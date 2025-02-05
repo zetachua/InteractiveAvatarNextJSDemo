@@ -113,10 +113,10 @@ export default function InteractiveAvatar() {
   async function handleSpeak() {
     setIsLoadingRepeat(true);
   
-    if (!avatar.current) {
-      setDebug("Avatar API not initialized");
-      return;
-    }
+    // if (!avatar.current) {
+    //   setDebug("Avatar API not initialized");
+    //   return;
+    // }
   
     try {
       // Fetch LLM response
@@ -127,14 +127,13 @@ export default function InteractiveAvatar() {
       });
       const data = await response.json();
       setChatHistory(data.chatHistory); // Update history
-      console.log('Full LLM response:', data.response); // Log the full response
-  
+      console.log(data,"do i exists")
       // Make the avatar speak the response
-      await avatar.current.speak({
-        text: data,
-        taskType: TaskType.REPEAT,
-        taskMode: TaskMode.SYNC,
-      });
+      // await avatar.current.speak({
+      //   text: data,
+      //   taskType: TaskType.REPEAT,
+      //   taskMode: TaskMode.SYNC,
+      // });
     } catch (error) {
       console.error("Error fetching LLM response:", error);
       setDebug("Failed to fetch response from LLM");
@@ -204,22 +203,7 @@ export default function InteractiveAvatar() {
         <CardBody className="h-[500px] flex flex-col justify-center items-center">
           {stream ? (
             <div className="h-[500px] w-[900px] justify-center items-center flex rounded-lg overflow-hidden" style={{flexDirection:'column'}}>
-              <div className="flex flex-col items-center gap-4" style={{flexDirection:'row',marginTop:'4rem',marginBottom:'1rem'}}>
-                  {/* Input field to capture user input */}
-                  <Input
-                    placeholder="Type your message..."
-                    value={userInput}
-                    onChange={(e) => setUserInput(e.target.value)}
-                    fullWidth
-                  />
-                  {/* Button to send userInput to the LLM */}
-                  <Button
-                    onClick={handleSpeak}
-                    isDisabled={!userInput.trim() || isLoadingRepeat}
-                  >
-                    {isLoadingRepeat ? <Spinner /> : "Send to LLM"}
-                  </Button>
-                </div>
+             
               <video
                 ref={mediaStream}
                 autoPlay
@@ -316,7 +300,23 @@ export default function InteractiveAvatar() {
           )}
         </CardBody>
         <Divider />
-        <CardFooter className="flex flex-col gap-3 relative">
+        <div className="flex flex-col items-center gap-4" style={{flexDirection:'row',margin:'1rem'}}>
+          {/* Input field to capture user input */}
+          <Input
+            placeholder="Type your message..."
+            value={userInput}
+            onChange={(e) => setUserInput(e.target.value)}
+            fullWidth
+          />
+          {/* Button to send userInput to the LLM */}
+          <Button
+            onClick={handleSpeak}
+            isDisabled={!userInput.trim() || isLoadingRepeat}
+          >
+            {isLoadingRepeat ? <Spinner /> : "Send to LLM"}
+          </Button>
+        </div>
+        {/* <CardFooter className="flex flex-col gap-3 relative">
           <Tabs
             aria-label="Options"
             selectedKey={chatMode}
@@ -327,7 +327,7 @@ export default function InteractiveAvatar() {
             <Tab key="text_mode" title="Text mode" />
             <Tab key="voice_mode" title="Voice mode" />
           </Tabs>
-          {/* {chatMode === "text_mode" ? (
+          {chatMode === "text_mode" ? (
             <div className="w-full flex relative">
               <InteractiveAvatarTextInput
                 disabled={!stream}
@@ -353,8 +353,8 @@ export default function InteractiveAvatar() {
                 {isUserTalking ? "Listening" : "Voice chat"}
               </Button>
             </div>
-          )} */}
-        </CardFooter>
+          )}
+        </CardFooter> */}
       </Card>
       <p className="font-mono text-right">
         <span className="font-bold">Console:</span>
