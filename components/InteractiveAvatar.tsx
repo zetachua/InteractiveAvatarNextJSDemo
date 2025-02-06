@@ -24,6 +24,7 @@ import { useMemoizedFn, usePrevious } from "ahooks";
 // import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
 import {AVATARS, STT_LANGUAGE_LIST} from "@/app/lib/constants";
+import TypewriterText from "./Typewriter";
 
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -33,6 +34,7 @@ export default function InteractiveAvatar() {
   const [knowledgeId, setKnowledgeId] = useState<string>("");
   const [avatarId, setAvatarId] = useState<string>("Wayne_20240711");
   const [language, setLanguage] = useState<string>('en');
+  const [displayText, setDisplayText]= useState('');
 
   const [data, setData] = useState<StartAvatarResponse>();
   const [userInput, setUserInput] = useState<string>("");
@@ -42,6 +44,9 @@ export default function InteractiveAvatar() {
   const [chatMode, setChatMode] = useState("text_mode");
   const [isUserTalking, setIsUserTalking] = useState(false);
   const [chatHistory,setChatHistory]=useState('');
+  const [feedbackText,setFeedbackText]=useState('');
+  const [suggestionOptions, setSuggestionOptions] = useState<string[]>([]); // Array to store suggestions
+  const [hideSuggestions, setHideSuggestions] = useState(false); // Array to store suggestions
 
   async function fetchAccessToken() {
     try {
@@ -110,7 +115,7 @@ export default function InteractiveAvatar() {
       setIsLoadingSession(false);
     }
   }
-  async function handleSpeak() {
+  async function handleSpeak(userInputValue?:string) {
     setIsLoadingRepeat(true);
   
     // if (!avatar.current) {
@@ -123,14 +128,17 @@ export default function InteractiveAvatar() {
       const response = await fetch("/api/llm-response", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userInput,chatHistory }),
+        body: JSON.stringify({ userInput: userInputValue|| userInput, chatHistory }),
       });
       const data = await response.json();
-      setChatHistory(data.chatHistory); // Update history
-      console.log(data,"do i exists")
+      setChatHistory(data.chatHistory); 
+      setDisplayText(data.responseContent);
+      setFeedbackText(data.feedback);
+      setSuggestionOptions(data.suggestions);
+      console.log(data.suggestions,"helloo")
       // Make the avatar speak the response
       // await avatar.current.speak({
-      //   text: data,
+      //   text: data.responseContent,
       //   taskType: TaskType.REPEAT,
       //   taskMode: TaskMode.SYNC,
       // });
@@ -300,6 +308,25 @@ export default function InteractiveAvatar() {
           )}
         </CardBody>
         <Divider />
+        <TypewriterText text={displayText} feedbackText={feedbackText}/>
+        <div>
+          { !hideSuggestions && suggestionOptions.map((option, index) => (
+            <Button
+              key={index}
+              onClick={() => 
+                {
+                  setUserInput(option); // Set the clicked suggestion as user input
+                  handleSpeak(option);
+                  setHideSuggestions(true);              
+                }
+              }
+              isDisabled={isLoadingRepeat}
+              style={{ margin: '0.5rem' }}
+            >
+              {option}
+            </Button>
+          ))}
+        </div>
         <div className="flex flex-col items-center gap-4" style={{flexDirection:'row',margin:'1rem'}}>
           {/* Input field to capture user input */}
           <Input
@@ -310,7 +337,7 @@ export default function InteractiveAvatar() {
           />
           {/* Button to send userInput to the LLM */}
           <Button
-            onClick={handleSpeak}
+            onClick={()=>handleSpeak()}
             isDisabled={!userInput.trim() || isLoadingRepeat}
           >
             {isLoadingRepeat ? <Spinner /> : "Send to LLM"}

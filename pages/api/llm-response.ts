@@ -6,6 +6,8 @@ import { CaseStudy } from '@/components/CaseStudyClass';
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 let selectedCase: CaseStudy | null = null; // Store the selected case persistently
+let suggestions : string[];
+let suggestionsMatch: RegExpMatchArray | null = null; // Initialize as null
 
 const llmResponse = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
@@ -17,24 +19,39 @@ const llmResponse = async (req: NextApiRequest, res: NextApiResponse) => {
       // Fetch the chat completion based on user input
       const chatCompletion = await getGroqChatCompletion(userInput, chatHistory);
       let responseContent = chatCompletion.choices[0].message.content;
-
       if (responseContent) {
         responseContent = responseContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
-        let feedbackMatch = responseContent.match(/Feedback:\s*(.+)/);
+        let feedbackMatch = responseContent.match(/<feedback\s*\/?>\s*(.*?)\s*<\/feedback\s*\/?>/);
         responseContent = feedbackMatch ? responseContent.replace(feedbackMatch[0], '').trim() : responseContent;
         feedback = feedbackMatch ? feedbackMatch[1].trim() : '';
+
+        // Match the "Here are some suggestions: ..." phrase and extract everything following it
+        suggestionsMatch = responseContent.match(/Here are some suggestions:\s*([\s\S]*?)(?:\s*\.\s*|$)/);
+        console.log(suggestionsMatch,"suggestionsMatch")
+        if (suggestionsMatch) {
+          let suggestionsContent = suggestionsMatch[1].trim();
+          console.log(suggestionsContent,"suggestionsContent")
+          suggestions = suggestionsContent.split(/,\s*(?!or\s)/).map(option => option.trim());
+          console.log(suggestions,"handleSuggestionClick")
+          //remove it from the original content
+          responseContent = responseContent.replace(suggestionsMatch[0], '').trim();
+        }
+
       }
 
       res.status(200).json({
         responseContent,
+        feedback,
+        suggestions,
         chatHistory: [
           ...chatHistory,
           { role: 'user', content: userInput },
           { role: 'assistant', content: responseContent },
         ],
       });
-
-      console.log(responseContent, feedback, 'what am i');
+      
+      suggestionsMatch=[""];
+      console.log("userInput: ", userInput,"response: ", responseContent, "feedback: ",feedback, 'what am ii');
     } catch (error) {
       console.error('Error fetching chat completion:', error);
       res.status(500).json({ error: 'Failed to fetch chat completion' });
@@ -81,13 +98,13 @@ const getGroqChatCompletion = async (userInput: string, chatHistory: any) => {
 
         Wait for the user to type anything to begin. Prompt the user which industry he is interested in with 3-5 items from these options ${uniqueIndustries}.
 
-        "Hello! I'm here to help you practice customer interviews. Which industry are you interested in? Here are some suggestions: <3 items from the options above>"
+        "Hello! I'm here to help you practice customer interviews. Which industry are you interested in?  Here are some suggestions: item1, item2, item3 (maximum of 3). " do not add "or" inbetween the items just separate with commas strictly.
 
-        Respond as if you were a persona with these values: ${selectedCase?.decision_making_style}. Provide realistic answers and keep them short and concise (<100 words), like this:
+        Respond as if you were a persona with these values: ${selectedCase?.decision_making_style}. Provide realistic answers and keep them simple to understand and concise (less than 100 words), like this:
 
-        "Hi, I'm a project manager at ${selectedCase?.company}, overseeing ${selectedCase?.summary}. I achieved ${selectedCase?.outcomes}. What would you like to know?"
+        "Hi, I'm a project manager at ${selectedCase?.company}, we achieved ${selectedCase?.outcomes}. What would you like to know?"
 
-        After the user asks 1 question, provide 1-sentence feedback at the end of every response to improve interview skills.
+        After the user asks 1 question, provide 1-sentence feedback at the end of every response to improve interview skills inside a <feedback> ... <feedback/> tag.
 
         Here’s more knowledge that you know: ${selectedCase?.challenges}, ${selectedCase?.decision_making_style}, ${selectedCase?.key_decisions}.
         `,
