@@ -14,3 +14,12 @@ export interface CaseStudy {
     decision_making_style: string;
     url: string;
   }
+
+// Define the types for StoryBook and availableThemes
+export interface StoryBook {
+  title: string;
+  characters: string;
+  setting:string;
+  plot: string;
+  moral:string;
+}

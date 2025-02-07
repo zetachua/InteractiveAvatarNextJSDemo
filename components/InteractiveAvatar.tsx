@@ -47,6 +47,8 @@ export default function InteractiveAvatar() {
   const [feedbackText,setFeedbackText]=useState('');
   const [suggestionOptions, setSuggestionOptions] = useState<string[]>([]); // Array to store suggestions
   const [hideSuggestions, setHideSuggestions] = useState(false); // Array to store suggestions
+  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  const [oneOption, setOneOption] = useState<boolean>();
 
   async function fetchAccessToken() {
     try {
@@ -132,9 +134,10 @@ export default function InteractiveAvatar() {
       });
       const data = await response.json();
       setChatHistory(data.chatHistory); 
-      setDisplayText(data.responseContent);
+      setDisplayText(data.filteredResponseContent);
       setFeedbackText(data.feedback);
       setSuggestionOptions(data.suggestions);
+      setOneOption(data.oneOption);
       console.log(data.suggestions,"helloo")
       // Make the avatar speak the response
       // await avatar.current.speak({
@@ -142,6 +145,9 @@ export default function InteractiveAvatar() {
       //   taskType: TaskType.REPEAT,
       //   taskMode: TaskMode.SYNC,
       // });
+
+      setUserInput('')
+      setSelectedOptions([''])
     } catch (error) {
       console.error("Error fetching LLM response:", error);
       setDebug("Failed to fetch response from LLM");
@@ -310,7 +316,8 @@ export default function InteractiveAvatar() {
         <Divider />
         <TypewriterText text={displayText} feedbackText={feedbackText}/>
         <div>
-          { !hideSuggestions && suggestionOptions.map((option, index) => (
+          {/* {oneOption? */}
+         { !hideSuggestions && suggestionOptions.map((option, index) => (
             <Button
               key={index}
               onClick={() => 
@@ -326,6 +333,31 @@ export default function InteractiveAvatar() {
               {option}
             </Button>
           ))}
+          {/* {
+          suggestionOptions.map((option, index) => (
+            <Button
+              key={index}
+              onClick={() => {
+                // Append to the userInput when an option is selected
+                  setUserInput(prev => prev ? `${prev}, ${option}` : option);  // Concatenate the selected option
+
+                  // Handle selected options in the selectedOptions state
+                  setSelectedOptions(prev =>
+                    prev.includes(option) ? prev.filter(item => item !== option) : [...prev, option]
+                  );
+                }}
+              isDisabled={isLoadingRepeat}
+              style={{
+                margin: '0.5rem',
+                backgroundColor: selectedOptions.includes(option) ? 'blue' : 'white', // Highlight selected
+                color: selectedOptions.includes(option) ? 'white' : 'black',
+              }}
+            >
+              {option}
+            </Button>
+          ))
+        } */}
+
         </div>
         <div className="flex flex-col items-center gap-4" style={{flexDirection:'row',margin:'1rem'}}>
           {/* Input field to capture user input */}
