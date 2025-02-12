@@ -4,9 +4,10 @@ import { useState, useEffect, useRef } from "react";
 interface TypewriterTextProps {
   text: string;
   feedbackText: string;
+  questionCount:number;
 }
 
-const TypewriterText: React.FC<TypewriterTextProps> = ({ text, feedbackText }) => {
+const TypewriterText: React.FC<TypewriterTextProps> = ({ text, feedbackText,questionCount }) => {
   const [displayedText, setDisplayedText] = useState<string>("");
   const [displayedFeedback, setDisplayedFeedback] = useState<string>(""); // Feedback state
   const wordsRef = useRef<string[]>([]); // Store words for response
@@ -17,86 +18,96 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({ text, feedbackText }) =
   const feedbackIntervalRef = useRef<NodeJS.Timeout | null>(null); // Interval for feedback text typing
   const containerRef = useRef<HTMLDivElement | null>(null); // Reference to container
 
-  // Response typing effect
+  // Response typing effect with delay
   useEffect(() => {
     if (!text) {
-      setDisplayedText(""); // Reset if text is empty
+      setDisplayedText(""); 
       wordsRef.current = [];
       return;
     }
 
-    const words = text.split(" "); // Split text into words
-    wordsRef.current = []; // Clear previous words
-    indexRef.current = 0; // Reset index
+    setDisplayedFeedback("");
 
-    if (intervalRef.current) clearInterval(intervalRef.current); // Clear any previous interval
+    const words = text.split(" ");
+    wordsRef.current = [];
+    indexRef.current = 0;
 
-    intervalRef.current = setInterval(() => {
-      if (indexRef.current < words.length) {
-        wordsRef.current.push(words[indexRef.current]); // Add new word
-        setDisplayedText(wordsRef.current.join(" ")); // Update state
-        indexRef.current++;
-      } else {
-        if (intervalRef.current) clearInterval(intervalRef.current);
-        // After finishing typing the response, start typing the feedback
-        startFeedbackTyping();
-      }
-    }, 200); // Adjust speed here (word delay)
+    const typingDelay = setTimeout(() => {
+      if (intervalRef.current) clearInterval(intervalRef.current); 
+
+      intervalRef.current = setInterval(() => {
+        if (indexRef.current < words.length) {
+          wordsRef.current.push(words[indexRef.current]); 
+          setDisplayedText(wordsRef.current.join(" ")); 
+          indexRef.current++;
+        } else {
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          startFeedbackTyping();
+        }
+      }, 200);
+    }, 2000);
 
     return () => {
+      clearTimeout(typingDelay); 
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [text]);
 
   // Feedback typing effect
   const startFeedbackTyping = () => {
-    const feedbackWords = feedbackText.split(" "); // Split feedback text into words
-    feedbackWordsRef.current = []; // Clear previous feedback words
-    feedbackIndexRef.current = 0; // Reset index for feedback
+    if(!feedbackText) return;
+    const feedbackWords = feedbackText?.split(" ");
+    feedbackWordsRef.current = [];
+    feedbackIndexRef.current = 0;
 
-    if (feedbackIntervalRef.current) clearInterval(feedbackIntervalRef.current); // Clear any previous feedback interval
+    if (feedbackIntervalRef.current) clearInterval(feedbackIntervalRef.current);
 
     feedbackIntervalRef.current = setInterval(() => {
       if (feedbackIndexRef.current < feedbackWords.length) {
-        feedbackWordsRef.current.push(feedbackWords[feedbackIndexRef.current]); // Add new word to feedback
-        setDisplayedFeedback(feedbackWordsRef.current.join(" ")); // Update feedback state
+        feedbackWordsRef.current.push(feedbackWords[feedbackIndexRef.current]); 
+        setDisplayedFeedback(feedbackWordsRef.current.join(" "));
         feedbackIndexRef.current++;
       } else {
         if (feedbackIntervalRef.current) clearInterval(feedbackIntervalRef.current);
       }
-    }, 200); // Adjust speed here (word delay)
+    }, 200);
   };
 
-  // Auto-scroll to the bottom after each text update
+  console.log(questionCount,"questionCount")
+  // Auto-scroll to bottom
   useEffect(() => {
     if (containerRef.current) {
       containerRef.current.scrollTop = containerRef.current.scrollHeight;
     }
-  }, [displayedText, displayedFeedback]); // Scroll when either response or feedback updates
+  }, [displayedText, displayedFeedback]);
 
   return (
     <div
-      ref={containerRef} // Assign ref to the container
+      ref={containerRef}
       className="text-white text-lg font-mono"
       style={{
-        padding: "1rem",
+        width: '520px',
+        maxHeight: '180px',
+        position: 'absolute',
+        bottom: '10px',
+        padding: "2rem",
         fontSize: "14px",
         textAlign: "left",
-        height: "200px", // Set fixed height
-        overflowY: "auto", // Enable vertical scrolling
-        backgroundColor: "#1e1e1e", // Optional: Set a background for contrast
-        border: "1px solid #444", // Optional: Add a border to the container
+        overflowY: "auto",
+        scrollbarWidth:'none'
       }}
     >
       <div style={{ marginBottom: "1rem" }}>
-        <strong>Response:</strong> <span>{displayedText}</span>
+        <span>{displayedText}</span>
       </div>
 
-      <Divider style={{ margin: "1rem 0" }} /> {/* Adjust divider spacing */}
+      <Divider style={{ margin: "1rem 0" }} />
 
+      {questionCount!==undefined && questionCount>2 &&
       <div>
         <strong>Feedback:</strong> <span>{displayedFeedback}</span>
       </div>
+      }
     </div>
   );
 };

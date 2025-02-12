@@ -8,15 +8,10 @@ import {
   Button,
   Card,
   CardBody,
-  CardFooter,
-  Divider,
   Input,
   Select,
   SelectItem,
   Spinner,
-  Chip,
-  Tabs,
-  Tab,
 } from "@nextui-org/react";
 import { useEffect, useRef, useState } from "react";
 import { useMemoizedFn, usePrevious } from "ahooks";
@@ -25,6 +20,9 @@ import { useMemoizedFn, usePrevious } from "ahooks";
 
 import {AVATARS, STT_LANGUAGE_LIST} from "@/app/lib/constants";
 import TypewriterText from "./Typewriter";
+import FeedbackPieChart from "./FeedbackPieChart";
+import { FeedbackData } from "./KnowledgeClasses";
+import { Square } from "@phosphor-icons/react";
 
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -45,10 +43,13 @@ export default function InteractiveAvatar() {
   const [isUserTalking, setIsUserTalking] = useState(false);
   const [chatHistory,setChatHistory]=useState('');
   const [feedbackText,setFeedbackText]=useState('');
-  const [suggestionOptions, setSuggestionOptions] = useState<string[]>([]); // Array to store suggestions
+  const [suggestionOptions, setSuggestionOptions] = useState<string[]>([]);
   const [hideSuggestions, setHideSuggestions] = useState(false); // Array to store suggestions
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [oneOption, setOneOption] = useState<boolean>();
+  const [questionCount, setQuestionCount] = useState<number>(0);
+  const [feedbackJson, setFeedbackJson] = useState<FeedbackData | null>(null);
+  const [allRatings, setAllRatings] = useState<number>(0);  // Initialize as number
 
   async function fetchAccessToken() {
     try {
@@ -100,7 +101,7 @@ export default function InteractiveAvatar() {
     });
     try {
       const res = await avatar.current.createStartAvatar({
-        quality: AvatarQuality.Low,
+        quality: AvatarQuality.High,
         avatarName: avatarId,
         disableIdleTimeout: true,
       });
@@ -120,13 +121,15 @@ export default function InteractiveAvatar() {
   async function handleSpeak(userInputValue?:string) {
     setIsLoadingRepeat(true);
   
-    // if (!avatar.current) {
-    //   setDebug("Avatar API not initialized");
-    //   return;
-    // }
+    if (!avatar.current) {
+      setDebug("Avatar API not initialized");
+      return;
+    }
   
     try {
       // Fetch LLM response
+      setFeedbackText('');
+      setDisplayText('');
       const response = await fetch("/api/llm-response", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -135,16 +138,29 @@ export default function InteractiveAvatar() {
       const data = await response.json();
       setChatHistory(data.chatHistory); 
       setDisplayText(data.filteredResponseContent);
-      setFeedbackText(data.feedback);
+      setFeedbackText(data.feedbackSummary);
       setSuggestionOptions(data.suggestions);
       setOneOption(data.oneOption);
-      console.log(data.suggestions,"helloo")
+
+      if(questionCount!==null && questionCount>1){
+          const updateFeedbackJson=mergeJsons(feedbackJson,data.feedbackMetrics)
+          setFeedbackJson(updateFeedbackJson);
+          setAllRatings((prevState) => {
+              const newRating = data.feedbackScore || 0;
+              console.log(data.feedbackScore,prevState,"allRatings")
+              return prevState + newRating; // Add the new rating to the previous state
+          });
+      }
+      setQuestionCount((prevState)=>{
+        return prevState+1;
+      })
+
       // Make the avatar speak the response
-      // await avatar.current.speak({
-      //   text: data.responseContent,
-      //   taskType: TaskType.REPEAT,
-      //   taskMode: TaskMode.SYNC,
-      // });
+      await avatar.current.speak({
+        text: data.filteredResponseContent,
+        taskType: TaskType.REPEAT,
+        taskMode: TaskMode.SYNC,
+      });
 
       setUserInput('')
       setSelectedOptions([''])
@@ -155,7 +171,6 @@ export default function InteractiveAvatar() {
       setIsLoadingRepeat(false);
     }
   }
-  
   
   async function handleInterrupt() {
     if (!avatar.current) {
@@ -169,6 +184,29 @@ export default function InteractiveAvatar() {
         setDebug(e.message);
       });
   }
+
+  function mergeJsons<T extends Record<string, number | string>>(obj1: T, obj2: T): T {
+    const mergedObj: T = { ...obj1 };
+  
+    Object.keys(obj2).forEach((key) => {
+      const value1 = mergedObj[key as keyof T];
+      const value2 = obj2[key as keyof T];
+  
+      // Only handle the merging of number fields
+      if (typeof value1 === "number" && typeof value2 === "number") {
+        mergedObj[key as keyof T] = (value1 + value2) as T[keyof T];
+      } else if (typeof value2 === "number") {
+        // If only obj2 has a number for that key, add it
+        mergedObj[key as keyof T] = value2;
+      }
+    });  
+
+    console.log(mergedObj,"what am ii")
+  
+    return mergedObj;
+  }
+  
+  
   async function endSession() {
     await avatar.current?.stopAvatar();
     setStream(undefined);
@@ -212,33 +250,26 @@ export default function InteractiveAvatar() {
   }, [mediaStream, stream]);
 
   return (
-    <div className="w-full flex flex-col gap-4">
-      <Card>
-        <CardBody className="h-[500px] flex flex-col justify-center items-center">
+    <div className="flex flex-col "style={{display:'flex',justifyContent:'center',alignItems:'center'}} >
+      <Card className="w-screen h-screen overflow-hidden border-none rounded-none" style={{background: 'linear-gradient(to top, #987B8C, #F0C7C2)'}}>
+        <CardBody className="flex flex-col justify-center items-center">
           {stream ? (
-            <div className="h-[500px] w-[900px] justify-center items-center flex rounded-lg overflow-hidden" style={{flexDirection:'column'}}>
-             
+            <div className="w-full justify-center items-center flex overflow-hidden" style={{flexDirection:'column'}}>
               <video
                 ref={mediaStream}
                 autoPlay
                 playsInline
                 style={{
-                  width: "100%",
-                  height: "100%",
+                  width: "90%",
+                  height: "80%",
+                  marginBottom:'4rem',
                   objectFit: "contain",
+                  borderRadius:'5px',
                 }}
               >
                 <track kind="captions" />
               </video>
-              <div className="flex flex-col gap-2 absolute bottom-3 right-3">
-                <Button
-                  className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
-                  size="md"
-                  variant="shadow"
-                  onClick={handleInterrupt}
-                >
-                  Interrupt task
-                </Button>
+              <div className="flex flex-row gap-2 absolute top-3">
                 <Button
                   className="bg-gradient-to-tr from-indigo-500 to-indigo-300  text-white rounded-lg"
                   size="md"
@@ -252,24 +283,24 @@ export default function InteractiveAvatar() {
           ) : !isLoadingSession ? (
             <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center">
               <div className="flex flex-col gap-2 w-full">
-                <p className="text-sm font-medium leading-none">
+                {/* <p className="text-sm font-medium leading-none">
                   Custom Knowledge ID (optional)
                 </p>
                 <Input
                   placeholder="Enter a custom knowledge ID"
                   value={knowledgeId}
                   onChange={(e) => setKnowledgeId(e.target.value)}
-                />
-                <p className="text-sm font-medium leading-none">
+                /> */}
+                {/* <p className="text-sm font-medium leading-none">
                   Custom Avatar ID (optional)
                 </p>
                 <Input
                   placeholder="Enter a custom avatar ID"
                   value={avatarId}
                   onChange={(e) => setAvatarId(e.target.value)}
-                />
+                /> */}
                 <Select
-                  placeholder="Or select one from these example avatars"
+                  placeholder="Select Avatar"
                   size="md"
                   onChange={(e) => {
                     setAvatarId(e.target.value);
@@ -284,7 +315,7 @@ export default function InteractiveAvatar() {
                     </SelectItem>
                   ))}
                 </Select>
-                <Select
+                {/* <Select
                   label="Select language"
                   placeholder="Select language"
                   className="max-w-xs"
@@ -298,7 +329,7 @@ export default function InteractiveAvatar() {
                       {lang.label}
                     </SelectItem>
                   ))}
-                </Select>
+                </Select> */}
               </div>
               <Button
                 className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-full text-white"
@@ -313,11 +344,12 @@ export default function InteractiveAvatar() {
             <Spinner color="default" size="lg" />
           )}
         </CardBody>
-        <Divider />
-        <TypewriterText text={displayText} feedbackText={feedbackText}/>
-        <div>
+        <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>
+
+        <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
+          <div>
           {/* {oneOption? */}
-         { !hideSuggestions && suggestionOptions.map((option, index) => (
+         { !hideSuggestions && suggestionOptions?.map((option, index) => (
             <Button
               key={index}
               onClick={() => 
@@ -328,7 +360,7 @@ export default function InteractiveAvatar() {
                 }
               }
               isDisabled={isLoadingRepeat}
-              style={{ margin: '0.5rem' }}
+              style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
             >
               {option}
             </Button>
@@ -357,24 +389,38 @@ export default function InteractiveAvatar() {
             </Button>
           ))
         } */}
-
         </div>
-        <div className="flex flex-col items-center gap-4" style={{flexDirection:'row',margin:'1rem'}}>
+        </div>
+        <div className="flex flex-col items-center" style={{flexDirection:'row',justifyContent:'center',marginBottom:'2rem'}}>
           {/* Input field to capture user input */}
           <Input
             placeholder="Type your message..."
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
-            fullWidth
-          />
+            className="w-50 text-sm p-2"
+            style={{ backgroundColor:'rgba(255,255,255,0.1)'}}
+
+            />
           {/* Button to send userInput to the LLM */}
-          <Button
-            onClick={()=>handleSpeak()}
-            isDisabled={!userInput.trim() || isLoadingRepeat}
-          >
-            {isLoadingRepeat ? <Spinner /> : "Send to LLM"}
+
+           <Button
+           onClick={()=>handleSpeak()}
+           isDisabled={!userInput.trim() || isLoadingRepeat}
+           style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
+            >
+           {isLoadingRepeat ? <Spinner /> :  "Send"}
           </Button>
+        {isLoadingSession &&
+          <Button
+            onClick={handleInterrupt}
+            style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
+          >
+            <Square weight="fill"/>
+          </Button> 
+          }
         </div>
+        {feedbackJson && questionCount>1 && <FeedbackPieChart data={feedbackJson} overallScore={allRatings} />}
+
         {/* <CardFooter className="flex flex-col gap-3 relative">
           <Tabs
             aria-label="Options"
@@ -415,11 +461,11 @@ export default function InteractiveAvatar() {
           )}
         </CardFooter> */}
       </Card>
-      <p className="font-mono text-right">
+      {/* <p className="font-mono text-right">
         <span className="font-bold">Console:</span>
         <br />
         {debug}
-      </p>
+      </p> */}
     </div>
   );
 }

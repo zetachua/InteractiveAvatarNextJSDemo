@@ -15,6 +15,7 @@ export interface CaseStudy {
     url: string;
   }
 
+
 // Define the types for StoryBook and availableThemes
 export interface StoryBook {
   title: string;
@@ -22,4 +23,15 @@ export interface StoryBook {
   setting:string;
   plot: string;
   moral:string;
+}
+
+
+export interface FeedbackData {
+  clarity: number;
+  relevance: number;
+  depth: number;
+  neutrality: number;
+  engagement: number;
+  overallScore: number;
+  feedbackSummary: string;
 }
