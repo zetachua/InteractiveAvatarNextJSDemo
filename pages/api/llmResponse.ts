@@ -21,7 +21,8 @@ const llmResponse = async (req: NextApiRequest, res: NextApiResponse) => {
       // Extract Json Data based on groupName
       if (groupToFetch || !selectedJsonData) {
         groupToFetch = groupName || 'Money_Savey';
-        selectedJsonData = startupKnowledgeJsonExtract(groupToFetch).selectedCase;
+        const { selectedCase } = await startupKnowledgeJsonExtract(groupToFetch);
+        selectedJsonData = selectedCase;
       }
 
       // Fetch chat completion based on user input
