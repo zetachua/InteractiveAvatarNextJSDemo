@@ -466,8 +466,8 @@ export default function InteractiveAvatar() {
         <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>
 
         <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
-          <div>
-            <div style={{backgroundColor:'rgba(255,255,255,0.1)',textAlign:'center',padding:'1rem',minWidth:'500px',borderRadius:'10px'}}> {isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput} 
+          <div style={{display:'flex',justifyContent:'center',alignItems:'center'}}>
+            <div style={{backgroundColor:'rgba(255,255,255,0.1)',textAlign:'center',padding:'1rem',width:'300px',borderRadius:'10px',height:'auto',position:'absolute',transform:'-50%,-50%',bottom:'12%',left:'39%'}}> {isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput} 
             </div>
          {/* { !hideSuggestions && suggestionOptions?.map((option, index) => (
             <Button
@@ -544,7 +544,7 @@ export default function InteractiveAvatar() {
           </Button> 
           }
         </div>
-        {feedbackJson && questionCount>1 && <FeedbackPieChart data={feedbackJson} overallScore={allRatings} />}
+        {feedbackJson && !displayRubricAnalytics && questionCount>1 && <FeedbackPieChart data={feedbackJson} overallScore={allRatings} />}
       {rubricJson && displayRubricAnalytics && <RubricPiechart data={rubricJson} overallScore={rubricAllRatings} summary={rubricSummary} displayRubricAnalytics={displayRubricAnalytics}></RubricPiechart>}
        {/* <CardFooter className="flex flex-col gap-3 relative">
            <Tabs

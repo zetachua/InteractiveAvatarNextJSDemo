@@ -23,6 +23,7 @@ const llmResponse = async (req: NextApiRequest, res: NextApiResponse) => {
         groupToFetch = groupName || 'Money_Savey';
         const { selectedCase } = await startupKnowledgeJsonExtract(groupToFetch);
         selectedJsonData = selectedCase;
+        console.log(selectedCase,groupName,"was i here");
       }
 
       // Fetch chat completion based on user input
@@ -53,7 +54,7 @@ const llmResponse = async (req: NextApiRequest, res: NextApiResponse) => {
         return res.status(400).json({ error: "Invalid rubric JSON format" });
       }
       const { rubricScore, rubricSummary, rubricMetrics } = rubricResult;
-      console.log(responseRubricContent,"response rubric")
+      console.log(rubricScore, rubricSummary, rubricMetrics,"response rubric")
 
 
       // Give response
@@ -97,7 +98,6 @@ const getGroqChatCompletion = async (userInput: string, chatHistory: any, prompt
     selectedPrompt=feedbackPrompt(userInput,reply,selectedCase.startup_idea)
   } else if (prompt='rubric'){
     selectedPrompt=marketRelevancePrompt(selectedCase.startup_idea)
-    console.log("i went heres")
   }
   console.log(selectedPrompt,"selectedPrompt")
   

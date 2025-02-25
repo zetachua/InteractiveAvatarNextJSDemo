@@ -27,7 +27,7 @@ const FeedbackPieChart: React.FC<FeedbackPieChartProps> = ({ data, overallScore 
   }));
 
   // Define colors for each section
-  const COLORS = ['#A8DADC', '#8BAFC5', '#1D3557', '#F1FAEE', '#839FB1'];
+  const COLORS = ['#A8DADC', '#FBAFC5', '#1D3557', '#E1FAEE', '#E39FB1'];
 
   const roundedOverallScore = overallScore !== undefined 
     ? Math.ceil((overallScore + Number.EPSILON) * 10) / 10 

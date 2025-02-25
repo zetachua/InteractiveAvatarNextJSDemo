@@ -37,13 +37,10 @@ const RubricPiechart: React.FC<RubricPieChartProps> = ({ data, overallScore,summ
 
   return (
     <div style={{ position: 'absolute',display:'flex',justifyContent:'center',alignItems:'center',flexDirection:'column', bottom: '-6rem', right: '-7rem',transform: 'scale(0.6)' }}>
-      {displayRubricAnalytics &&(<>
-          <div style={{background:'rgba(255,255,255,0.1)',padding:'2rem',borderRadius:'50px',width:'400px',textAlign:'center'}}><b><u>Overall Summary:</u><br/>{summary}</b></div>
-          <div style={{fontWeight:600,fontSize:'24px',padding:'0rem 1.2rem 0rem 1.2rem',borderRadius:'10px',zIndex:'1000',position:'absolute',top:'62%',left:'50%',transform:'translate(-50%,-50%)',color:'#000',backgroundColor:'#fff'}} >
-            {roundedOverallScore}
-          </div>
-        </>)
-        }
+      <div style={{background:'rgba(255,255,255,0.1)',padding:'2rem',borderRadius:'50px',width:'400px',textAlign:'center'}}><b><u>Overall Summary:</u><br/>{summary}</b></div>
+      <div style={{fontWeight:600,fontSize:'24px',padding:'0rem 1.2rem 0rem 1.2rem',borderRadius:'10px',zIndex:'1000',position:'absolute',top:'62%',left:'50%',transform:'translate(-50%,-50%)',color:'#000',backgroundColor:'#fff'}} >
+        {roundedOverallScore}
+      </div>
       <PieChart width={500} height={500}>
         <Pie
           data={chartData}
