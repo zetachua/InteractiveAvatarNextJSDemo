@@ -10,6 +10,25 @@ let thematics: string[] = [];
 let selectedJsonData: StartupGroups | undefined;
 let rating=0;
 let groupToFetch='Money_Savey'
+
+const fetchRubric = async (userInput: string, chatHistory: any[], selectedJsonData: any) => {
+  const rubricRatingCompletion = await getGroqChatCompletion(userInput, chatHistory, "rubric", "", selectedJsonData);
+  let responseRubricContent = rubricRatingCompletion.choices[0].message.content;
+
+  if (!responseRubricContent) {
+    throw new Error("Empty rubric response");
+  }
+
+  console.log(responseRubricContent, "responseRubricContent");
+  const rubricResult = rubricFilter(responseRubricContent);
+
+  if (!rubricResult) {
+    throw new Error("Invalid rubric JSON format");
+  }
+
+  return rubricResult;
+};
+
 const llmResponse = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
     try {
@@ -23,7 +42,6 @@ const llmResponse = async (req: NextApiRequest, res: NextApiResponse) => {
         groupToFetch = groupName || 'Money_Savey';
         const { selectedCase } = await startupKnowledgeJsonExtract(groupToFetch);
         selectedJsonData = selectedCase;
-        console.log(selectedCase,groupName,"was i here");
       }
 
       // Fetch chat completion based on user input
@@ -45,16 +63,8 @@ const llmResponse = async (req: NextApiRequest, res: NextApiResponse) => {
       const { feedbackScore, feedbackSummary, feedbackMetrics } = feedbackResult;
 
       // Fetch rubrics rating
-      const rubricRatingCompletion = await getGroqChatCompletion(userInput, chatHistory, "rubric", "",selectedJsonData);
-      let responseRubricContent = rubricRatingCompletion.choices[0].message.content;
-      if (!responseRubricContent) return res.status(400).json({ error: "Empty rubric response" });
-      const rubricResult = rubricFilter(responseRubricContent);
-      if (!rubricResult) {
-        console.error("Error parsing rubric JSON, returning default feedback.");
-        return res.status(400).json({ error: "Invalid rubric JSON format" });
-      }
-      const { rubricScore, rubricSummary, rubricMetrics } = rubricResult;
-      console.log(rubricScore, rubricSummary, rubricMetrics,"response rubric")
+      const { rubricScore, rubricSummary, rubricMetrics } = await fetchRubric(userInput, chatHistory, selectedJsonData);
+      console.log( rubricScore, rubricSummary, rubricMetrics,"response rubric")
 
 
       // Give response
@@ -97,7 +107,7 @@ const getGroqChatCompletion = async (userInput: string, chatHistory: any, prompt
   } else if (prompt=='feedback'){
     selectedPrompt=feedbackPrompt(userInput,reply,selectedCase.startup_idea)
   } else if (prompt='rubric'){
-    selectedPrompt=marketRelevancePrompt(selectedCase.startup_idea)
+    selectedPrompt=marketRelevancePrompt(selectedCase.startup_idea,chatHistory)
   }
   console.log(selectedPrompt,"selectedPrompt")
   

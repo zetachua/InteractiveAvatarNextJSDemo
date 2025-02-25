@@ -33,10 +33,10 @@ export const startupPersonaPrompt = (selectedCase: any) => `
   When replying, keep responses conversational, avoid bullet points, and adopt a serious tone if the user’s question is negative, rude, bored, or ineffective.
 `;
 
-export const marketRelevancePrompt=(selectedCase:any)=>`
+export const marketRelevancePrompt=(selectedCase:any,chatHistory:any)=>`
 
     You are an expert in analyzing customer interviews and assessing whether they effectively validate a startup's market segment, pain points, and viability. 
-    Evaluate the following interview question based on **market validation criteria**.
+    Evaluate the following interview question based on **market validation criteria**. 
 
     ### **Market Validation Assessment:**
     - **Market Research Quality (1-5):** Does the interview reflect strong primary market research, including insights from real customers and hypothesis validation?
@@ -46,6 +46,7 @@ export const marketRelevancePrompt=(selectedCase:any)=>`
     - **Customer Adoption Insights (1-5):** Does the interview assess **customer buying behavior, urgency, and willingness to switch to this solution?**
 
     **Student's Startup Idea:** ${selectedCase?.startupIdea}
+    **Student's Interview: ${chatHistory}
 
     Return a JSON object with the scores and a **brief summary of feedback focusing on market validation insights**.
     If the user's question **fails to uncover market viability, competition, or customer behavior**, provide **constructive feedback** suggesting how they can refine their **interview approach or startup target market**.
