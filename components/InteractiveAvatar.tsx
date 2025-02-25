@@ -44,8 +44,8 @@ export default function InteractiveAvatar() {
   const [data, setData] = useState<StartAvatarResponse>();
   const [userInput, setUserInput] = useState<string>("");
   const [text, setText] = useState<string>("");
-  // const [apiKey, setApiKey] = useState<string>("");
-  const [apiKey, setApiKey] = useState<string>("MThhZjFjZDQ3YjlmNDI4OTk4NmE3OTM5ZTQ0MWYxYmEtMTczODgyNjE0MA==");
+  const [apiKey, setApiKey] = useState<string>("");
+  // const [apiKey, setApiKey] = useState<string>("MThhZjFjZDQ3YjlmNDI4OTk4NmE3OTM5ZTQ0MWYxYmEtMTczODgyNjE0MA==");
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatar | null>(null);
   const [chatMode, setChatMode] = useState("text_mode");
