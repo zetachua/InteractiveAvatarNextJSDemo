@@ -3,7 +3,7 @@ import { CaseStudy, StartupGroups, StoryBook } from '@/components/KnowledgeClass
 // Helper function to fetch JSON data
 const fetchJsonData = async (fileName: string) => {
   try {
-    const res = await fetch(`/${process.env.NEXT_PUBLIC_BASE_URL}/${fileName}`);
+    const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}${fileName}`);
     if (!res.ok) throw new Error(`Failed to fetch ${fileName}`);
     return await res.json();
   } catch (error) {
