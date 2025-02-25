@@ -1,5 +1,5 @@
 import type { StartAvatarResponse } from "@heygen/streaming-avatar";
-
+import { startupNameJsonExtract } from "@/pages/api/promptExtractFunctions";
 import StreamingAvatar, {
   AvatarQuality,
   StreamingEvents, TaskMode, TaskType, VoiceEmotion,
@@ -8,21 +8,28 @@ import {
   Button,
   Card,
   CardBody,
+  CardFooter,
+  Chip,
   Input,
   Select,
   SelectItem,
   Spinner,
+  Tab,
+  Tabs,
 } from "@nextui-org/react";
 import { useEffect, useRef, useState } from "react";
 import { useMemoizedFn, usePrevious } from "ahooks";
 
 // import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
-import {AVATARS, STT_LANGUAGE_LIST} from "@/app/lib/constants";
+// import {AVATARS, STT_LANGUAGE_LIST} from "@/app/lib/constants";
 import TypewriterText from "./Typewriter";
 import FeedbackPieChart from "./FeedbackPieChart";
-import { FeedbackData } from "./KnowledgeClasses";
-import { Square } from "@phosphor-icons/react";
+import { FeedbackData,RubricData } from "./KnowledgeClasses";
+import { Square, MicrophoneSlash,Microphone} from "@phosphor-icons/react";
+import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
+import RubricPiechart from "./RubricPieChart";
+import { GROUPNAMES } from "@/pages/api/constants";
 
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -30,31 +37,44 @@ export default function InteractiveAvatar() {
   const [stream, setStream] = useState<MediaStream>();
   const [debug, setDebug] = useState<string>();
   const [knowledgeId, setKnowledgeId] = useState<string>("");
-  const [avatarId, setAvatarId] = useState<string>("Wayne_20240711");
+  const [avatarId, setAvatarId] = useState<string>("josh_lite3_20230714");
   const [language, setLanguage] = useState<string>('en');
   const [displayText, setDisplayText]= useState('');
 
   const [data, setData] = useState<StartAvatarResponse>();
   const [userInput, setUserInput] = useState<string>("");
   const [text, setText] = useState<string>("");
+  // const [apiKey, setApiKey] = useState<string>("");
+  const [apiKey, setApiKey] = useState<string>("MThhZjFjZDQ3YjlmNDI4OTk4NmE3OTM5ZTQ0MWYxYmEtMTczODgyNjE0MA==");
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatar | null>(null);
   const [chatMode, setChatMode] = useState("text_mode");
   const [isUserTalking, setIsUserTalking] = useState(false);
   const [chatHistory,setChatHistory]=useState('');
+  const [groupName,setGroupName]=useState('Money_Savey');
   const [feedbackText,setFeedbackText]=useState('');
+  const [rubricSummary,setRubricSummary]=useState('');
+  const [displayRubricAnalytics,setDisplayRubricAnalytics]=useState(false);
   const [suggestionOptions, setSuggestionOptions] = useState<string[]>([]);
-  const [hideSuggestions, setHideSuggestions] = useState(false); // Array to store suggestions
+  const [hideSuggestions, setHideSuggestions] = useState(false); 
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
-  const [oneOption, setOneOption] = useState<boolean>();
   const [questionCount, setQuestionCount] = useState<number>(0);
   const [feedbackJson, setFeedbackJson] = useState<FeedbackData | null>(null);
-  const [allRatings, setAllRatings] = useState<number>(0);  // Initialize as number
+  const [allRatings, setAllRatings] = useState<number>(0); 
+  const [rubricJson, setRubricJson] = useState<RubricData | null>(null);
+  const [rubricAllRatings, setRubricAllRatings] = useState<number>(0); 
+  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const transcriptRef = useRef<string>(''); 
 
   async function fetchAccessToken() {
     try {
       const response = await fetch("/api/get-access-token", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json", // Specify the content type if you're sending JSON data
+          "x-api-key": apiKey, // Include the API key in the request header
+        },
       });
       const token = await response.text();
 
@@ -70,6 +90,7 @@ export default function InteractiveAvatar() {
 
   async function startSession() {
     setIsLoadingSession(true);
+    setDisplayRubricAnalytics(false);
     const newToken = await fetchAccessToken();
 
     avatar.current = new StreamingAvatar({
@@ -112,35 +133,39 @@ export default function InteractiveAvatar() {
         useSilencePrompt: false
       });
       setChatMode("voice_mode");
+      console.log("i did run")
     } catch (error) {
       console.error("Error starting avatar session:", error);
     } finally {
       setIsLoadingSession(false);
     }
   }
+  
   async function handleSpeak(userInputValue?:string) {
     setIsLoadingRepeat(true);
-  
-    if (!avatar.current) {
-      setDebug("Avatar API not initialized");
-      return;
-    }
+    setDisplayRubricAnalytics(false);
+    // if (!avatar.current) {
+    //   setDebug("Avatar API not initialized");
+    //   return;
+    // }
   
     try {
       // Fetch LLM response
       setFeedbackText('');
       setDisplayText('');
-      const response = await fetch("/api/llm-response", {
+      const response = await fetch("/api/llmResponse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userInput: userInputValue|| userInput, chatHistory }),
+        body: JSON.stringify({ userInput: userInputValue|| userInput, chatHistory , groupName}),
       });
       const data = await response.json();
       setChatHistory(data.chatHistory); 
       setDisplayText(data.filteredResponseContent);
       setFeedbackText(data.feedbackSummary);
+      setRubricSummary(data.rubricSummary);
       setSuggestionOptions(data.suggestions);
-      setOneOption(data.oneOption);
+      setRubricJson(data.rubricMetrics);
+      setRubricAllRatings(data.rubricScore);
 
       if(questionCount!==null && questionCount>1){
           const updateFeedbackJson=mergeJsons(feedbackJson,data.feedbackMetrics)
@@ -156,11 +181,11 @@ export default function InteractiveAvatar() {
       })
 
       // Make the avatar speak the response
-      await avatar.current.speak({
-        text: data.filteredResponseContent,
-        taskType: TaskType.REPEAT,
-        taskMode: TaskMode.SYNC,
-      });
+      // await avatar.current.speak({
+      //   text: data.filteredResponseContent,
+      //   taskType: TaskType.REPEAT,
+      //   taskMode: TaskMode.SYNC,
+      // });
 
       setUserInput('')
       setSelectedOptions([''])
@@ -171,6 +196,72 @@ export default function InteractiveAvatar() {
       setIsLoadingRepeat(false);
     }
   }
+  const toggleSpeechToText = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setDebug('Speech Recognition API not supported in this browser');
+      return;
+    }
+
+    if (!isRecording) {
+      // Start recording
+      const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.continuous = true;
+
+      transcriptRef.current = ''; // Reset transcript
+
+      recognition.onstart = () => {
+        console.log('Speech recognition started');
+      };
+
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        const newTranscript = Array.from(event.results)
+          .map((result) => result[0].transcript)
+          .join(' ');
+        transcriptRef.current = newTranscript;
+        console.log('Transcript updated:', transcriptRef.current);
+      };
+
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+        console.error('Speech recognition error:', event.error);
+        setDebug(`Speech recognition error: ${event.error}`);
+        setIsRecording(false);
+        recognitionRef.current = null;
+      };
+
+      recognition.onend = () => {
+        console.log('Speech recognition ended, current transcript:', transcriptRef.current);
+        if (isRecording) {
+          // Restart if ended unexpectedly
+          console.log('Restarting recognition...');
+          recognition.start();
+        } else {
+          // Stopped manually, update userInput and trigger speak
+          setUserInput(transcriptRef.current || '');
+          if (transcriptRef.current) {
+            handleSpeak(transcriptRef.current);
+          } else {
+            setDebug('No speech detected');
+          }
+          recognitionRef.current = null;
+        }
+      };
+
+      recognition.start();
+      setIsRecording(true);
+      setDebug('');
+    } else {
+      // Stop recording
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+        setIsRecording(false);
+      }
+    }
+  };
   
   async function handleInterrupt() {
     if (!avatar.current) {
@@ -199,10 +290,7 @@ export default function InteractiveAvatar() {
         // If only obj2 has a number for that key, add it
         mergedObj[key as keyof T] = value2;
       }
-    });  
-
-    console.log(mergedObj,"what am ii")
-  
+    });    
     return mergedObj;
   }
   
@@ -210,7 +298,14 @@ export default function InteractiveAvatar() {
   async function endSession() {
     await avatar.current?.stopAvatar();
     setStream(undefined);
+    displayRubrics();
   }
+
+  const displayRubrics= ()=> {
+    setDisplayRubricAnalytics(true);
+    console.log(displayRubricAnalytics,"im ended")
+  }
+
 
   const handleChangeChatMode = useMemoizedFn(async (v) => {
     if (v === chatMode) {
@@ -270,7 +365,7 @@ export default function InteractiveAvatar() {
                 <track kind="captions" />
               </video>
               <div className="flex flex-row gap-2 absolute top-3">
-                <Button
+              <Button
                   className="bg-gradient-to-tr from-indigo-500 to-indigo-300  text-white rounded-lg"
                   size="md"
                   variant="shadow"
@@ -299,7 +394,7 @@ export default function InteractiveAvatar() {
                   value={avatarId}
                   onChange={(e) => setAvatarId(e.target.value)}
                 /> */}
-                <Select
+                {/* <Select
                   placeholder="Select Avatar"
                   size="md"
                   onChange={(e) => {
@@ -314,7 +409,7 @@ export default function InteractiveAvatar() {
                       {avatar.name}
                     </SelectItem>
                   ))}
-                </Select>
+                </Select> */}
                 {/* <Select
                   label="Select language"
                   placeholder="Select language"
@@ -330,6 +425,30 @@ export default function InteractiveAvatar() {
                     </SelectItem>
                   ))}
                 </Select> */}
+                 <Input
+                  placeholder="Enter HeyGen API Key"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  />
+                 <Select
+                  placeholder="Select Group Name"
+                  size="md"
+                  value={groupName}
+                  onChange={(e) => {
+                    setGroupName(e.target.value);
+                  }}
+                >
+                  {GROUPNAMES.map((group) => (
+                    <SelectItem
+                      key={group.groupName}
+                      textValue={group.groupName}
+                    >
+                      {group.groupName}
+                    </SelectItem>
+                  ))}
+
+                </Select>
+                
               </div>
               <Button
                 className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-full text-white"
@@ -348,8 +467,9 @@ export default function InteractiveAvatar() {
 
         <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
           <div>
-          {/* {oneOption? */}
-         { !hideSuggestions && suggestionOptions?.map((option, index) => (
+            <div style={{backgroundColor:'rgba(255,255,255,0.1)',textAlign:'center',padding:'1rem',minWidth:'500px',borderRadius:'10px'}}> {isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput} 
+            </div>
+         {/* { !hideSuggestions && suggestionOptions?.map((option, index) => (
             <Button
               key={index}
               onClick={() => 
@@ -364,7 +484,7 @@ export default function InteractiveAvatar() {
             >
               {option}
             </Button>
-          ))}
+          ))} */}
           {/* {
           suggestionOptions.map((option, index) => (
             <Button
@@ -393,7 +513,14 @@ export default function InteractiveAvatar() {
         </div>
         <div className="flex flex-col items-center" style={{flexDirection:'row',justifyContent:'center',marginBottom:'2rem'}}>
           {/* Input field to capture user input */}
-          <Input
+          <Button
+          onClick={toggleSpeechToText}
+          disabled={isLoadingRepeat}
+          style={{ background: 'rgba(255,255,255,0.1)', margin: '0.5rem' ,borderRadius:'100px'}}
+        >
+          Talk {isRecording ? <MicrophoneSlash size={20} /> : <Microphone size={20} />}
+        </Button>
+          {/* <Input
             placeholder="Type your message..."
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
@@ -401,15 +528,13 @@ export default function InteractiveAvatar() {
             style={{ backgroundColor:'rgba(255,255,255,0.1)'}}
 
             />
-          {/* Button to send userInput to the LLM */}
-
            <Button
            onClick={()=>handleSpeak()}
            isDisabled={!userInput.trim() || isLoadingRepeat}
            style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
             >
            {isLoadingRepeat ? <Spinner /> :  "Send"}
-          </Button>
+          </Button> */}
         {isLoadingSession &&
           <Button
             onClick={handleInterrupt}
@@ -420,9 +545,9 @@ export default function InteractiveAvatar() {
           }
         </div>
         {feedbackJson && questionCount>1 && <FeedbackPieChart data={feedbackJson} overallScore={allRatings} />}
-
-        {/* <CardFooter className="flex flex-col gap-3 relative">
-          <Tabs
+      {rubricJson && displayRubricAnalytics && <RubricPiechart data={rubricJson} overallScore={rubricAllRatings} summary={rubricSummary} displayRubricAnalytics={displayRubricAnalytics}></RubricPiechart>}
+       {/* <CardFooter className="flex flex-col gap-3 relative">
+           <Tabs
             aria-label="Options"
             selectedKey={chatMode}
             onSelectionChange={(v) => {
@@ -431,8 +556,8 @@ export default function InteractiveAvatar() {
           >
             <Tab key="text_mode" title="Text mode" />
             <Tab key="voice_mode" title="Voice mode" />
-          </Tabs>
-          {chatMode === "text_mode" ? (
+          </Tabs> */}
+          {/* {chatMode === "text_mode" ? (
             <div className="w-full flex relative">
               <InteractiveAvatarTextInput
                 disabled={!stream}
@@ -447,7 +572,7 @@ export default function InteractiveAvatar() {
                 <Chip className="absolute right-16 top-3">Listening</Chip>
               )}
             </div>
-          ) : (
+          ) : ( 
             <div className="w-full text-center">
               <Button
                 isDisabled={!isUserTalking}
@@ -458,14 +583,14 @@ export default function InteractiveAvatar() {
                 {isUserTalking ? "Listening" : "Voice chat"}
               </Button>
             </div>
-          )}
-        </CardFooter> */}
+           )} 
+        </CardFooter>>*/}
       </Card>
-      {/* <p className="font-mono text-right">
+       {/* <p className="font-mono text-right">
         <span className="font-bold">Console:</span>
         <br />
         {debug}
-      </p> */}
+      </p>  */}
     </div>
   );
 }

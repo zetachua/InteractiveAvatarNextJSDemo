@@ -35,3 +35,40 @@ export interface FeedbackData {
   overallScore: number;
   feedbackSummary: string;
 }
+
+export interface FeedbackMetricData {
+  clarity: number;
+  relevance: number;
+  depth: number;
+  neutrality: number;
+  engagement: number;
+}
+
+export interface RubricMetricData {
+  marketResearchQuality: number;
+  painPointValidation: number;
+  marketOpportunity: number;
+  competitiveLandscapeAwareness: number;
+  customerAdoptionInsights: number;
+}
+
+export interface RubricData {
+  marketResearchQuality: number;
+  painPointValidation: number;
+  marketOpportunity: number;
+  competitiveLandscapeAwareness: number;
+  customerAdoptionInsights: number;
+  overallScore: number;
+  feedbackSummary: string;
+}
+
+export interface StartupGroups {
+  group_name: string;
+  startup_idea: string;
+  industries: string;
+  target_audience: string;
+  interview_learnings: string;
+  challenges: string;
+  competitive_edge: string;
+  competition: string;
+}
