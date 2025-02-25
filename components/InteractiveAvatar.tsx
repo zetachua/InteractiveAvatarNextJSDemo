@@ -144,10 +144,10 @@ export default function InteractiveAvatar() {
   async function handleSpeak(userInputValue?:string) {
     setIsLoadingRepeat(true);
     setDisplayRubricAnalytics(false);
-    // if (!avatar.current) {
-    //   setDebug("Avatar API not initialized");
-    //   return;
-    // }
+    if (!avatar.current) {
+      setDebug("Avatar API not initialized");
+      return;
+    }
   
     try {
       // Fetch LLM response
@@ -181,11 +181,11 @@ export default function InteractiveAvatar() {
       })
 
       // Make the avatar speak the response
-      // await avatar.current.speak({
-      //   text: data.filteredResponseContent,
-      //   taskType: TaskType.REPEAT,
-      //   taskMode: TaskMode.SYNC,
-      // });
+      await avatar.current.speak({
+        text: data.filteredResponseContent,
+        taskType: TaskType.REPEAT,
+        taskMode: TaskMode.SYNC,
+      });
 
       setUserInput('')
       setSelectedOptions([''])
