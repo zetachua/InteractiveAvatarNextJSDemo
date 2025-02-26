@@ -1,4 +1,5 @@
 import { CaseStudy, StartupGroups, StoryBook } from '@/components/KnowledgeClasses';
+import { start } from 'repl';
 
 // Helper function to fetch JSON data
 const fetchJsonData = async (fileName: string) => {
@@ -40,43 +41,25 @@ export const nusKnowledgeJsonExtract = async (userInput: string) => {
   return { uniqueIndustries, selectedCase };
 };
 
-export const startupKnowledgeJsonExtract = async (groupName: string) => {
+export const startupKnowledgeJsonExtract = async (startupIdea:string,hypothesis:string,targetAudience:string) => {
   let selectedCase: StartupGroups | undefined;
-  // Fetch knowledge base
-  const data = await fetchJsonData('startupIdeaKnowledge.json');
-  if (!data) return { selectedCase: undefined };
 
-  const knowledgeBase: StartupGroups[] = data.groups;
-
-  selectedCase = knowledgeBase.find((group) => group.group_name === groupName);
-
-  if (!selectedCase) {
+  if (!startupIdea || !hypothesis || !targetAudience) {
     selectedCase = {
-      group_name: 'Money_Savey',
       startup_idea: "A platform offering personalized financial guidance for budgeting, saving, and investing (e.g., ETFs, stocks), with adjustable risk portfolios and a visual timeline to track goals, adjusting for unexpected expenses.",
-      industries: 'Banking, Insurance',
-      target_audience: 'Young Singaporeans; JC students, NSmen, undergrads, fresh graduates, financial advisors',
-      interview_learnings: 'fresh_graduates: Earn SGD 3,000–6,000, aim to save 30% for goals like master’s/PhD; find current tools helpful for growth but not planning, lack urgency unclear. Undergrads/Graduates: Three types (job-ready, eager-to-learn, financially literate); want long/short-term goals (e.g., home by 30, trips), find tools boring/complex, prefer one-stop shop, dislike advisors/time-intensive processes, aim to grow savings but lack confidence. Financial_advisors: Note young people struggle with expenditure awareness; viability of integrated solutions uncertain due to payment reluctance.',
-      challenges: 'Personalization, Monetization',
-      competitive_edge: 'User-friendly design, Simple tools, Practical design',
-      competition: 'Brokerage apps, ChatGPT',
+      hypothesis:"Many young people struggle with managing their finances due to a lack of understanding, complexity in existing solutions, and a reluctance to seek financial advice. While they have long-term goals like homeownership, they lack detailed plans, prefer simple, one-stop financial tools, and are hesitant to engage with financial advisors due to concerns about cost and trust.",
+      target_audience: 'a fresh graduate',
+    };
+  }
+  else{
+    selectedCase = {
+      startup_idea:startupIdea,
+      target_audience: targetAudience,
+      hypothesis:hypothesis,
     };
   }
 
   return { selectedCase };
-};
-
-export const startupNameJsonExtract = async (): Promise<string[]> => {
-  // Fetch knowledge base
-  const data = await fetchJsonData('startupIdeaKnowledge.json');
-  if (!data) return [];
-
-  const knowledgeBase: StartupGroups[] = data.groups;
-
-  // Extract group names into an array of strings
-  const GROUPNAMES = knowledgeBase.map((group) => group.group_name);
-
-  return GROUPNAMES;
 };
 
 export const aiChildrenKnowledgeJsonExtract = async (userInput: string) => {

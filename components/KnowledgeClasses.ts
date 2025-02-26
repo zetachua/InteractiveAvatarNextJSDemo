@@ -45,30 +45,28 @@ export interface FeedbackMetricData {
 }
 
 export interface RubricMetricData {
-  marketResearchQuality: number;
   painPointValidation: number;
   marketOpportunity: number;
-  competitiveLandscapeAwareness: number;
   customerAdoptionInsights: number;
+}
+export interface RubricSpecificData {
+  painPointValidation: string;
+  marketOpportunity: string;
+  customerAdoptionInsights: string;
 }
 
 export interface RubricData {
-  marketResearchQuality: number;
   painPointValidation: number;
   marketOpportunity: number;
-  competitiveLandscapeAwareness: number;
   customerAdoptionInsights: number;
   overallScore: number;
   feedbackSummary: string;
+  suggestedQuestions:string[];
+  specificFeedback: RubricSpecificData;
 }
 
 export interface StartupGroups {
-  group_name: string;
   startup_idea: string;
-  industries: string;
   target_audience: string;
-  interview_learnings: string;
-  challenges: string;
-  competitive_edge: string;
-  competition: string;
+  hypothesis:string;
 }

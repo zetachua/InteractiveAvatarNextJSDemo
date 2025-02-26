@@ -9,11 +9,11 @@ export const suggestionsOptionsFilter = (responseContent: string,rating:number) 
 
   // Match the "Here are some suggestions: ..." phrase and extract everything following it
   suggestionsMatch = filteredResponseContent.match(/<suggestions>\s*([\s\S]*?)\s*<\/suggestions>/);
-  console.log(suggestionsMatch, "suggestionsMatch");
+  // console.log(suggestionsMatch, "suggestionsMatch");
 
   if (suggestionsMatch) {
     let suggestionsContent = suggestionsMatch[1].trim();
-    console.log(suggestionsContent, "suggestionsContent");
+    // console.log(suggestionsContent, "suggestionsContent");
 
     // Split the suggestions, clean up unwanted symbols, and filter to ensure only words
     suggestions = suggestionsContent
@@ -22,7 +22,6 @@ export const suggestionsOptionsFilter = (responseContent: string,rating:number) 
       .map(option => option.replace(/[^\w\s]/g, '')) // Remove any non-word characters (e.g. **, $, etc.)
       .filter(option => option.length > 0); // Filter out empty strings
     
-    console.log(suggestions, "handleSuggestionClicks");
 
     // Remove the suggestions from the original content
     filteredResponseContent = filteredResponseContent.replace(suggestionsMatch[0], '').trim();
@@ -64,6 +63,7 @@ export const feedbackFilter = (responseContent: string) => {
 
 
 export const rubricFilter = (responseContent: string) => {
+  console.log(responseContent,"original responseContent")
     try {
       let rubricJson = responseContent
         .replace(/<think>[\s\S]*?<\/think>/g, '')  // Remove <think> tags
@@ -80,13 +80,14 @@ export const rubricFilter = (responseContent: string) => {
         rubricScore: rubricDataJson.overallScore,
         rubricSummary: rubricDataJson.feedbackSummary,
         rubricMetrics: {
-          marketResearchQuality: rubricDataJson.marketResearchQuality,
           painPointValidation: rubricDataJson.painPointValidation,
           marketOpportunity: rubricDataJson.marketOpportunity,
-          competitiveLandscapeAwareness: rubricDataJson.competitiveLandscapeAwareness,
           customerAdoptionInsights: rubricDataJson.customerAdoptionInsights,
-        }
+        },
+        rubricSpecificFeedback: rubricDataJson.specificFeedback,
+        rubricSuggestionQuestions: rubricDataJson.suggestedQuestions,
       };
+
     } catch (error) {
       console.error("Error parsing JSON:", error);
       return null;

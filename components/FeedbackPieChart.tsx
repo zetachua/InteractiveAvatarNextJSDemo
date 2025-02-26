@@ -32,7 +32,6 @@ const FeedbackPieChart: React.FC<FeedbackPieChartProps> = ({ data, overallScore 
   const roundedOverallScore = overallScore !== undefined 
     ? Math.ceil((overallScore + Number.EPSILON) * 10) / 10 
     : 0;  
-  console.log(roundedOverallScore,"overallScore")
 
   return (
     <div style={{ position: 'absolute', bottom: '-6rem', right: '-8rem',transform: 'scale(0.6)' }}>

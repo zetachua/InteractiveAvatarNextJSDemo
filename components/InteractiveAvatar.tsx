@@ -1,5 +1,4 @@
 import type { StartAvatarResponse } from "@heygen/streaming-avatar";
-import { startupNameJsonExtract } from "@/pages/api/promptExtractFunctions";
 import StreamingAvatar, {
   AvatarQuality,
   StreamingEvents, TaskMode, TaskType, VoiceEmotion,
@@ -25,7 +24,7 @@ import { useMemoizedFn, usePrevious } from "ahooks";
 // import {AVATARS, STT_LANGUAGE_LIST} from "@/app/lib/constants";
 import TypewriterText from "./Typewriter";
 import FeedbackPieChart from "./FeedbackPieChart";
-import { FeedbackData,RubricData } from "./KnowledgeClasses";
+import { FeedbackData,RubricData, RubricSpecificData } from "./KnowledgeClasses";
 import { Square, MicrophoneSlash,Microphone} from "@phosphor-icons/react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 import RubricPiechart from "./RubricPieChart";
@@ -51,9 +50,18 @@ export default function InteractiveAvatar() {
   const [chatMode, setChatMode] = useState("text_mode");
   const [isUserTalking, setIsUserTalking] = useState(false);
   const [chatHistory,setChatHistory]=useState('');
-  const [groupName,setGroupName]=useState('Money_Savey');
+  const [startupIdea,setStartupIdea]=useState('');
+  const [hypothesis,setHypothesis]=useState('');
+  const [targetAudience,setTargetAudience]=useState('');
   const [feedbackText,setFeedbackText]=useState('');
   const [rubricSummary,setRubricSummary]=useState('');
+  const [rubricSpecificFeedback,setRubricSpecificFeedback]=useState<RubricSpecificData>(
+    {
+      painPointValidation: '',
+      marketOpportunity: '',
+      customerAdoptionInsights: ''
+    });
+  const [rubricSuggestedQns,setRubricSuggestedQns]= useState<string[]>([]);
   const [displayRubricAnalytics,setDisplayRubricAnalytics]=useState(false);
   const [suggestionOptions, setSuggestionOptions] = useState<string[]>([]);
   const [hideSuggestions, setHideSuggestions] = useState(false); 
@@ -146,7 +154,7 @@ export default function InteractiveAvatar() {
     setDisplayRubricAnalytics(false);
     if (!avatar.current) {
       setDebug("Avatar API not initialized");
-      return;
+    return;
     }
   
     try {
@@ -156,7 +164,7 @@ export default function InteractiveAvatar() {
       const response = await fetch("/api/llmResponse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userInput: userInputValue|| userInput, chatHistory , groupName}),
+        body: JSON.stringify({ userInput: userInputValue|| userInput, chatHistory,startupIdea,hypothesis,targetAudience}),
       });
       const data = await response.json();
       setChatHistory(data.chatHistory); 
@@ -166,7 +174,9 @@ export default function InteractiveAvatar() {
       setSuggestionOptions(data.suggestions);
       setRubricJson(data.rubricMetrics);
       setRubricAllRatings(data.rubricScore);
-
+      setRubricSpecificFeedback(data.rubricSpecificFeedback);
+      setRubricSuggestedQns(data.rubricSuggestedQuestions);
+      
       if(questionCount!==null && questionCount>1){
           const updateFeedbackJson=mergeJsons(feedbackJson,data.feedbackMetrics)
           setFeedbackJson(updateFeedbackJson);
@@ -180,7 +190,7 @@ export default function InteractiveAvatar() {
         return prevState+1;
       })
 
-      // Make the avatar speak the response
+      // // Make the avatar speak the response
       await avatar.current.speak({
         text: data.filteredResponseContent,
         taskType: TaskType.REPEAT,
@@ -376,8 +386,8 @@ export default function InteractiveAvatar() {
               </div>
             </div>
           ) : !isLoadingSession ? (
-            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center">
-              <div className="flex flex-col gap-2 w-full">
+            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center"style={{backgroundColor:'rgba(255,255,255,0.2)',borderRadius:'50px',padding:'2rem',maxHeight:'55%'}}>
+              <div className="flex flex-col gap-2 w-full" >
                 {/* <p className="text-sm font-medium leading-none">
                   Custom Knowledge ID (optional)
                 </p>
@@ -426,11 +436,27 @@ export default function InteractiveAvatar() {
                   ))}
                 </Select> */}
                  <Input
-                  placeholder="Enter HeyGen API Key"
+                  placeholder="Paste HeyGen API Key"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   />
-                 <Select
+                  <p></p>
+                  <Input
+                  placeholder="Startup Idea Description"
+                  value={startupIdea}
+                  onChange={(e) => setStartupIdea(e.target.value)}
+                  />
+                   <Input
+                  placeholder="Target Audience"
+                  value={targetAudience}
+                  onChange={(e) => setTargetAudience(e.target.value)}
+                  />
+                   <Input
+                  placeholder="Hypothesis to Confirm"
+                  value={hypothesis}
+                  onChange={(e) => setHypothesis(e.target.value)}
+                  />
+                 {/* <Select
                   placeholder="Select Group Name"
                   size="md"
                   value={groupName}
@@ -447,7 +473,7 @@ export default function InteractiveAvatar() {
                     </SelectItem>
                   ))}
 
-                </Select>
+                </Select> */}
                 
               </div>
               <Button
@@ -463,11 +489,13 @@ export default function InteractiveAvatar() {
             <Spinner color="default" size="lg" />
           )}
         </CardBody>
+
         <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>
 
         <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
-          <div style={{display:'flex',justifyContent:'center',alignItems:'center'}}>
-            <div style={{backgroundColor:'rgba(255,255,255,0.1)',textAlign:'center',padding:'1rem',width:'300px',borderRadius:'10px',height:'auto',position:'absolute',transform:'-50%,-50%',bottom:'12%',left:'39%'}}> {isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput} 
+          <div style={{display:'flex',width:'100%',justifyContent:'center',alignItems:'center'}}>
+            <div style={{backgroundColor:'rgba(255,255,255,0.1)',textAlign:'center',padding:'1rem',maxWidth:'60%',minWidth:'30%',borderRadius:'10px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',bottom:'9%',left:'50%'}}> 
+              {isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput} 
             </div>
          {/* { !hideSuggestions && suggestionOptions?.map((option, index) => (
             <Button
@@ -515,7 +543,7 @@ export default function InteractiveAvatar() {
           {/* Input field to capture user input */}
           <Button
           onClick={toggleSpeechToText}
-          disabled={isLoadingRepeat}
+          disabled={!isLoadingSession}
           style={{ background: 'rgba(255,255,255,0.1)', margin: '0.5rem' ,borderRadius:'100px'}}
         >
           Talk {isRecording ? <MicrophoneSlash size={20} /> : <Microphone size={20} />}
@@ -545,7 +573,9 @@ export default function InteractiveAvatar() {
           }
         </div>
         {feedbackJson && !displayRubricAnalytics && questionCount>1 && <FeedbackPieChart data={feedbackJson} overallScore={allRatings} />}
-      {rubricJson && displayRubricAnalytics && <RubricPiechart data={rubricJson} overallScore={rubricAllRatings} summary={rubricSummary} displayRubricAnalytics={displayRubricAnalytics}></RubricPiechart>}
+        { rubricJson && displayRubricAnalytics && 
+            <RubricPiechart data={rubricJson} overallScore={rubricAllRatings} summary={rubricSummary} specificFeedback={rubricSpecificFeedback} suggestedQuestions={rubricSuggestedQns}></RubricPiechart>
+        }
        {/* <CardFooter className="flex flex-col gap-3 relative">
            <Tabs
             aria-label="Options"

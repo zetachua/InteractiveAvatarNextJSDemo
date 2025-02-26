@@ -44,8 +44,8 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({ text, feedbackText,ques
           if (intervalRef.current) clearInterval(intervalRef.current);
           startFeedbackTyping();
         }
-      }, 200);
-    }, 2000);
+      }, 350);
+    }, 1500);
 
     return () => {
       clearTimeout(typingDelay); 
@@ -73,7 +73,6 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({ text, feedbackText,ques
     }, 200);
   };
 
-  console.log(questionCount,"questionCount")
   // Auto-scroll to bottom
   useEffect(() => {
     if (containerRef.current) {
@@ -86,7 +85,7 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({ text, feedbackText,ques
       ref={containerRef}
       className="text-white text-lg font-mono"
       style={{
-        width: '520px',
+        width: '30%',
         maxHeight: '180px',
         position: 'absolute',
         bottom: '10px',
