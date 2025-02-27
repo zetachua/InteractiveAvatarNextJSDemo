@@ -18,6 +18,7 @@ import {
 } from "@nextui-org/react";
 import { useEffect, useRef, useState } from "react";
 import { useMemoizedFn, usePrevious } from "ahooks";
+import './WaveAnimation.css';
 
 // import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
@@ -442,19 +443,21 @@ export default function InteractiveAvatar() {
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   />
-                  <p></p>
-                  <Input
-                  placeholder="Startup Idea Description"
+                  <p className="text-sm font-medium leading-none" style={{color:'#fafafa',marginTop:'1rem'}}>
+                  
+                  </p>                  
+                <Input
+                  placeholder="Startup Idea Description (Default: Money_Savey)"
                   value={startupIdea}
                   onChange={(e) => setStartupIdea(e.target.value)}
                   />
                    <Input
-                  placeholder="Target Audience"
+                  placeholder="Target Audience (Default: Fresh Grad)"
                   value={targetAudience}
                   onChange={(e) => setTargetAudience(e.target.value)}
                   />
                    <Input
-                  placeholder="Hypothesis to Confirm"
+                  placeholder="Hypothesis to Confirm (Default: Money_Savey)"
                   value={hypothesis}
                   onChange={(e) => setHypothesis(e.target.value)}
                   />
@@ -495,7 +498,7 @@ export default function InteractiveAvatar() {
         <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>
 
         <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
-          <div style={{display:'flex',width:'100%',justifyContent:'center',alignItems:'center'}}>
+          <div style={{display:!displayRubricAnalytics?'flex':'none',width:'100%',justifyContent:'center',alignItems:'center'}}>
             <div style={{backgroundColor:'rgba(255,255,255,0.1)',textAlign:'center',padding:'1rem',maxWidth:'60%',minWidth:'30%',borderRadius:'10px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',bottom:'9%',left:'50%'}}> 
               {isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput} 
             </div>
@@ -541,14 +544,13 @@ export default function InteractiveAvatar() {
         } */}
         </div>
         </div>
-        <div className="flex flex-col items-center" style={{flexDirection:'row',justifyContent:'center',marginBottom:'2rem'}}>
+        <div className="flex flex-col items-center" style={{flexDirection:'row',justifyContent:'center',marginBottom:'2rem',display:!displayRubricAnalytics?'flex':'none',}}>
           {/* Input field to capture user input */}
           <Button
-          onClick={toggleSpeechToText}
-          disabled={isLoadingSession}
-          style={{ background: 'rgba(255,255,255,0.1)', margin: '0.5rem' ,borderRadius:'100px'}}
-        >
-          Talk {isRecording ? <MicrophoneSlash size={20} /> : <Microphone size={20} />}
+            onClick={toggleSpeechToText}
+            style={{ background:'rgba(255,255,255,0.1)',margin: '0.5rem' ,borderRadius:'100px'}}
+          >
+          {isRecording ? <div className={`wave`} />: <>Talk <Microphone size={14} /></>}
         </Button>
           {/* <Input
             placeholder="Type your message..."
@@ -565,14 +567,12 @@ export default function InteractiveAvatar() {
             >
            {isLoadingRepeat ? <Spinner /> :  "Send"}
           </Button> */}
-        {isLoadingSession &&
           <Button
             onClick={handleInterrupt}
-            style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
+            style={{ margin: '0.5rem',opacity:displayRubricAnalytics?'50%':'100%',background:'rgba(255,255,255,0.1)'}}
           >
             <Square weight="fill"/>
           </Button> 
-          }
         </div>
         {feedbackJson && !displayRubricAnalytics && questionCount>0 && <FeedbackPieChart data={feedbackJson} overallScore={allRatings} />}
         { rubricJson && displayRubricAnalytics && 

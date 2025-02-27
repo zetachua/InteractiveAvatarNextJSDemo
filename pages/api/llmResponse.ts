@@ -34,7 +34,7 @@ const llmResponse = async (req: NextApiRequest, res: NextApiResponse) => {
       // Fetch feedback rating and check for null
       let feedbackScore, feedbackSummary, feedbackMetrics;
       const feedbackResult = await fetchFeedback(userInput, chatHistory, selectedJsonData, "feedback", filteredResponseContent);
-      if (feedbackResult) {
+      if (feedbackResult?.feedbackScore!=undefined && feedbackResult) {
         feedbackScore = feedbackResult.feedbackScore;
         feedbackSummary = feedbackResult.feedbackSummary;
         feedbackMetrics = feedbackResult.feedbackMetrics;
@@ -45,7 +45,7 @@ const llmResponse = async (req: NextApiRequest, res: NextApiResponse) => {
       // Fetch rubric rating and check for null
       let rubricScore, rubricSummary, rubricMetrics,rubricSuggestedQuestions,rubricSpecificFeedback;
       const rubricResult = await fetchRubric(userInput, chatHistory, selectedJsonData, "rubric", "");
-      if (rubricResult?.rubricSpecificFeedback && rubricResult) {
+      if (rubricResult?.rubricSpecificFeedback!=undefined && rubricResult) {
         rubricScore = rubricResult.rubricScore;
         rubricSummary = rubricResult.rubricSummary;
         rubricMetrics = rubricResult.rubricMetrics;
@@ -129,12 +129,10 @@ const fetchFeedback = async (userInput: string, chatHistory: any[], selectedJson
     let responseContent = rubricRatingCompletion.choices[0].message.content;
 
     if (!responseContent) {
-      throw new Error("CHECK1 Empty feedback response");
+      throw new Error("Empty feedback response");
     }
 
-    console.log(responseContent, "CHECK2 responseContent");
     const filteredResponse = feedbackFilter(responseContent);
-    console.log(filteredResponse, "CHECK3 filteredResponse");
 
     if (!filteredResponse) {
       console.log("Invalid feedback JSON format, returning null");
@@ -153,7 +151,7 @@ const fetchRubric = async (userInput: string, chatHistory: any[], selectedJsonDa
     const rubricRatingCompletion = await getGroqChatCompletion(userInput, chatHistory, promptType, '', selectedJsonData);
     let responseContent = rubricRatingCompletion.choices[0].message.content;
     if (!responseContent) {
-      throw new Error("CHECK1 Empty rubric response");
+      throw new Error("Empty rubric response");
     }
 
     console.log(responseContent, "CHECK2 responseContent");

@@ -100,6 +100,7 @@ export const rubricFilter = (responseContent: string) => {
       };
     }
 
+    if (rubricDataJson.overallScore==undefined) return;
     return {
       rubricScore: rubricDataJson.overallScore,
       rubricSummary: rubricDataJson.feedbackSummary,

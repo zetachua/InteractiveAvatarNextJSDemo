@@ -1,0 +1,25 @@
+/* waveAnimation.css */
+
+@keyframes wave {
+  0% {
+    transform: scaleX(1);
+  }
+  50% {
+    transform: scaleX(1.1);
+  }
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+.wave {
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(-90deg, rgba(255, 0, 0, 0.8), rgba(0, 255, 255, 0.8));
+  border-radius: 50%;
+  animation: wave 1s infinite ease-in-out;
+}
+
+.waveStopped {
+  animation: none;
+}
