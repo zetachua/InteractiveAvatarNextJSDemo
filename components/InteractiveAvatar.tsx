@@ -177,7 +177,7 @@ export default function InteractiveAvatar() {
       setRubricSpecificFeedback(data.rubricSpecificFeedback);
       setRubricSuggestedQns(data.rubricSuggestedQuestions);
       
-      if(questionCount!==null && questionCount>1){
+      if(questionCount!==null && questionCount>0){
           const updateFeedbackJson=mergeJsons(feedbackJson,data.feedbackMetrics)
           setFeedbackJson(updateFeedbackJson);
           setAllRatings((prevState) => {

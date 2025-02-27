@@ -68,6 +68,8 @@ export const marketRelevancePrompt = (selectedCase: any, chatHistory: any) => `
       }
     }
 
+    If no startup idea or interview data is provided, return a JSON object with scores of 1, a feedback summary noting the lack of data, and generic suggested questions to start validation.
+
 `
 
 //  {
