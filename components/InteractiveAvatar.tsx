@@ -572,7 +572,7 @@ export default function InteractiveAvatar() {
           </Button> 
           }
         </div>
-        {feedbackJson && !displayRubricAnalytics && questionCount>1 && <FeedbackPieChart data={feedbackJson} overallScore={allRatings} />}
+        {feedbackJson && !displayRubricAnalytics && questionCount>0 && <FeedbackPieChart data={feedbackJson} overallScore={allRatings} />}
         { rubricJson && displayRubricAnalytics && 
             <RubricPiechart data={rubricJson} overallScore={rubricAllRatings} summary={rubricSummary} specificFeedback={rubricSpecificFeedback} suggestedQuestions={rubricSuggestedQns}></RubricPiechart>
         }
