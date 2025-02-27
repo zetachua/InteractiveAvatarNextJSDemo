@@ -495,7 +495,7 @@ export default function InteractiveAvatar() {
           )}
         </CardBody>
 
-        <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>
+        {!displayRubricAnalytics && <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>}
 
         <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
           <div style={{display:!displayRubricAnalytics?'flex':'none',width:'100%',justifyContent:'center',alignItems:'center'}}>
