@@ -168,17 +168,17 @@ export default function InteractiveAvatar() {
         body: JSON.stringify({ userInput: userInputValue|| userInput, chatHistory,startupIdea,hypothesis,targetAudience}),
       });
       const data = await response.json();
-      setChatHistory(data.chatHistory); 
-      setDisplayText(data.filteredResponseContent);
-      setFeedbackText(data.feedbackSummary);
-      setRubricSummary(data.rubricSummary);
-      setSuggestionOptions(data.suggestions);
-      setRubricJson(data.rubricMetrics);
-      setRubricAllRatings(data.rubricScore);
-      setRubricSpecificFeedback(data.rubricSpecificFeedback);
-      setRubricSuggestedQns(data.rubricSuggestedQuestions);
+      if (data.chatHistory !== undefined) setChatHistory(data.chatHistory);
+      if (data.filteredResponseContent !== undefined) setDisplayText(data.filteredResponseContent);
+      if (data.feedbackSummary !== undefined) setFeedbackText(data.feedbackSummary);
+      if (data.rubricSummary !== undefined) setRubricSummary(data.rubricSummary);
+      if (data.suggestions !== undefined) setSuggestionOptions(data.suggestions);
+      if (data.rubricMetrics !== undefined) setRubricJson(data.rubricMetrics);
+      if (data.rubricScore !== undefined) setRubricAllRatings(data.rubricScore);
+      if (data.rubricSpecificFeedback !== undefined) setRubricSpecificFeedback(data.rubricSpecificFeedback);
+      if (data.rubricSuggestedQuestions !== undefined) setRubricSuggestedQns(data.rubricSuggestedQuestions);
       
-      if(questionCount!==null && questionCount>0){
+      if(questionCount!==null && questionCount>0 && data.feedbackMetrics!==undefined && data.feedbackScore!==undefined){
           const updateFeedbackJson=mergeJsons(feedbackJson,data.feedbackMetrics)
           setFeedbackJson(updateFeedbackJson);
           setAllRatings((prevState) => {
@@ -187,9 +187,7 @@ export default function InteractiveAvatar() {
               return prevState + newRating; // Add the new rating to the previous state
           });
       }
-      setQuestionCount((prevState)=>{
-        return prevState+1;
-      })
+      setQuestionCount((prevState)=>{ return prevState+1; })
 
       // // Make the avatar speak the response
       await avatar.current.speak({
