@@ -545,7 +545,7 @@ export default function InteractiveAvatar() {
           {/* Input field to capture user input */}
           <Button
           onClick={toggleSpeechToText}
-          disabled={isLoadingSession}
+          disabled={!isLoadingSession}
           style={{ background: 'rgba(255,255,255,0.1)', margin: '0.5rem' ,borderRadius:'100px'}}
         >
           Talk {isRecording ? <MicrophoneSlash size={20} /> : <Microphone size={20} />}
