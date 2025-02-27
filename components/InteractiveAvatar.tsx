@@ -70,6 +70,7 @@ export default function InteractiveAvatar() {
   const [questionCount, setQuestionCount] = useState<number>(0);
   const [feedbackJson, setFeedbackJson] = useState<FeedbackData | null>(null);
   const [allRatings, setAllRatings] = useState<number>(0); 
+  const [totalRounds, setTotalRounds] = useState<number>(0); 
   const [rubricJson, setRubricJson] = useState<RubricData | null>(null);
   const [rubricAllRatings, setRubricAllRatings] = useState<number>(0); 
   const [isRecording, setIsRecording] = useState<boolean>(false);
@@ -177,7 +178,7 @@ export default function InteractiveAvatar() {
       if (data.rubricScore !== undefined) setRubricAllRatings(data.rubricScore);
       if (data.rubricSpecificFeedback !== undefined) setRubricSpecificFeedback(data.rubricSpecificFeedback);
       if (data.rubricSuggestedQuestions !== undefined) setRubricSuggestedQns(data.rubricSuggestedQuestions);
-      
+
       if(questionCount!==null && questionCount>0 && data.feedbackMetrics!==undefined && data.feedbackScore!==undefined){
           const updateFeedbackJson=mergeJsons(feedbackJson,data.feedbackMetrics)
           setFeedbackJson(updateFeedbackJson);
@@ -186,6 +187,7 @@ export default function InteractiveAvatar() {
               console.log(data.feedbackScore,prevState,"allRatings")
               return prevState + newRating; // Add the new rating to the previous state
           });
+          setTotalRounds((prevState)=>{ return prevState+1; });
       }
       setQuestionCount((prevState)=>{ return prevState+1; })
 
@@ -574,7 +576,7 @@ export default function InteractiveAvatar() {
         </div>
         {feedbackJson && !displayRubricAnalytics && questionCount>0 && <FeedbackPieChart data={feedbackJson} overallScore={allRatings} />}
         { rubricJson && displayRubricAnalytics && 
-            <RubricPiechart data={rubricJson} overallScore={rubricAllRatings} summary={rubricSummary} specificFeedback={rubricSpecificFeedback} suggestedQuestions={rubricSuggestedQns}></RubricPiechart>
+            <RubricPiechart data={rubricJson} overallScore={rubricAllRatings} summary={rubricSummary} specificFeedback={rubricSpecificFeedback} suggestedQuestions={rubricSuggestedQns} totalRounds={totalRounds}></RubricPiechart>
         }
        {/* <CardFooter className="flex flex-col gap-3 relative">
            <Tabs

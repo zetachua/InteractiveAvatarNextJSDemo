@@ -6,6 +6,7 @@ import { Button } from '@nextui-org/button';
 // Props for the component
 interface RubricPieChartProps {
   summary: string;
+  totalRounds:number;
   suggestedQuestions: string[];
   specificFeedback: RubricSpecificData;
   data?: RubricMetricData; // Optional data
@@ -15,11 +16,11 @@ interface RubricPieChartProps {
 const RubricPiechart: React.FC<RubricPieChartProps> = ({
   data,
   overallScore,
+  totalRounds,
   summary,
   suggestedQuestions,
   specificFeedback,
 }) => {
-  const [totalCounter, setTotalCounter] = useState(0);
 
   // Ensure data is always a valid rubricData object
   const rubricData: RubricMetricData =
@@ -136,7 +137,7 @@ const RubricPiechart: React.FC<RubricPieChartProps> = ({
             backgroundColor: '#fff',
           }}
         >
-          {roundedOverallScore}/{totalCounter}
+          {roundedOverallScore}/{totalRounds*5}
         </div>
         <PieChart width={450} height={450}>
           <Pie
