@@ -102,7 +102,7 @@ const RubricPiechart: React.FC<RubricPieChartProps> = ({ data, overallScore,summ
         </div>
         <div style={{padding:'1rem'}}> 
         <div style={{display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%'}}>
-          <div style={{background: 'rgba(255, 255, 255, 0.2)', padding: '1.5rem', position:'relative',borderRadius: '10px'}}>
+          <div style={{background: 'rgba(255, 255, 255, 0.2)', padding: '1.5rem',position:'relative',borderRadius: '10px'}}>
             <b>Pain Point Validation:</b>
             <p>{specificFeedback?.painPointValidation}</p>
             <button 
@@ -111,7 +111,6 @@ const RubricPiechart: React.FC<RubricPieChartProps> = ({ data, overallScore,summ
                 position: 'absolute', 
                 right: '1%', 
                 top: '4.2%', 
-                width:'200px',
                 padding: '0.3rem 1rem', 
                 border: 'none', 
                 background:'rgba(255,255,255,0.05)',
@@ -135,7 +134,6 @@ const RubricPiechart: React.FC<RubricPieChartProps> = ({ data, overallScore,summ
                 top: '4.2%', 
                 padding: '0.3rem 1rem', 
                 border: 'none', 
-                width:'200px',
                 background:'rgba(255,255,255,0.05)',
                 borderRadius:'50px',
                 color: '#fff', 
@@ -157,7 +155,6 @@ const RubricPiechart: React.FC<RubricPieChartProps> = ({ data, overallScore,summ
                 top: '4.2%', 
                 padding: '0.3rem 1rem', 
                 border: 'none', 
-                width:'200px',
                 background:'rgba(255,255,255,0.05)',
                 borderRadius:'50px',
                 color: '#fff', 

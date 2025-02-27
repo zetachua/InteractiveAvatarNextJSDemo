@@ -67,9 +67,6 @@ export const marketRelevancePrompt = (selectedCase: any, chatHistory: any) => `
         "customerAdoptionInsights": "Behavior like advisor reluctance and simplicity preference is clear, but unclear urgency, switching willingness, and adoption barriers show interest without commitment."
       }
     }
-
-    If no startup idea or interview data is provided, return a JSON object with scores of 1, a feedback summary noting the lack of data, and generic suggested questions to start validation.
-
 `
 
 //  {

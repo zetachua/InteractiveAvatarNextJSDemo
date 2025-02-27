@@ -61,35 +61,59 @@ export const feedbackFilter = (responseContent: string) => {
   }
 };
 
-
 export const rubricFilter = (responseContent: string) => {
-  console.log(responseContent,"original responseContent")
-    try {
-      let rubricJson = responseContent
-        .replace(/<think>[\s\S]*?<\/think>/g, '')  // Remove <think> tags
-        .replace(/```json|```/g, '')               // Remove ```json markers
-        .trim();
-        
-      let rubricJsonMatch = rubricJson.match(/\{[\s\S]*\}/);
-      rubricJson = rubricJsonMatch ? rubricJsonMatch[0].trim() : '{}';
-      console.log("Raw rubricJson:", rubricJson);
+  console.log(responseContent, "original responseContent");
   
-      const rubricDataJson: RubricData = JSON.parse(rubricJson);
-  
-      return {
-        rubricScore: rubricDataJson.overallScore,
-        rubricSummary: rubricDataJson.feedbackSummary,
-        rubricMetrics: {
-          painPointValidation: rubricDataJson.painPointValidation,
-          marketOpportunity: rubricDataJson.marketOpportunity,
-          customerAdoptionInsights: rubricDataJson.customerAdoptionInsights,
-        },
-        rubricSpecificFeedback: rubricDataJson.specificFeedback,
-        rubricSuggestionQuestions: rubricDataJson.suggestedQuestions,
-      };
+  try {
+    let rubricJson = responseContent
+      .replace(/<think>[\s\S]*?<\/think>/g, '')  // Remove <think> tags
+      .replace(/```json|```/g, '')               // Remove ```json markers
+      .trim();
+    
+    let rubricJsonMatch = rubricJson.match(/\{[\s\S]*\}/);
+    rubricJson = rubricJsonMatch ? rubricJsonMatch[0].trim() : '{}';
+    console.log("Raw rubricJson:", rubricJson);
 
+    let rubricDataJson: RubricData;
+
+    // Try to parse the JSON, or use default fallback if parsing fails
+    try {
+      rubricDataJson = JSON.parse(rubricJson);
     } catch (error) {
-      console.error("Error parsing JSON:", error);
-      return null;
+      console.error("Error parsing rubric JSON, using default values:", error);
+      // Default rubric values when no valid rubricJson is found
+      rubricDataJson = {
+        painPointValidation: 1,
+        marketOpportunity: 1,
+        customerAdoptionInsights: 1,
+        overallScore: 1,
+        suggestedQuestions: [
+          "What challenges do you face with your current solutions, and how important is it for you to find a better option?",
+          "What would convince you to try a new product or service to address this issue, and how much would you be willing to invest in it?"
+        ],
+        feedbackSummary: "No startup idea or interview data was provided to evaluate. As a result, all scores are set to a baseline of 1 out of 5. To provide a meaningful assessment, specific details about the problem, target market, and customer insights are needed. The suggested questions can help gather initial validation data.",
+        specificFeedback: {
+          painPointValidation: "Without data, there’s no evidence of a validated pain point. Gathering insights on user challenges is a critical first step.",
+          marketOpportunity: "No information available to assess market size, revenue potential, or competitive landscape. Market research is needed to evaluate opportunity.",
+          customerAdoptionInsights: "Lack of data prevents analysis of customer behavior, urgency, or willingness to adopt a solution. User interviews could uncover these insights."
+        }
+      };
     }
-  };
+
+    return {
+      rubricScore: rubricDataJson.overallScore,
+      rubricSummary: rubricDataJson.feedbackSummary,
+      rubricMetrics: {
+        painPointValidation: rubricDataJson.painPointValidation,
+        marketOpportunity: rubricDataJson.marketOpportunity,
+        customerAdoptionInsights: rubricDataJson.customerAdoptionInsights,
+      },
+      rubricSpecificFeedback: rubricDataJson.specificFeedback,
+      rubricSuggestionQuestions: rubricDataJson.suggestedQuestions,
+    };
+
+  } catch (error) {
+    console.error("Error in rubricFilter function:", error);
+    return null;
+  }
+};

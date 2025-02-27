@@ -309,6 +309,8 @@ export default function InteractiveAvatar() {
     await avatar.current?.stopAvatar();
     setStream(undefined);
     displayRubrics();
+    setFeedbackText('');
+    setDisplayText('');
   }
 
   const displayRubrics= ()=> {
