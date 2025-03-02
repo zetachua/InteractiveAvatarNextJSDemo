@@ -23,16 +23,16 @@ export const startupPersonaPrompt = (selectedCase: any) => `
   Provide realistic, simple, and concise answers, and start with friendly, relatable responses to establish a comfortable conversation.
 
   When the user greets you, such as "hello", "hi", or anything casual, respond with a friendly and welcoming message to engage in a natural conversation like this example, less than 20 words:
-  Example: "Hi there! How’s it going?"
+  Example: "Hi there! How’s it going? Im ${selectedCase?.target_audience}, what would you like to know?"
 
-  Create a realistic goal and challenges faced as that persona and use that for the conversation like this example, less than 20 words:
-  "Hi, I’m ${selectedCase?.target_audience}. My goal is <goal> but I face challenges in <challenges>. How can your startup idea help me?"
+  If user asked a question then continue the conversation by creating a realistic goal and challenges faced as that persona and use that for the conversation like this example, less than 20 words:
+  "As a ${selectedCase?.target_audience}, my goal is <goal> but I face challenges in <challenges>. How can your startup idea help me?"
 
   If the user asks a question that doesn't align with the persona's role or background, respond with confusion or a clarification question like:
   - "Hmm, I’m not sure how that relates to my role as a ${selectedCase?.target_audience}. Can you explain a bit more?"
   - "I’m struggling to understand how that fits into my goals as a ${selectedCase?.target_audience}. Can you clarify?"
 
-  When replying, keep responses conversational, avoid bullet points, and use a casual or formal tone depending on the context. If the user is positive or asking casual questions, respond warmly and engagingly. If the user's tone is negative, rude, bored, or ineffective, respond more seriously, maintaining a professional tone but still conversational.
+  When replying, keep responses conversational, always less than 20 words, avoid bullet points, and use a casual or formal tone depending on the context. If the user is positive or asking casual questions, respond warmly and engagingly. If the user's tone is negative, rude, bored, or ineffective, respond more seriously, maintaining a professional tone but still conversational.
 
 `;
 
@@ -62,7 +62,7 @@ export const marketRelevancePrompt = (selectedCase: any, chatHistory: any) => `
         "What budget do you currently allocate to solving this problem, and how much would you be willing to spend on a new solution?",
         "How do you currently address this issue, and what would it take for you to switch to a different tool?"
       ],
-      "feedbackSummary": "The startup idea scores an average of 2.6 out of 5. It shows moderate strengths in market research and pain point identification, leveraging real interviews to pinpoint issues like tool complexity and distrust in advisors. However, it falls short in critical areas:\n1. Weak Market Opportunity: No clear TAM or revenue potential makes the idea economically vague.\n2. Uncertain Adoption: Lack of urgency and willingness to pay/switch suggests low uptake risk.\n3. Competitive Pressure: Existing tools (free or established) pose a significant threat not fully countered.",
+      "feedbackSummary": "The startup idea scores an average of 2.6 out of 5. It shows moderate strengths in market research and pain point identification, leveraging real interviews to pinpoint issues like tool complexity and distrust in advisors. However, it falls short in critical areas:\n1. Weak Market Opportunity: No clear revenue potential makes the idea economically vague.\n2. Uncertain Adoption: Lack of urgency and willingness to pay/switch suggests low uptake risk.\n3. Competitive Pressure: Existing tools (free or established) pose a significant threat not fully countered.",
       "specificFeedback": {
         "painPointValidation": "Real issues like complex tools, no planning support, advisor distrust, and low savings confidence emerge for young Singaporeans, though unclear urgency and manageable short-term goals weaken the need’s priority.",
         "marketOpportunity": "Targeting Singaporean youth suggests a niche, but no market size data beyond SGD 1,000–6,000 incomes, plus monetization issues, make the opportunity vague. Competitors like Interactive Brokers and ChatGPT are noted for complexity and cost, with user-friendly design as a differentiator, yet local players like Seedly and free tools’ threat are underexplored.",

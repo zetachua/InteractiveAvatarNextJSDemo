@@ -25,7 +25,7 @@ import './WaveAnimation.css';
 // import {AVATARS, STT_LANGUAGE_LIST} from "@/app/lib/constants";
 import TypewriterText from "./Typewriter";
 import FeedbackPieChart from "./FeedbackPieChart";
-import { FeedbackData,RubricData, RubricSpecificData } from "./KnowledgeClasses";
+import { ChatHistory, FeedbackData,RubricData, RubricSpecificData } from "./KnowledgeClasses";
 import { Square, MicrophoneSlash,Microphone} from "@phosphor-icons/react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 import RubricPiechart from "./RubricPieChart";
@@ -33,6 +33,7 @@ import { GROUPNAMES } from "@/pages/api/constants";
 
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
+  const [loadingRubric, setLoadingRubric] = useState(false);
   const [isLoadingRepeat, setIsLoadingRepeat] = useState(false);
   const [stream, setStream] = useState<MediaStream>();
   const [debug, setDebug] = useState<string>();
@@ -50,7 +51,7 @@ export default function InteractiveAvatar() {
   const avatar = useRef<StreamingAvatar | null>(null);
   const [chatMode, setChatMode] = useState("text_mode");
   const [isUserTalking, setIsUserTalking] = useState(false);
-  const [chatHistory,setChatHistory]=useState('');
+  const [chatHistory, setChatHistory] = useState<ChatHistory[]>([]);
   const [startupIdea,setStartupIdea]=useState('');
   const [hypothesis,setHypothesis]=useState('');
   const [targetAudience,setTargetAudience]=useState('');
@@ -172,12 +173,7 @@ export default function InteractiveAvatar() {
       if (data.chatHistory !== undefined) setChatHistory(data.chatHistory);
       if (data.filteredResponseContent !== undefined) setDisplayText(data.filteredResponseContent);
       if (data.feedbackSummary !== undefined) setFeedbackText(data.feedbackSummary);
-      if (data.rubricSummary !== undefined) setRubricSummary(data.rubricSummary);
       if (data.suggestions !== undefined) setSuggestionOptions(data.suggestions);
-      if (data.rubricMetrics !== undefined) setRubricJson(data.rubricMetrics);
-      if (data.rubricScore !== undefined) setRubricAllRatings(data.rubricScore);
-      if (data.rubricSpecificFeedback !== undefined) setRubricSpecificFeedback(data.rubricSpecificFeedback);
-      if (data.rubricSuggestedQuestions !== undefined) setRubricSuggestedQns(data.rubricSuggestedQuestions);
 
       if(questionCount!==null && questionCount>0 && data.feedbackMetrics!==undefined && data.feedbackScore!==undefined){
           const updateFeedbackJson=mergeJsons(feedbackJson,data.feedbackMetrics)
@@ -287,6 +283,26 @@ export default function InteractiveAvatar() {
       });
   }
 
+
+  const resetAllStates=()=>{
+    setFeedbackText('');
+    setDisplayText('');
+    setChatHistory([]);
+    setRubricSummary('');
+    setSuggestionOptions([]);
+    setRubricJson(null);
+    setAllRatings(0);
+    setTotalRounds(0);
+    setRubricAllRatings(0);
+    setFeedbackJson(null);
+    setRubricSpecificFeedback( {
+      painPointValidation: '',
+      marketOpportunity: '',
+      customerAdoptionInsights: ''
+    });
+   setRubricSuggestedQns([]);
+  }
+
   function mergeJsons<T extends Record<string, number | string>>(obj1: T, obj2: T): T {
     const mergedObj: T = { ...obj1 };
   
@@ -306,24 +322,37 @@ export default function InteractiveAvatar() {
   }
   
   
-  async function endSession() {
-    await avatar.current?.stopAvatar();
-    setStream(undefined);
-    displayRubrics();
-    setFeedbackText('');
-    setDisplayText('');
-    setChatHistory('');
-    setRubricSummary('');
-    setSuggestionOptions([]);
-    setRubricJson(null);
-    setRubricAllRatings(0);
-    setRubricSpecificFeedback( {
-      painPointValidation: '',
-      marketOpportunity: '',
-      customerAdoptionInsights: ''
+async function endSession() {
+  // Set loading state to true before starting the fetch
+  setLoadingRubric(true);
+  
+  await avatar.current?.stopAvatar();
+  setStream(undefined);
+
+  try {
+    const response = await fetch("/api/rubricResponse", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ startupIdea, hypothesis, targetAudience, chatHistory }),
     });
-   setRubricSuggestedQns([]);
+
+    const data = await response.json();
+    
+    // Once data is received, update the state and stop the spinner
+    if (data.rubricSummary !== undefined) setRubricSummary(data.rubricSummary);
+    if (data.rubricMetrics !== undefined) setRubricJson(data.rubricMetrics);
+    if (data.rubricScore !== undefined) setRubricAllRatings(data.rubricScore);
+    if (data.rubricSpecificFeedback !== undefined) setRubricSpecificFeedback(data.rubricSpecificFeedback);
+    if (data.rubricSuggestedQuestions !== undefined) setRubricSuggestedQns(data.rubricSuggestedQuestions);
+
+    displayRubrics();
+  } catch (error) {
+    console.error('Error fetching rubric response:', error);
+  } finally {
+    // Set loading to false once the fetch is completed (either success or failure)
+    setLoadingRubric(false);
   }
+}
 
   const displayRubrics= ()=> {
     setDisplayRubricAnalytics(true);
@@ -351,12 +380,6 @@ export default function InteractiveAvatar() {
       avatar?.current?.stopListening();
     }
   }, [text, previousText]);
-
-  useEffect(() => {
-    return () => {
-      endSession();
-    };
-  }, []);
 
   useEffect(() => {
     if (stream && mediaStream.current) {
@@ -506,7 +529,7 @@ export default function InteractiveAvatar() {
           )}
         </CardBody>
 
-        {!displayRubricAnalytics && !isLoadingSession && <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>}
+        {!displayRubricAnalytics && !isLoadingSession && !loadingRubric && <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>}
 
         <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
           <div style={{display:!displayRubricAnalytics && !isLoadingSession?'flex':'none',width:'100%',justifyContent:'center',alignItems:'center'}}>
@@ -587,8 +610,25 @@ export default function InteractiveAvatar() {
         </div>
         {feedbackJson && !displayRubricAnalytics && questionCount>0 && <FeedbackPieChart data={feedbackJson} overallScore={allRatings} />}
         { rubricJson && displayRubricAnalytics && 
-            <RubricPiechart data={rubricJson} overallScore={rubricAllRatings} summary={rubricSummary} specificFeedback={rubricSpecificFeedback} suggestedQuestions={rubricSuggestedQns} totalRounds={totalRounds}></RubricPiechart>
+            <RubricPiechart data={rubricJson} overallScore={rubricAllRatings} summary={rubricSummary} specificFeedback={rubricSpecificFeedback} suggestedQuestions={rubricSuggestedQns} resetAllStates={resetAllStates} totalRounds={totalRounds} chatHistory={chatHistory}></RubricPiechart>
         }
+        {loadingRubric&&<Spinner 
+          style={{
+            color:'white',
+            background: 'rgba(50,51,52)',
+            padding: '2rem',
+            borderRadius: '50px',
+            position: 'absolute',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%,-50%) scale(0.6)',
+            width: '30%',
+          }}
+          size="lg" />}
        {/* <CardFooter className="flex flex-col gap-3 relative">
            <Tabs
             aria-label="Options"

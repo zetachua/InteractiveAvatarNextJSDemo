@@ -70,3 +70,8 @@ export interface StartupGroups {
   target_audience: string;
   hypothesis:string;
 }
+
+export interface ChatHistory {
+  role: 'user' | 'assistant'; // Define allowed roles
+  content: string;
+}

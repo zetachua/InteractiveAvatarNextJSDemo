@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, Text } from 'recharts';
-import { RubricMetricData, RubricSpecificData } from './KnowledgeClasses';
+import { ChatHistory, RubricMetricData, RubricSpecificData } from './KnowledgeClasses';
 import { Button } from '@nextui-org/button';
 
 // Props for the component
 interface RubricPieChartProps {
+  chatHistory: ChatHistory[]; // Instead of `chatHistory: ''`
+  resetAllStates:()=>void;
   summary: string;
   totalRounds:number;
   suggestedQuestions: string[];
@@ -15,11 +17,13 @@ interface RubricPieChartProps {
 
 const RubricPiechart: React.FC<RubricPieChartProps> = ({
   data,
+  chatHistory,
   overallScore,
   totalRounds,
   summary,
   suggestedQuestions,
   specificFeedback,
+  resetAllStates,
 }) => {
 
   // Ensure data is always a valid rubricData object
@@ -51,7 +55,24 @@ const RubricPiechart: React.FC<RubricPieChartProps> = ({
   ${specificFeedback?.customerAdoptionInsights}
 
   `;
-
+  const downloadTextFile = () => {
+    // Convert chatHistory array to a formatted string
+    const chatText = chatHistory
+      .map((message) => `${message.role.toUpperCase()}: ${message.content}`)
+      .join("\n"); // Join messages with line breaks
+  
+    const blob = new Blob([chatText], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+  
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "chatHistory.txt";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+  
   // Convert the data into the format required for the PieChart
   const chartData = Object.entries(rubricData).map(([key, value]) => ({
     name: key.charAt(0).toUpperCase() + key.slice(1), // Capitalize first letter
@@ -94,7 +115,10 @@ const RubricPiechart: React.FC<RubricPieChartProps> = ({
           top: '-2%',
           transform: 'translate(-50%,-50%) scale(1.6)',
         }}
-        onClick={() => window.location.reload()} // Refresh the page
+        onClick={() => {
+          resetAllStates();
+          window.location.reload()
+        }} // Refresh the page
       >
         Restart Round
       </Button>
@@ -137,7 +161,7 @@ const RubricPiechart: React.FC<RubricPieChartProps> = ({
             backgroundColor: '#fff',
           }}
         >
-          {roundedOverallScore}/{totalRounds*5}
+          {roundedOverallScore}/5
         </div>
         <PieChart width={450} height={450}>
           <Pie
@@ -234,7 +258,26 @@ const RubricPiechart: React.FC<RubricPieChartProps> = ({
         >
           Copy All
         </button>
+        <button
+         style={{
+          position: 'absolute',
+          right: '2%',
+          top: '5%',
+          padding: '0.5rem 1rem',
+          border: 'none',
+          background: 'rgba(255,255,255,0.4)',
+          borderRadius: '50px',
+          color: '#fff',
+          cursor: 'pointer',
+          fontSize: '16px',
+        }}
+          onClick={() => downloadTextFile()}
+        >
+          Download ChatHistory
+        </button>
+
       </div>
+  
     </div>
   );
 };
