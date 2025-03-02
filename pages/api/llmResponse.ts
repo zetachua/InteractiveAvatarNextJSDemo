@@ -12,7 +12,7 @@ let rating=0;
 const llmResponse = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
     try {
-      const { userInput, chatHistory, startupIdea, hypothesis, targetAudience } = req.body;
+      const { userInput, chatHistory, startupIdea, hypothesis, targetAudience, displayRubricAnalytics } = req.body;
       console.log('Request Body:', req.body);
 
       if (userInput === "hello" || userInput === "start") thematics = [];
@@ -27,7 +27,7 @@ const llmResponse = async (req: NextApiRequest, res: NextApiResponse) => {
       const [chatCompletion, sentimentResult, rubricResult] = await Promise.all([
         getGroqChatCompletion(userInput, chatHistory, "nus", "", selectedJsonData),
         fetchSentiment(userInput, chatHistory, selectedJsonData, "feedback", ""),
-        fetchRubric(userInput, chatHistory, selectedJsonData, "rubric", "")
+        displayRubricAnalytics && fetchRubric(userInput, chatHistory, selectedJsonData, "rubric", "")
       ]);
 
       // Process chat completion

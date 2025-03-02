@@ -166,7 +166,7 @@ export default function InteractiveAvatar() {
       const response = await fetch("/api/llmResponse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userInput: userInputValue|| userInput, chatHistory,startupIdea,hypothesis,targetAudience}),
+        body: JSON.stringify({ userInput: userInputValue|| userInput, chatHistory,startupIdea,hypothesis,targetAudience, displayRubricAnalytics}),
       });
       const data = await response.json();
       if (data.chatHistory !== undefined) setChatHistory(data.chatHistory);
@@ -312,6 +312,17 @@ export default function InteractiveAvatar() {
     displayRubrics();
     setFeedbackText('');
     setDisplayText('');
+    setChatHistory('');
+    setRubricSummary('');
+    setSuggestionOptions([]);
+    setRubricJson(null);
+    setRubricAllRatings(0);
+    setRubricSpecificFeedback( {
+      painPointValidation: '',
+      marketOpportunity: '',
+      customerAdoptionInsights: ''
+    });
+   setRubricSuggestedQns([]);
   }
 
   const displayRubrics= ()=> {
@@ -495,10 +506,10 @@ export default function InteractiveAvatar() {
           )}
         </CardBody>
 
-        {!displayRubricAnalytics && <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>}
+        {!displayRubricAnalytics && !isLoadingSession && <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>}
 
         <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
-          <div style={{display:!displayRubricAnalytics?'flex':'none',width:'100%',justifyContent:'center',alignItems:'center'}}>
+          <div style={{display:!displayRubricAnalytics && !isLoadingSession?'flex':'none',width:'100%',justifyContent:'center',alignItems:'center'}}>
             <div style={{backgroundColor:'rgba(255,255,255,0.1)',textAlign:'center',padding:'1rem',maxWidth:'60%',minWidth:'30%',borderRadius:'10px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',bottom:'9%',left:'50%'}}> 
               {isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput} 
             </div>
@@ -544,7 +555,7 @@ export default function InteractiveAvatar() {
         } */}
         </div>
         </div>
-        <div className="flex flex-col items-center" style={{flexDirection:'row',justifyContent:'center',marginBottom:'2rem',display:!displayRubricAnalytics?'flex':'none',}}>
+        <div className="flex flex-col items-center" style={{flexDirection:'row',justifyContent:'center',marginBottom:'2rem',display:!displayRubricAnalytics &&!isLoadingSession?'flex':'none',}}>
           {/* Input field to capture user input */}
           <Button
             onClick={toggleSpeechToText}
