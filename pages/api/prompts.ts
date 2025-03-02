@@ -108,7 +108,7 @@ export const feedbackPrompt=(question:string,reply:string,startupIdea:string)=>`
       Return a JSON object with the scores and a brief summary of the feedback. 
 
       Question: "${question}"
-      Feedback: "${reply}"
+      Response: "${reply}"
 
       Output format (place more emphasis on the question for scoring):
       {

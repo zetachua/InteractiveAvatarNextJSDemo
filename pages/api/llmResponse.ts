@@ -9,54 +9,57 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 let thematics: string[] = [];
 let selectedJsonData: StartupGroups | undefined;
 let rating=0;
-
 const llmResponse = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
     try {
-      const { userInput, chatHistory,startupIdea,hypothesis,targetAudience } = req.body;
+      const { userInput, chatHistory, startupIdea, hypothesis, targetAudience } = req.body;
       console.log('Request Body:', req.body);
 
       if (userInput === "hello" || userInput === "start") thematics = [];
 
       // Extract Json Data based on groupName
       if (!selectedJsonData) {
-        const { selectedCase } = await startupKnowledgeJsonExtract(startupIdea,hypothesis,targetAudience);
+        const { selectedCase } = await startupKnowledgeJsonExtract(startupIdea, hypothesis, targetAudience);
         selectedJsonData = selectedCase;
       }
 
-      // Fetch chat completion based on user input
-      const chatCompletion = await getGroqChatCompletion(userInput, chatHistory, "nus", "", selectedJsonData);
+      // Run all API calls in parallel
+      const [chatCompletion, sentimentResult, rubricResult] = await Promise.all([
+        getGroqChatCompletion(userInput, chatHistory, "nus", "", selectedJsonData),
+        fetchSentiment(userInput, chatHistory, selectedJsonData, "feedback", ""),
+        fetchRubric(userInput, chatHistory, selectedJsonData, "rubric", "")
+      ]);
+
+      // Process chat completion
       let responseContent = chatCompletion.choices[0].message.content;
       if (!responseContent) return res.status(400).json({ error: "Empty response from chat completion" });
 
       const { filteredResponseContent, suggestions } = suggestionsOptionsFilter(responseContent, rating);
 
-      // Fetch feedback rating and check for null
+      // Process sentiment feedback
       let feedbackScore, feedbackSummary, feedbackMetrics;
-      const feedbackResult = await fetchFeedback(userInput, chatHistory, selectedJsonData, "feedback", filteredResponseContent);
-      if (feedbackResult?.feedbackScore!=undefined && feedbackResult) {
-        feedbackScore = feedbackResult.feedbackScore;
-        feedbackSummary = feedbackResult.feedbackSummary;
-        feedbackMetrics = feedbackResult.feedbackMetrics;
+      if (sentimentResult?.feedbackScore !== undefined) {
+        feedbackScore = sentimentResult.feedbackScore;
+        feedbackSummary = sentimentResult.feedbackSummary;
+        feedbackMetrics = sentimentResult.feedbackMetrics;
       } else {
         console.log("Invalid feedback data, keeping previous values.");
       }
 
-      // Fetch rubric rating and check for null
-      let rubricScore, rubricSummary, rubricMetrics,rubricSuggestedQuestions,rubricSpecificFeedback;
-      const rubricResult = await fetchRubric(userInput, chatHistory, selectedJsonData, "rubric", "");
-      if (rubricResult?.rubricSpecificFeedback!=undefined && rubricResult) {
+      // Process rubric evaluation
+      let rubricScore, rubricSummary, rubricMetrics, rubricSuggestedQuestions, rubricSpecificFeedback;
+      if (rubricResult?.rubricSpecificFeedback !== undefined) {
         rubricScore = rubricResult.rubricScore;
         rubricSummary = rubricResult.rubricSummary;
         rubricMetrics = rubricResult.rubricMetrics;
         rubricSuggestedQuestions = rubricResult.rubricSuggestionQuestions;
         rubricSpecificFeedback = rubricResult.rubricSpecificFeedback;
-        console.log("i have updated successfully")
+        console.log("Rubric updated successfully");
       } else {
         console.log("Invalid rubric data, keeping previous values.");
       }
 
-      // Give response
+      // Send response
       res.status(200).json({
         filteredResponseContent,
         suggestions,
@@ -75,13 +78,11 @@ const llmResponse = async (req: NextApiRequest, res: NextApiResponse) => {
         rubricSuggestedQuestions
       });
 
-      console.log(rubricSpecificFeedback, rubricSuggestedQuestions,"meowmeow");
+      console.log(rubricSpecificFeedback, rubricSuggestedQuestions, "meowmeow");
     } catch (error) {
       console.error('Error fetching chat completion:', error);
-      res.status(500).json({ error: 'Failed to fetch chat completion' });
+      res.status(500).json({ error: "Internal Server Error" });
     }
-  } else {
-    res.status(405).json({ error: 'Method Not Allowed' });
   }
 };
 
@@ -123,7 +124,7 @@ const getGroqChatCompletion = async (userInput: string, chatHistory: any, prompt
 
 
 
-const fetchFeedback = async (userInput: string, chatHistory: any[], selectedJsonData: any, promptType: string, feedback: string) => {
+const fetchSentiment = async (userInput: string, chatHistory: any[], selectedJsonData: any, promptType: string, feedback: string) => {
   try {
     const rubricRatingCompletion = await getGroqChatCompletion(userInput, chatHistory, promptType, feedback, selectedJsonData);
     let responseContent = rubricRatingCompletion.choices[0].message.content;
@@ -141,7 +142,7 @@ const fetchFeedback = async (userInput: string, chatHistory: any[], selectedJson
 
     return filteredResponse;
   } catch (error) {
-    console.error("Error in fetchFeedback:", error);
+    console.error("Error in fetchSentiment:", error);
     return null;  // Return null if an error occurs
   }
 };
