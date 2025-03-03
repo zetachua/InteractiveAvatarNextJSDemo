@@ -165,3 +165,82 @@ export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, t
         4. Deep short conclusion
   `
 
+  export const pitchEvaluationPrompt = (chatHistory: string) => `
+  You are an expert evaluator assessing startup pitches based on **STRICT** investor standards. Given the following conversation history of a startup pitch discussion:
+  
+  Chat History:
+  ${chatHistory}
+  
+  Evaluate the pitch based on the following criteria:
+  
+  ### **1. Market/Customer Validation (15%)**
+     - Assess the **strength, credibility, and scale** of the startup’s market validation.  
+     - Clarity of explanation matters a lot. If they say they have strong market validation but vaguely explain it, they should score a lot lower.  
+     - Validation can be based on **pilot projects, LOI/MOU agreements, or strong customer traction.**  
+     - A startup does **not** need all three validation types—**one strong form** can still warrant a high score.  
+     - Consider the **depth of commitment** from customers or partners and the likelihood of sustained market interest.  
+  
+  #### **Scoring Guide:**
+  - **1-2 points** → No validation, vague claims, or purely theoretical concepts.  
+  - **3-7 points** → Weak or minimal validation. No tangible proof, vague claims, or purely theoretical concepts.  
+  - **8-11 points** → Moderate validation. Some LOIs, a small pilot, or limited early customer traction.  
+  - **12-15 points** → Strong validation. Large-scale adoption, compelling testimonials, or deep partnerships.  
+    - Example: A startup with **1,000+ engaged users, strong testimonials, and clear product-market fit** should score in the **14-15** range, given good and clear explanations.  
+  
+  ### **2. Investment Pitch Deck (15%)**
+     - **Mechanics (15%):**  
+       - Does the pitch **clearly explain** the problem, solution, and business model?  
+       - How **big is the problem**? (Market size and potential opportunity)  
+       - Is there a **strong value proposition**? (Why customers will choose this solution)  
+       - How **defensible** is the business? (Barriers to entry, competitive advantages)  
+       - Does the pitch provide insight into **why this team** is the right one to execute the vision?  
+       - While not everything needs deep detail, the pitch should convey enough for an investor to consider it seriously.  
+  
+  #### **Scoring Guide:**  
+  - **1-7 points** → Weak mechanics. The pitch is unclear, missing key elements, or lacks coherence.  
+  - **8-11 points** → Decent explanation, with some strong points, but missing depth or structure in key areas.  
+  - **12-15 points** → Compelling and clearly conveys the business case for funding.  
+  
+  ### **3. Oral Presentation (15%)**
+     - **Clarity & Delivery (1-10):**  
+       - Is the presenter’s communication **clear, articulate, and confident**?  
+       - Do they effectively convey their **ideas, passion, and expertise**?  
+       - Is their tone **engaging and persuasive**, or do they sound hesitant?  
+       - Do they avoid unnecessary jargon and explain concepts in an **accessible way**?  
+  
+     - **Structure & Organization (1-5):**  
+       - Does the presentation **flow logically**, covering key points in a coherent order?  
+       - Is it **concise and engaging**, avoiding unnecessary filler?  
+       - Does it **prioritize important information**, making it easy to follow?  
+  
+  #### **Scoring Guide:**  
+  - **1-7 points** → Weak presentation. Unclear delivery, lacks structure, hesitant, or unengaging.  
+  - **8-11 points** → Decent presentation. Some strong moments but could improve clarity, confidence, or structure.  
+  - **12-15 points** → Highly compelling. Clear, persuasive, confident, and well-structured.  
+  
+  ### **Output Format:**  
+  Return a JSON object with scores and feedback.
+  
+  \`\`\`json
+  {
+    "marketValidation": {
+      "score": 12,
+      "feedback": "The startup has demonstrated strong market validation with 10,000+ loyal users and compelling customer feedback. However, their explanation of validation could be clearer to maximize investor confidence."
+    },
+    "pitchDeck": {
+      "score": 11,
+      "feedback": "The pitch covers the problem, market size, and value proposition well, but lacks strong defensibility arguments. The team’s expertise is mentioned but could be emphasized more."
+    },
+    "oralPresentation": {
+      "score": 13,
+      "feedback": "The presenter communicated clearly and confidently, effectively engaging the audience. However, the structure could be slightly improved to avoid minor repetition."
+    },
+    "overallScore": 12,
+    "summary": "This is a strong pitch with solid validation and a compelling presentation. Improvements in defensibility arguments and structural flow could further enhance investor interest."
+  }
+  \`\`\`
+  
+  If the startup’s market validation is **weak, vague, or purely theoretical**, assign a score between **1-5.**  
+  
+  Now, analyze the chat history and return the evaluation.
+  `;
