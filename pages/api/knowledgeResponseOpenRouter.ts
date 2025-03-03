@@ -2,8 +2,14 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import Groq from 'groq-sdk';
 import { knowledgePrompt} from './prompts';
 import { responseFilter } from './completionFilterFunctions';
+import OpenAI from 'openai';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+// Initialize OpenAI client with OpenRouter's endpoint and API key
+const openai = new OpenAI({
+  baseURL: 'https://openrouter.ai/api/v1',
+  apiKey: process.env.OPENROUTER_API_KEY, // Add your OpenRouter API key to .env
+});
 
 const knowledgeResponse = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
