@@ -102,6 +102,7 @@ const RubricPiechart: React.FC<RubricPieChartProps> = ({
         top: '50%',
         transform: 'translate(-50%,-50%) scale(0.6)',
         width: '100%',
+        zIndex:'100'
       }}
     >
       <Button

@@ -31,6 +31,15 @@ export const suggestionsOptionsFilter = (responseContent: string,rating:number) 
 };
 
 
+export const responseFilter = (responseContent: string) => {
+  let filteredResponseContent = responseContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+  let feedbackMatch = filteredResponseContent.match(/<feedback\s*\/?>\s*(.*?)\s*<\/feedback\s*\/?>/);
+  filteredResponseContent = feedbackMatch ? filteredResponseContent.replace(feedbackMatch[0], '').trim() : filteredResponseContent;
+
+  return { filteredResponseContent };
+};
+
+
 export const feedbackFilter = (responseContent: string) => {
   try {
     let feedbackJson = responseContent

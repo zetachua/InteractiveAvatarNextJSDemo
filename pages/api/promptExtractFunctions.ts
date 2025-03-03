@@ -1,5 +1,6 @@
 import { CaseStudy, StartupGroups, StoryBook } from '@/components/KnowledgeClasses';
 import { start } from 'repl';
+import { kaching } from './constants';
 
 // Helper function to fetch JSON data
 const fetchJsonData = async (fileName: string) => {
@@ -45,11 +46,7 @@ export const startupKnowledgeJsonExtract = async (startupIdea:string,hypothesis:
   let selectedCase: StartupGroups | undefined;
 
   if (!startupIdea || !hypothesis || !targetAudience) {
-    selectedCase = {
-      startup_idea: "A platform offering personalized financial guidance for budgeting, saving, and investing (e.g., ETFs, stocks), with adjustable risk portfolios and a visual timeline to track goals, adjusting for unexpected expenses.",
-      hypothesis:"Many young people struggle with managing their finances due to a lack of understanding, complexity in existing solutions, and a reluctance to seek financial advice. While they have long-term goals like homeownership, they lack detailed plans, prefer simple, one-stop financial tools, and are hesitant to engage with financial advisors due to concerns about cost and trust.",
-      target_audience: 'a fresh graduate',
-    };
+    selectedCase = kaching;
   }
   else{
     selectedCase = {

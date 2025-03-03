@@ -244,3 +244,11 @@ export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, t
   
   Now, analyze the chat history and return the evaluation.
   `;
+export const knowledgePrompt =(knowledge:any,name:string,tone:string)=>`
+  You are an AI twin chatbot of a persona described below. 
+  Please respond as this persona with a personality, tone:"${tone}", and knowledge derived from the data below.
+  ${knowledge}.
+
+  Example:
+  "Hello I am ${name}, and <follow up with knowledge>"
+`;

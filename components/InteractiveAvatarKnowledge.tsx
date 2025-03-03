@@ -1,4 +1,5 @@
 import type { StartAvatarResponse } from "@heygen/streaming-avatar";
+import { AVATARS, STT_LANGUAGE_LIST } from "@/app/lib/constants";
 import StreamingAvatar, {
   AvatarQuality,
   StreamingEvents, TaskMode, TaskType, VoiceEmotion,
@@ -13,27 +14,18 @@ import {
   Select,
   SelectItem,
   Spinner,
-  Tab,
-  Tabs,
 } from "@nextui-org/react";
 import { useEffect, useRef, useState } from "react";
 import { useMemoizedFn, usePrevious } from "ahooks";
 import './WaveAnimation.css';
 
-// import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
-// import {AVATARS, STT_LANGUAGE_LIST} from "@/app/lib/constants";
 import TypewriterText from "./Typewriter";
-import FeedbackPieChart from "./FeedbackPieChart";
-import { ChatHistory, FeedbackData,RubricData, RubricSpecificData } from "./KnowledgeClasses";
+import { ChatHistory } from "./KnowledgeClasses";
 import { Square,Microphone} from "@phosphor-icons/react";
-import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
-import RubricPiechart from "./RubricPieChart";
-import StartupPopup from "./ViewDefaultKnowledge";
 
-export default function InteractiveAvatar() {
+export default function InteractiveAvatarKnowledge() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
-  const [loadingRubric, setLoadingRubric] = useState(false);
   const [isLoadingRepeat, setIsLoadingRepeat] = useState(false);
   const [stream, setStream] = useState<MediaStream>();
   const [debug, setDebug] = useState<string>();
@@ -46,33 +38,14 @@ export default function InteractiveAvatar() {
   const [userInput, setUserInput] = useState<string>("");
   const [text, setText] = useState<string>("");
   const [apiKey, setApiKey] = useState<string>("");
-  // const [apiKey, setApiKey] = useState<string>("MThhZjFjZDQ3YjlmNDI4OTk4NmE3OTM5ZTQ0MWYxYmEtMTczODgyNjE0MA==");
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatar | null>(null);
   const [chatMode, setChatMode] = useState("text_mode");
   const [isUserTalking, setIsUserTalking] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatHistory[]>([]);
-  const [startupIdea,setStartupIdea]=useState('');
-  const [hypothesis,setHypothesis]=useState('');
-  const [targetAudience,setTargetAudience]=useState('');
-  const [feedbackText,setFeedbackText]=useState('');
-  const [rubricSummary,setRubricSummary]=useState('');
-  const [rubricSpecificFeedback,setRubricSpecificFeedback]=useState<RubricSpecificData>(
-    {
-      painPointValidation: '',
-      marketOpportunity: '',
-      customerAdoptionInsights: ''
-    });
-  const [rubricSuggestedQns,setRubricSuggestedQns]= useState<string[]>([]);
-  const [displayRubricAnalytics,setDisplayRubricAnalytics]=useState(false);
-  const [suggestionOptions, setSuggestionOptions] = useState<string[]>([]);
-  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
-  const [questionCount, setQuestionCount] = useState<number>(0);
-  const [feedbackJson, setFeedbackJson] = useState<FeedbackData | null>(null);
-  const [allRatings, setAllRatings] = useState<number>(0); 
-  const [totalRounds, setTotalRounds] = useState<number>(0); 
-  const [rubricJson, setRubricJson] = useState<RubricData | null>(null);
-  const [rubricAllRatings, setRubricAllRatings] = useState<number>(0); 
+  const [name,setName]=useState('');
+  const [knowledge,setKnowledge]=useState('');
+  const [tone,setTone]=useState('');
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const transcriptRef = useRef<string>(''); 
@@ -100,7 +73,6 @@ export default function InteractiveAvatar() {
 
   async function startSession() {
     setIsLoadingSession(true);
-    setDisplayRubricAnalytics(false);
     const newToken = await fetchAccessToken();
 
     avatar.current = new StreamingAvatar({
@@ -153,7 +125,6 @@ export default function InteractiveAvatar() {
   
   async function handleSpeak(userInputValue?:string) {
     setIsLoadingRepeat(true);
-    setDisplayRubricAnalytics(false);
     if (!avatar.current) {
       setDebug("Avatar API not initialized");
     return;
@@ -161,30 +132,15 @@ export default function InteractiveAvatar() {
   
     try {
       // Fetch LLM response
-      setFeedbackText('');
       setDisplayText('');
-      const response = await fetch("/api/llmResponse", {
+      const response = await fetch("/api/knowledgeResponse", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userInput: userInputValue|| userInput, chatHistory,startupIdea,hypothesis,targetAudience, displayRubricAnalytics}),
+        body: JSON.stringify({ userInput: userInputValue|| userInput, chatHistory, name, knowledge, tone}),
       });
       const data = await response.json();
       if (data.chatHistory !== undefined) setChatHistory(data.chatHistory);
       if (data.filteredResponseContent !== undefined) setDisplayText(data.filteredResponseContent);
-      if (data.feedbackSummary !== undefined) setFeedbackText(data.feedbackSummary);
-      if (data.suggestions !== undefined) setSuggestionOptions(data.suggestions);
-
-      if(questionCount!==null && questionCount>0 && data.feedbackMetrics!==undefined && data.feedbackScore!==undefined){
-          const updateFeedbackJson=mergeJsons(feedbackJson,data.feedbackMetrics)
-          setFeedbackJson(updateFeedbackJson);
-          setAllRatings((prevState) => {
-              const newRating = data.feedbackScore || 0;
-              console.log(data.feedbackScore,prevState,"allRatings")
-              return prevState + newRating; // Add the new rating to the previous state
-          });
-          setTotalRounds((prevState)=>{ return prevState+1; });
-      }
-      setQuestionCount((prevState)=>{ return prevState+1; })
 
       // // Make the avatar speak the response
       await avatar.current.speak({
@@ -194,7 +150,6 @@ export default function InteractiveAvatar() {
       });
 
       setUserInput('')
-      setSelectedOptions([''])
     } catch (error) {
       console.error("Error fetching LLM response:", error);
       setDebug("Failed to fetch response from LLM");
@@ -202,6 +157,7 @@ export default function InteractiveAvatar() {
       setIsLoadingRepeat(false);
     }
   }
+
   const toggleSpeechToText = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -282,26 +238,6 @@ export default function InteractiveAvatar() {
       });
   }
 
-
-  const resetAllStates=()=>{
-    setFeedbackText('');
-    setDisplayText('');
-    setChatHistory([]);
-    setRubricSummary('');
-    setSuggestionOptions([]);
-    setRubricJson(null);
-    setAllRatings(0);
-    setTotalRounds(0);
-    setRubricAllRatings(0);
-    setFeedbackJson(null);
-    setRubricSpecificFeedback( {
-      painPointValidation: '',
-      marketOpportunity: '',
-      customerAdoptionInsights: ''
-    });
-   setRubricSuggestedQns([]);
-  }
-
   function mergeJsons<T extends Record<string, number | string>>(obj1: T, obj2: T): T {
     const mergedObj: T = { ...obj1 };
   
@@ -321,43 +257,10 @@ export default function InteractiveAvatar() {
   }
   
   
-async function endSession() {
-  // Set loading state to true before starting the fetch
-  setLoadingRubric(true);
-  
+async function endSession() {  
   await avatar.current?.stopAvatar();
   setStream(undefined);
-
-  try {
-    const response = await fetch("/api/rubricResponse", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ startupIdea, hypothesis, targetAudience, chatHistory }),
-    });
-
-    const data = await response.json();
-    
-    // Once data is received, update the state and stop the spinner
-    if (data.rubricSummary !== undefined) setRubricSummary(data.rubricSummary);
-    if (data.rubricMetrics !== undefined) setRubricJson(data.rubricMetrics);
-    if (data.rubricScore !== undefined) setRubricAllRatings(data.rubricScore);
-    if (data.rubricSpecificFeedback !== undefined) setRubricSpecificFeedback(data.rubricSpecificFeedback);
-    if (data.rubricSuggestedQuestions !== undefined) setRubricSuggestedQns(data.rubricSuggestedQuestions);
-
-    displayRubrics();
-  } catch (error) {
-    console.error('Error fetching rubric response:', error);
-  } finally {
-    // Set loading to false once the fetch is completed (either success or failure)
-    setLoadingRubric(false);
-  }
 }
-
-  const displayRubrics= ()=> {
-    setDisplayRubricAnalytics(true);
-    console.log(displayRubricAnalytics,"im ended")
-  }
-
 
   const handleChangeChatMode = useMemoizedFn(async (v) => {
     if (v === chatMode) {
@@ -422,8 +325,8 @@ async function endSession() {
               </div>
             </div>
           ) : !isLoadingSession ? (
-            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center"style={{backgroundColor:'rgba(255,255,255,0.2)',borderRadius:'50px',padding:'2rem',maxHeight:'60%'}}>
-              <div className="flex flex-col gap-2 w-full" style={{position:'relative'}} >
+            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center"style={{backgroundColor:'rgba(255,255,255,0.2)',borderRadius:'50px',padding:'2rem',maxHeight:'80%'}}>
+              <div className="flex flex-col gap-2 w-full" >
                 {/* <p className="text-sm font-medium leading-none">
                   Custom Knowledge ID (optional)
                 </p>
@@ -432,15 +335,15 @@ async function endSession() {
                   value={knowledgeId}
                   onChange={(e) => setKnowledgeId(e.target.value)}
                 /> */}
-                {/* <p className="text-sm font-medium leading-none">
+                <p className="text-sm font-medium leading-none">
                   Custom Avatar ID (optional)
                 </p>
                 <Input
                   placeholder="Enter a custom avatar ID"
                   value={avatarId}
                   onChange={(e) => setAvatarId(e.target.value)}
-                /> */}
-                {/* <Select
+                />
+                <Select
                   placeholder="Select Avatar"
                   size="md"
                   onChange={(e) => {
@@ -455,8 +358,8 @@ async function endSession() {
                       {avatar.name}
                     </SelectItem>
                   ))}
-                </Select> */}
-                {/* <Select
+                </Select>
+                <Select
                   label="Select language"
                   placeholder="Select language"
                   className="max-w-xs"
@@ -470,7 +373,7 @@ async function endSession() {
                       {lang.label}
                     </SelectItem>
                   ))}
-                </Select> */}
+                </Select>
                  <Input
                   placeholder="Paste HeyGen API Key"
                   value={apiKey}
@@ -478,22 +381,21 @@ async function endSession() {
                   />
                   <p className="text-sm font-medium leading-none" style={{color:'#fafafa',marginTop:'1rem'}}>
                   
-                  </p>      
-                  <StartupPopup></StartupPopup>            
+                  </p>                  
                 <Input
-                  placeholder="Startup Idea Description (Default: Money_Savey)"
-                  value={startupIdea}
-                  onChange={(e) => setStartupIdea(e.target.value)}
+                  placeholder="Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
                   />
                    <Input
-                  placeholder="Target Audience (Default: Fresh Grad)"
-                  value={targetAudience}
-                  onChange={(e) => setTargetAudience(e.target.value)}
+                  placeholder="Tone"
+                  value={tone}
+                  onChange={(e) => setTone(e.target.value)}
                   />
                    <Input
-                  placeholder="Hypothesis to Confirm (Default: Money_Savey)"
-                  value={hypothesis}
-                  onChange={(e) => setHypothesis(e.target.value)}
+                  placeholder="Knowledge"
+                  value={knowledge}
+                  onChange={(e) => setKnowledge(e.target.value)}
                   />
                  {/* <Select
                   placeholder="Select Group Name"
@@ -529,10 +431,10 @@ async function endSession() {
           )}
         </CardBody>
 
-        {!displayRubricAnalytics && !isLoadingSession && !loadingRubric && <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>}
+       <TypewriterText text={displayText} feedbackText={''} questionCount={0}/>
 
         <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
-          <div style={{display:!displayRubricAnalytics && !isLoadingSession?'flex':'none',width:'100%',justifyContent:'center',alignItems:'center'}}>
+          <div style={{display: !isLoadingSession?'flex':'none',width:'100%',justifyContent:'center',alignItems:'center'}}>
             <div style={{backgroundColor:'rgba(255,255,255,0.1)',textAlign:'center',padding:'1rem',maxWidth:'60%',minWidth:'30%',borderRadius:'10px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',bottom:'9%',left:'50%'}}> 
               {isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput} 
             </div>
@@ -578,7 +480,8 @@ async function endSession() {
         } */}
         </div>
         </div>
-        <div className="flex flex-col items-center" style={{flexDirection:'row',justifyContent:'center',marginBottom:'2rem',display:!displayRubricAnalytics &&!isLoadingSession?'flex':'none',}}>
+
+        <div className="flex flex-col items-center" style={{flexDirection:'row',justifyContent:'center',marginBottom:'2rem',}}>
           {/* Input field to capture user input */}
           <Button
             onClick={toggleSpeechToText}
@@ -603,32 +506,11 @@ async function endSession() {
           </Button> */}
           <Button
             onClick={handleInterrupt}
-            style={{ margin: '0.5rem',opacity:displayRubricAnalytics?'50%':'100%',background:'rgba(255,255,255,0.1)'}}
+            style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
           >
             <Square weight="fill"/>
           </Button> 
         </div>
-        {feedbackJson && !displayRubricAnalytics && questionCount>0 && <FeedbackPieChart data={feedbackJson} overallScore={allRatings} />}
-        { rubricJson && displayRubricAnalytics && 
-            <RubricPiechart data={rubricJson} overallScore={rubricAllRatings} summary={rubricSummary} specificFeedback={rubricSpecificFeedback} suggestedQuestions={rubricSuggestedQns} resetAllStates={resetAllStates} totalRounds={totalRounds} chatHistory={chatHistory}></RubricPiechart>
-        }
-        {loadingRubric&&<Spinner 
-          style={{
-            color:'white',
-            background: 'rgba(50,51,52)',
-            padding: '2rem',
-            borderRadius: '50px',
-            position: 'absolute',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            left: '50%',
-            top: '50%',
-            transform: 'translate(-50%,-50%) scale(0.6)',
-            width: '30%',
-          }}
-          size="lg" />}
        {/* <CardFooter className="flex flex-col gap-3 relative">
            <Tabs
             aria-label="Options"
