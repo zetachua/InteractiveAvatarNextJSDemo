@@ -195,6 +195,11 @@ export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, t
        - How **defensible** is the business? (Barriers to entry, competitive advantages)  
        - Does the pitch provide insight into **why this team** is the right one to execute the vision?  
        - While not everything needs deep detail, the pitch should convey enough for an investor to consider it seriously.  
+       
+     - **Structure & Organization (1-5):**  
+     - Does the presentation **flow logically**, covering key points in a coherent order?  
+     - Is it **concise and engaging**, avoiding unnecessary filler?  
+     - Does it **prioritize important information**, making it easy to follow?  
   
   #### **Scoring Guide:**  
   - **1-7 points** → Weak mechanics. The pitch is unclear, missing key elements, or lacks coherence.  
@@ -207,11 +212,6 @@ export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, t
        - Do they effectively convey their **ideas, passion, and expertise**?  
        - Is their tone **engaging and persuasive**, or do they sound hesitant?  
        - Do they avoid unnecessary jargon and explain concepts in an **accessible way**?  
-  
-     - **Structure & Organization (1-5):**  
-       - Does the presentation **flow logically**, covering key points in a coherent order?  
-       - Is it **concise and engaging**, avoiding unnecessary filler?  
-       - Does it **prioritize important information**, making it easy to follow?  
   
   #### **Scoring Guide:**  
   - **1-7 points** → Weak presentation. Unclear delivery, lacks structure, hesitant, or unengaging.  

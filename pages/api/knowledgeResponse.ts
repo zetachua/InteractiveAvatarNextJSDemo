@@ -2,6 +2,7 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import Groq from 'groq-sdk';
 import { knowledgePrompt} from './prompts';
 import { responseFilter } from './completionFilterFunctions';
+import { baba_house } from './constants';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -40,12 +41,10 @@ const knowledgeResponse = async (req: NextApiRequest, res: NextApiResponse) => {
 // Function to fetch chat completion from Groq
 const getGroqChatCompletion = async (knowledge:string, userInput: string, chatHistory: any, name:string, tone:string) => {
   const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
-  
+
   if (!name || !knowledge || !tone) {
-    name = "Baba Pete";  
-    knowledge = "all things Peranakan, NUS Baba House stories, and cultural gems";  
-    tone = "bubbly, lively, and full of fun heritage facts!";  
-    }
+      [name, knowledge, tone] = [baba_house.name, baba_house.knowledge, baba_house.tone];
+  }
 
   return groq.chat.completions.create({
     messages: [

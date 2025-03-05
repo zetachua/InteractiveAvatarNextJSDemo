@@ -23,6 +23,9 @@ import './WaveAnimation.css';
 import TypewriterText from "./Typewriter";
 import { ChatHistory } from "./KnowledgeClasses";
 import { Square,Microphone} from "@phosphor-icons/react";
+import StartupPopup from "./CustomerExamplesPopup";
+import { baba_house } from "@/pages/api/constants";
+import KnowledgeExamplePopup from "./KnowledgeExamplesPopup";
 
 export default function InteractiveAvatarKnowledge() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -30,7 +33,7 @@ export default function InteractiveAvatarKnowledge() {
   const [stream, setStream] = useState<MediaStream>();
   const [debug, setDebug] = useState<string>();
   const [knowledgeId, setKnowledgeId] = useState<string>("");
-  const [avatarId, setAvatarId] = useState<string>("josh_lite3_20230714");
+  const [avatarId, setAvatarId] = useState<string>("June_HR_public");
   const [language, setLanguage] = useState<string>('en');
   const [displayText, setDisplayText]= useState('');
 
@@ -260,6 +263,7 @@ export default function InteractiveAvatarKnowledge() {
 async function endSession() {  
   await avatar.current?.stopAvatar();
   setStream(undefined);
+  setDisplayText('');
 }
 
   const handleChangeChatMode = useMemoizedFn(async (v) => {
@@ -325,8 +329,8 @@ async function endSession() {
               </div>
             </div>
           ) : !isLoadingSession ? (
-            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center"style={{backgroundColor:'rgba(255,255,255,0.2)',borderRadius:'50px',padding:'2rem',maxHeight:'80%'}}>
-              <div className="flex flex-col gap-2 w-full" >
+            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center"style={{backgroundColor:'rgba(255,255,255,0.2)',borderRadius:'50px',padding:'2rem',maxHeight:'60%'}}>
+              <div className="flex flex-col gap-2 w-full"style={{position:'relative'}} >
                 {/* <p className="text-sm font-medium leading-none">
                   Custom Knowledge ID (optional)
                 </p>
@@ -335,14 +339,14 @@ async function endSession() {
                   value={knowledgeId}
                   onChange={(e) => setKnowledgeId(e.target.value)}
                 /> */}
-                <p className="text-sm font-medium leading-none">
+                {/* <p className="text-sm font-medium leading-none">
                   Custom Avatar ID (optional)
                 </p>
                 <Input
                   placeholder="Enter a custom avatar ID"
                   value={avatarId}
                   onChange={(e) => setAvatarId(e.target.value)}
-                />
+                /> */}
                 <Select
                   placeholder="Select Avatar"
                   size="md"
@@ -359,7 +363,7 @@ async function endSession() {
                     </SelectItem>
                   ))}
                 </Select>
-                <Select
+                {/* <Select
                   label="Select language"
                   placeholder="Select language"
                   className="max-w-xs"
@@ -373,27 +377,27 @@ async function endSession() {
                       {lang.label}
                     </SelectItem>
                   ))}
-                </Select>
+                </Select> */}
                  <Input
                   placeholder="Paste HeyGen API Key"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   />
                   <p className="text-sm font-medium leading-none" style={{color:'#fafafa',marginTop:'1rem'}}>
-                  
-                  </p>                  
+                  </p>        
+                  <KnowledgeExamplePopup></KnowledgeExamplePopup>                      
                 <Input
-                  placeholder="Name"
+                  placeholder="Name (Default: Baba Pete)"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   />
                    <Input
-                  placeholder="Tone"
+                  placeholder="Tone (Default: bubbly)"
                   value={tone}
                   onChange={(e) => setTone(e.target.value)}
                   />
                    <Input
-                  placeholder="Knowledge"
+                  placeholder="Knowledge (Default: all things Peranakan)"
                   value={knowledge}
                   onChange={(e) => setKnowledge(e.target.value)}
                   />
@@ -434,9 +438,9 @@ async function endSession() {
        <TypewriterText text={displayText} feedbackText={''} questionCount={0}/>
 
         <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
-          <div style={{display: !isLoadingSession?'flex':'none',width:'100%',justifyContent:'center',alignItems:'center'}}>
-            <div style={{backgroundColor:'rgba(255,255,255,0.1)',textAlign:'center',padding:'1rem',maxWidth:'60%',minWidth:'30%',borderRadius:'10px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',bottom:'9%',left:'50%'}}> 
-              {isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput} 
+          <div style={{display: 'flex',width:'100%',justifyContent:'center',alignItems:'center'}}>
+          <div style={{backgroundColor:'rgba(255,255,255,0.1)',textAlign:'center',padding:'1rem',maxWidth:'60%',minWidth:'30%',borderRadius:'10px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',bottom:'9%',left:'50%'}}> 
+            {isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput} 
             </div>
          {/* { !hideSuggestions && suggestionOptions?.map((option, index) => (
             <Button

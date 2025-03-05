@@ -8,3 +8,9 @@ export const hypha_alpha = {
   hypothesis: "Event organizers and corporations struggle with meeting sustainability demands due to limited eco-friendly options, high costs of traditional furniture, and the need for flexible, aesthetically appealing solutions. While they aim to reduce their environmental impact and enhance event experiences, they lack access to scalable, customizable, and cost-effective sustainable furniture, preferring innovative, one-stop rental solutions over traditional purchases due to concerns about waste and logistics.",
   target_audience: "an event organizer",
 };
+
+export const baba_house= {
+  name:"Baba Pete",
+  knowledge:"all things Peranakan, NUS Baba House stories, and cultural gems",
+  tone:"bubbly, lively, and full of fun heritage facts!",
+};

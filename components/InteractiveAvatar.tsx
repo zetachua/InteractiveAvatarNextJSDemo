@@ -19,6 +19,8 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useMemoizedFn, usePrevious } from "ahooks";
 import './WaveAnimation.css';
+import { kaching,hypha_alpha } from "@/pages/api/constants";
+
 
 // import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
@@ -29,7 +31,7 @@ import { ChatHistory, FeedbackData,RubricData, RubricSpecificData } from "./Know
 import { Square,Microphone} from "@phosphor-icons/react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 import RubricPiechart from "./RubricPieChart";
-import StartupPopup from "./ViewDefaultKnowledge";
+import CustomerExamplePopup from "./CustomerExamplesPopup";
 
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -38,7 +40,7 @@ export default function InteractiveAvatar() {
   const [stream, setStream] = useState<MediaStream>();
   const [debug, setDebug] = useState<string>();
   const [knowledgeId, setKnowledgeId] = useState<string>("");
-  const [avatarId, setAvatarId] = useState<string>("josh_lite3_20230714");
+  const [avatarId, setAvatarId] = useState<string>("June_HR_public");
   const [language, setLanguage] = useState<string>('en');
   const [displayText, setDisplayText]= useState('');
 
@@ -202,6 +204,19 @@ export default function InteractiveAvatar() {
       setIsLoadingRepeat(false);
     }
   }
+  async function handleInterrupt() {
+    if (!avatar.current) {
+      setDebug("Avatar API not initialized");
+
+      return;
+    }
+    await avatar.current
+      .interrupt()
+      .catch((e) => {
+        setDebug(e.message);
+      });
+  }
+
   const toggleSpeechToText = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
@@ -269,19 +284,6 @@ export default function InteractiveAvatar() {
     }
   };
   
-  async function handleInterrupt() {
-    if (!avatar.current) {
-      setDebug("Avatar API not initialized");
-
-      return;
-    }
-    await avatar.current
-      .interrupt()
-      .catch((e) => {
-        setDebug(e.message);
-      });
-  }
-
 
   const resetAllStates=()=>{
     setFeedbackText('');
@@ -479,7 +481,7 @@ async function endSession() {
                   <p className="text-sm font-medium leading-none" style={{color:'#fafafa',marginTop:'1rem'}}>
                   
                   </p>      
-                  <StartupPopup></StartupPopup>            
+                  <CustomerExamplePopup></CustomerExamplePopup>            
                 <Input
                   placeholder="Startup Idea Description (Default: Money_Savey)"
                   value={startupIdea}
