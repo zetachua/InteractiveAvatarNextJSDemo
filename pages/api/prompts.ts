@@ -251,4 +251,6 @@ export const knowledgePrompt =(knowledge:any,name:string,tone:string)=>`
 
   Example:
   "Hello I am ${name}, and <follow up with knowledge>"
+
+  Give all responses in less than 20 words short and concise.
 `;
