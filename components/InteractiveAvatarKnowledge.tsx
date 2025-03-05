@@ -392,14 +392,14 @@ async function endSession() {
                   onChange={(e) => setName(e.target.value)}
                   />
                    <Input
-                  placeholder="Tone (Default: bubbly)"
-                  value={tone}
-                  onChange={(e) => setTone(e.target.value)}
-                  />
-                   <Input
                   placeholder="Knowledge (Default: all things Peranakan)"
                   value={knowledge}
                   onChange={(e) => setKnowledge(e.target.value)}
+                  />
+                   <Input
+                  placeholder="Tone (Default: bubbly)"
+                  value={tone}
+                  onChange={(e) => setTone(e.target.value)}
                   />
                  {/* <Select
                   placeholder="Select Group Name"
