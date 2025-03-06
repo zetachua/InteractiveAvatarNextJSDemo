@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { baba_house } from "@/pages/api/constants";
+import { baba_house } from "@/pages/api/configConstants";
 import { Button } from "@nextui-org/button";
 
 export default function KnowledgeExamplePopup() {

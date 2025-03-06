@@ -1,3 +1,4 @@
+//Default contexts constants
 export const kaching = {
   startup_idea: "A platform offering personalized financial guidance for budgeting, saving, and investing (e.g., ETFs, stocks), with adjustable risk portfolios and a visual timeline to track goals, adjusting for unexpected expenses.",
   hypothesis:"Many young people struggle with managing their finances due to a lack of understanding, complexity in existing solutions, and a reluctance to seek financial advice. While they have long-term goals like homeownership, they lack detailed plans, prefer simple, one-stop financial tools, and are hesitant to engage with financial advisors due to concerns about cost and trust.",
@@ -14,3 +15,14 @@ export const baba_house= {
   knowledge:"all things Peranakan, NUS Baba House stories, and cultural gems",
   tone:"bubbly, lively, and full of fun heritage facts!",
 };
+// Models
+export const models = [
+  'Deepseek-R1-Distill-Llama-70b',
+  'llama3-8b-8192',
+  'sao10k/l3.1-euryale-70b',
+];
+
+export const groqModels = [
+  'Deepseek-R1-Distill-Llama-70b',
+  'llama3-8b-8192',
+];

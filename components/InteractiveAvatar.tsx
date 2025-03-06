@@ -19,7 +19,6 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useMemoizedFn, usePrevious } from "ahooks";
 import './WaveAnimation.css';
-import { kaching,hypha_alpha } from "@/pages/api/constants";
 
 
 // import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
@@ -31,7 +30,8 @@ import { ChatHistory, FeedbackData,RubricData, RubricSpecificData } from "./Know
 import { Square,Microphone} from "@phosphor-icons/react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 import RubricPiechart from "./RubricPieChart";
-import CustomerExamplePopup from "./CustomerExamplesPopup";
+import CustomerExamplePopup from "./PopupExamplesCustomer";
+import {groqModels} from '../pages/api/configConstants'
 
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -78,6 +78,7 @@ export default function InteractiveAvatar() {
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const transcriptRef = useRef<string>(''); 
+  const [selectedModel, setSelectedModel] = useState<string>('');
 
   async function fetchAccessToken() {
     try {
@@ -165,10 +166,11 @@ export default function InteractiveAvatar() {
       // Fetch LLM response
       setFeedbackText('');
       setDisplayText('');
-      const response = await fetch("/api/llmResponse", {
+      // let apiSource=selectedModel=='sao10k/l3.1-euryale-70b'?'llmResponseOpenRouter':'llmResponse';
+      const response = await fetch(`/api/llmResponse`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userInput: userInputValue|| userInput, chatHistory,startupIdea,hypothesis,targetAudience, displayRubricAnalytics}),
+        body: JSON.stringify({ userInput: userInputValue|| userInput, chatHistory,startupIdea,hypothesis,targetAudience, displayRubricAnalytics,selectedModel}),
       });
       const data = await response.json();
       if (data.chatHistory !== undefined) setChatHistory(data.chatHistory);
@@ -478,11 +480,23 @@ async function endSession() {
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   />
+                  {/* <Select
+                    placeholder="Select AI Model"
+                    size="md"
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)} // Update selected model on change
+                  >
+                    {groqModels.map((model, index) => (
+                      <SelectItem key={index} value={model}>
+                       {model}
+                      </SelectItem>
+                    ))}
+                </Select> */}
                   <p className="text-sm font-medium leading-none" style={{color:'#fafafa',marginTop:'1rem'}}>
                   
                   </p>      
                   <CustomerExamplePopup></CustomerExamplePopup>            
-                <Input
+                  <Input
                   placeholder="Startup Idea Description (Default: Money_Savey)"
                   value={startupIdea}
                   onChange={(e) => setStartupIdea(e.target.value)}
@@ -497,24 +511,6 @@ async function endSession() {
                   value={hypothesis}
                   onChange={(e) => setHypothesis(e.target.value)}
                   />
-                 {/* <Select
-                  placeholder="Select Group Name"
-                  size="md"
-                  value={groupName}
-                  onChange={(e) => {
-                    setGroupName(e.target.value);
-                  }}
-                >
-                  {GROUPNAMES.map((group) => (
-                    <SelectItem
-                      key={group.groupName}
-                      textValue={group.groupName}
-                    >
-                      {group.groupName}
-                    </SelectItem>
-                  ))}
-
-                </Select> */}
                 
               </div>
               <Button
@@ -531,7 +527,8 @@ async function endSession() {
           )}
         </CardBody>
 
-        {!displayRubricAnalytics && !isLoadingSession && !loadingRubric && <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>}
+        { stream && <>
+        <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>
 
         <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
           <div style={{display:!displayRubricAnalytics && !isLoadingSession?'flex':'none',width:'100%',justifyContent:'center',alignItems:'center'}}>
@@ -610,6 +607,9 @@ async function endSession() {
             <Square weight="fill"/>
           </Button> 
         </div>
+        </>
+        }
+
         {feedbackJson && !displayRubricAnalytics && questionCount>0 && <FeedbackPieChart data={feedbackJson} overallScore={allRatings} />}
         { rubricJson && displayRubricAnalytics && 
             <RubricPiechart data={rubricJson} overallScore={rubricAllRatings} summary={rubricSummary} specificFeedback={rubricSpecificFeedback} suggestedQuestions={rubricSuggestedQns} resetAllStates={resetAllStates} totalRounds={totalRounds} chatHistory={chatHistory}></RubricPiechart>
@@ -631,6 +631,7 @@ async function endSession() {
             width: '30%',
           }}
           size="lg" />}
+          
        {/* <CardFooter className="flex flex-col gap-3 relative">
            <Tabs
             aria-label="Options"

@@ -2,18 +2,18 @@ import { NextApiRequest, NextApiResponse } from 'next';
 import Groq from 'groq-sdk';
 import { knowledgePrompt} from './prompts';
 import { responseFilter } from './completionFilterFunctions';
-import { baba_house } from './constants';
+import { baba_house } from './configConstants';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 const knowledgeResponse = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
     try {
-      const {  userInput, chatHistory, name, knowledge, tone} = req.body;
+      const {  userInput, chatHistory, name, knowledge, tone,selectedModel} = req.body;
       console.log('Request Body:', req.body);
       let chatCompletion;
       [chatCompletion] = await Promise.all([
-          getGroqChatCompletion(knowledge,userInput, chatHistory,name,tone),
+          getGroqChatCompletion(knowledge,userInput, chatHistory,name,tone,selectedModel),
         ]);
 
       // Process chat completion
@@ -39,7 +39,7 @@ const knowledgeResponse = async (req: NextApiRequest, res: NextApiResponse) => {
 };
 
 // Function to fetch chat completion from Groq
-const getGroqChatCompletion = async (knowledge:string, userInput: string, chatHistory: any, name:string, tone:string) => {
+const getGroqChatCompletion = async (knowledge:string, userInput: string, chatHistory: any, name:string, tone:string,selectedModel:string) => {
   const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
 
   if (!name || !knowledge || !tone) {
@@ -58,9 +58,7 @@ const getGroqChatCompletion = async (knowledge:string, userInput: string, chatHi
         content: userInput,
       },
     ],
-    model: 'Deepseek-R1-Distill-Llama-70b',
-        // model:"llama3-8b-8192",  
-
+    model:selectedModel,
   });
 };
 

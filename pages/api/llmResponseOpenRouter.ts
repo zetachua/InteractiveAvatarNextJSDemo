@@ -10,7 +10,7 @@ let thematics: string[] = [];
 let selectedJsonData: StartupGroups | undefined;
 let rating=0;
 
-const llmResponse = async (req: NextApiRequest, res: NextApiResponse) => {
+const llmResponseOpenRouter = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
     try {
       const { userInput, chatHistory, startupIdea, hypothesis, targetAudience,selectedModel} = req.body;
@@ -125,5 +125,5 @@ const fetchSentiment = async (userInput: string, chatHistory: any[], selectedJso
   }
 };
 
-export default llmResponse;
+export default llmResponseOpenRouter;
 

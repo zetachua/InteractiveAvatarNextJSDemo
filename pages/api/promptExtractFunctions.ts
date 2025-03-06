@@ -1,6 +1,6 @@
 import { CaseStudy, StartupGroups, StoryBook } from '@/components/KnowledgeClasses';
 import { start } from 'repl';
-import { kaching } from './constants';
+import { kaching } from './configConstants';
 
 // Helper function to fetch JSON data
 const fetchJsonData = async (fileName: string) => {

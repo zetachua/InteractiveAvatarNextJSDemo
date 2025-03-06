@@ -18,14 +18,14 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useMemoizedFn, usePrevious } from "ahooks";
 import './WaveAnimation.css';
-
+import {models} from '../pages/api/configConstants'
 
 import TypewriterText from "./Typewriter";
 import { ChatHistory } from "./KnowledgeClasses";
 import { Square,Microphone} from "@phosphor-icons/react";
-import StartupPopup from "./CustomerExamplesPopup";
-import { baba_house } from "@/pages/api/constants";
-import KnowledgeExamplePopup from "./KnowledgeExamplesPopup";
+import StartupPopup from "./PopupExamplesCustomer";
+import { baba_house } from "@/pages/api/configConstants";
+import KnowledgeExamplePopup from "./PopupExamplesKnowledge";
 
 export default function InteractiveAvatarKnowledge() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -52,6 +52,7 @@ export default function InteractiveAvatarKnowledge() {
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const transcriptRef = useRef<string>(''); 
+  const [selectedModel, setSelectedModel] = useState<string>('Deepseek-R1-Distill-Llama-70b');
 
   async function fetchAccessToken() {
     try {
@@ -136,10 +137,11 @@ export default function InteractiveAvatarKnowledge() {
     try {
       // Fetch LLM response
       setDisplayText('');
-      const response = await fetch("/api/knowledgeResponse", {
+      // let apiSource=selectedModel=='sao10k/l3.1-euryale-70b'?'knowledgeResponseOpenRouter':'knowledgeResponse';
+      const response = await fetch(`/api/knowledgeResponse`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userInput: userInputValue|| userInput, chatHistory, name, knowledge, tone}),
+        body: JSON.stringify({ userInput: userInputValue|| userInput, chatHistory, name, knowledge, tone,selectedModel}),
       });
       const data = await response.json();
       if (data.chatHistory !== undefined) setChatHistory(data.chatHistory);
@@ -260,11 +262,11 @@ export default function InteractiveAvatarKnowledge() {
   }
   
   
-async function endSession() {  
-  await avatar.current?.stopAvatar();
-  setStream(undefined);
-  setDisplayText('');
-}
+  async function endSession() {  
+    await avatar.current?.stopAvatar();
+    setStream(undefined);
+    setDisplayText('');
+  }
 
   const handleChangeChatMode = useMemoizedFn(async (v) => {
     if (v === chatMode) {
@@ -347,6 +349,11 @@ async function endSession() {
                   value={avatarId}
                   onChange={(e) => setAvatarId(e.target.value)}
                 /> */}
+                 <Input
+                  placeholder="Paste HeyGen API Key"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  />
                 <Select
                   placeholder="Select Avatar"
                   size="md"
@@ -378,11 +385,19 @@ async function endSession() {
                     </SelectItem>
                   ))}
                 </Select> */}
-                 <Input
-                  placeholder="Paste HeyGen API Key"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  />
+                
+                   {/* <Select
+                      placeholder="Select AI Model"
+                      size="md"
+                      value={selectedModel}
+                      onChange={(e) => setSelectedModel(e.target.value)} // Update selected model on change
+                    >
+                    {models.map((model, index) => (
+                      <SelectItem key={index} value={model}>
+                       {model}
+                      </SelectItem>
+                    ))}
+                  </Select> */}
                   <p className="text-sm font-medium leading-none" style={{color:'#fafafa',marginTop:'1rem'}}>
                   </p>        
                   <KnowledgeExamplePopup></KnowledgeExamplePopup>                      
@@ -434,14 +449,14 @@ async function endSession() {
             <Spinner color="default" size="lg" />
           )}
         </CardBody>
-
+      {stream && <>
        <TypewriterText text={displayText} feedbackText={''} questionCount={0}/>
 
         <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
           <div style={{display: 'flex',width:'100%',justifyContent:'center',alignItems:'center'}}>
-          <div style={{backgroundColor:'rgba(255,255,255,0.1)',textAlign:'center',padding:'1rem',maxWidth:'60%',minWidth:'30%',borderRadius:'10px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',bottom:'9%',left:'50%'}}> 
-            {isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput} 
-            </div>
+            <div style={{backgroundColor:'rgba(255,255,255,0.1)',textAlign:'center',padding:'1rem',maxWidth:'60%',minWidth:'30%',borderRadius:'10px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',bottom:'9%',left:'50%'}}> 
+              {isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput} 
+              </div>
          {/* { !hideSuggestions && suggestionOptions?.map((option, index) => (
             <Button
               key={index}
@@ -482,7 +497,7 @@ async function endSession() {
             </Button>
           ))
         } */}
-        </div>
+          </div>
         </div>
 
         <div className="flex flex-col items-center" style={{flexDirection:'row',justifyContent:'center',marginBottom:'2rem',}}>
@@ -490,9 +505,9 @@ async function endSession() {
           <Button
             onClick={toggleSpeechToText}
             style={{ background:'rgba(255,255,255,0.1)',margin: '0.5rem' ,borderRadius:'100px'}}
-          >
-          {isRecording ? <div className={`wave`} />: <>Talk <Microphone size={14} /></>}
-        </Button>
+            >
+            {isRecording ? <div className={`wave`} />: <>Talk <Microphone size={14} /></>}
+          </Button>
           {/* <Input
             placeholder="Type your message..."
             value={userInput}
@@ -515,6 +530,8 @@ async function endSession() {
             <Square weight="fill"/>
           </Button> 
         </div>
+       </>
+      }
        {/* <CardFooter className="flex flex-col gap-3 relative">
            <Tabs
             aria-label="Options"

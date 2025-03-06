@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { kaching, hypha_alpha } from "@/pages/api/constants";
+import { kaching, hypha_alpha } from "@/pages/api/configConstants";
 import { Button } from "@nextui-org/button";
 
 export default function CustomerExamplePopup() {
