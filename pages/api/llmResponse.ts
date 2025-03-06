@@ -70,7 +70,7 @@ const llmResponse = async (req: NextApiRequest, res: NextApiResponse) => {
 };
 
 // Function to fetch chat completion from Groq
-const getGroqChatCompletion = async (userInput: string, chatHistory: any, prompt:any,reply:any,selectedCase:any,selectedModel:any) => {
+export const getGroqChatCompletion = async (userInput: string, chatHistory: any, prompt:any,reply:any,selectedCase:any,selectedModel:any) => {
   const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
   // const {storyBookTitles,selectedStoryBook}= aiChildrenKnowledgeJsonFilter(userInput);
   // thematics.push(userInput)
