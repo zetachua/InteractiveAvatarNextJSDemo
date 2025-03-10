@@ -31,7 +31,7 @@ import { Square,Microphone} from "@phosphor-icons/react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 import RubricPiechart from "./RubricPieChart";
 import CustomerExamplePopup from "./PopupExamplesCustomer";
-import {groqModels} from '../pages/api/configConstants'
+import {models} from '../pages/api/configConstants'
 
 export default function InteractiveAvatar() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -48,7 +48,6 @@ export default function InteractiveAvatar() {
   const [userInput, setUserInput] = useState<string>("");
   const [text, setText] = useState<string>("");
   const [apiKey, setApiKey] = useState<string>("");
-  // const [apiKey, setApiKey] = useState<string>("MThhZjFjZDQ3YjlmNDI4OTk4NmE3OTM5ZTQ0MWYxYmEtMTczODgyNjE0MA==");
   const mediaStream = useRef<HTMLVideoElement>(null);
   const avatar = useRef<StreamingAvatar | null>(null);
   const [chatMode, setChatMode] = useState("text_mode");
@@ -166,7 +165,6 @@ export default function InteractiveAvatar() {
       // Fetch LLM response
       setFeedbackText('');
       setDisplayText('');
-      // let apiSource=selectedModel=='sao10k/l3.1-euryale-70b'?'llmResponseOpenRouter':'llmResponse';
       const response = await fetch(`/api/llmResponse`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -480,18 +478,23 @@ async function endSession() {
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   />
-                  {/* <Select
+                 <Select
                     placeholder="Select AI Model"
                     size="md"
                     value={selectedModel}
-                    onChange={(e) => setSelectedModel(e.target.value)} // Update selected model on change
+                    onChange={(e) => {
+                      const selectedValue = Number(e.target.value);
+                      console.log("Selected model:", models[selectedValue]);
+                      setSelectedModel(models[selectedValue]);
+
+                    }}
                   >
-                    {groqModels.map((model, index) => (
-                      <SelectItem key={index} value={model}>
-                       {model}
-                      </SelectItem>
-                    ))}
-                </Select> */}
+                  {models.map((model, index) => (
+                    <SelectItem key={index} value={model}>
+                    {model}
+                    </SelectItem>
+                  ))}
+                </Select>
                   <p className="text-sm font-medium leading-none" style={{color:'#fafafa',marginTop:'1rem'}}>
                   
                   </p>      

@@ -3,45 +3,54 @@ import { knowledgePrompt } from './prompts';
 import { responseFilter } from './completionFilterFunctions';
 
 const knowledgeResponseOpenRouter = async (req: NextApiRequest, res: NextApiResponse) => {
-  if (req.method === 'POST') {
-    try {
-      const { userInput, chatHistory, name, knowledge, tone,selectedModel} = req.body;
-      console.log('Request Body:', req.body);
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method Not Allowed' });
+  }
 
-      // Fetch chat completion using fetch API
-      const chatCompletion = await getOpenRouterChatCompletion(knowledge, userInput, chatHistory, name, tone);
+  try {
+    const { userInput, chatHistory, name, knowledge, tone, selectedModel } = req.body;
+    console.log('Request Body OpenRouter:', req.body);
 
-      let responseContent = chatCompletion?.choices[0]?.message?.content;
-      console.log(responseContent, "was there a response");
+    // Fetch chat completion from OpenRouter
+    const chatCompletion = await getOpenRouterChatCompletion(
+      knowledge,
+      userInput,
+      chatHistory,
+      name,
+      tone,
+      selectedModel
+    );
 
-      if (!responseContent) return res.status(400).json({ error: "Empty response from chat completion" });
+    let responseContent = chatCompletion?.choices?.[0]?.message?.content;
 
-      const { filteredResponseContent } = responseFilter(responseContent);
-
-      // Send response
-      res.status(200).json({
-        filteredResponseContent,
-        chatHistory: [
-          ...chatHistory,
-          { role: 'user', content: userInput },
-          { role: 'assistant', content: responseContent },
-        ],
-      });
-
-    } catch (error) {
-      console.error('Error fetching chat completion:', error);
-      res.status(500).json({ error: "Internal Server Error" });
+    if (!responseContent) {
+      return res.status(400).json({ error: 'Empty response from chat completion' });
     }
+
+    const { filteredResponseContent } = responseFilter(responseContent);
+
+    res.status(200).json({
+      filteredResponseContent,
+      chatHistory: [
+        ...chatHistory,
+        { role: 'user', content: userInput },
+        { role: 'assistant', content: responseContent },
+      ],
+    });
+  } catch (error) {
+    console.error('Error fetching chat completion:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 };
 
-// Function to fetch chat completion from OpenRouter using fetch API
+// Function to fetch chat completion using OpenRouter API
 const getOpenRouterChatCompletion = async (
   knowledge: string,
   userInput: string,
-  chatHistory: any,
+  chatHistory: any[],
   name: string,
-  tone: string
+  tone: string,
+  selectedModel: string
 ) => {
   const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
 
@@ -49,11 +58,11 @@ const getOpenRouterChatCompletion = async (
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`, // Your OpenRouter API key
+        'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`, // Use environment variable for security
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'sao10k/l3.1-euryale-70b', // Model to use
+        model: selectedModel || 'sao10k/l3.1-euryale-70b', // Use selected model or default
         messages: [
           {
             role: 'system',
@@ -68,13 +77,12 @@ const getOpenRouterChatCompletion = async (
       }),
     });
 
-    // Check for a successful response
     if (!response.ok) {
-      throw new Error('Failed to fetch chat completion');
+      throw new Error(`Failed to fetch chat completion: ${response.statusText}`);
     }
 
     const data = await response.json();
-    return data; // Return the response data from OpenRouter API
+    return data;
   } catch (error) {
     console.error('Error in fetch request:', error);
     throw new Error('Error fetching chat completion');

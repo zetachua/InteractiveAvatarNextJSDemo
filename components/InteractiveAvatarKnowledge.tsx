@@ -23,8 +23,6 @@ import {models} from '../pages/api/configConstants'
 import TypewriterText from "./Typewriter";
 import { ChatHistory } from "./KnowledgeClasses";
 import { Square,Microphone} from "@phosphor-icons/react";
-import StartupPopup from "./PopupExamplesCustomer";
-import { baba_house } from "@/pages/api/configConstants";
 import KnowledgeExamplePopup from "./PopupExamplesKnowledge";
 
 export default function InteractiveAvatarKnowledge() {
@@ -52,7 +50,7 @@ export default function InteractiveAvatarKnowledge() {
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const transcriptRef = useRef<string>(''); 
-  const [selectedModel, setSelectedModel] = useState<string>('Deepseek-R1-Distill-Llama-70b');
+  const [selectedModel, setSelectedModel] = useState<string>("Deepseek-R1-Distill-Llama-70b");
 
   async function fetchAccessToken() {
     try {
@@ -137,8 +135,9 @@ export default function InteractiveAvatarKnowledge() {
     try {
       // Fetch LLM response
       setDisplayText('');
-      // let apiSource=selectedModel=='sao10k/l3.1-euryale-70b'?'knowledgeResponseOpenRouter':'knowledgeResponse';
-      const response = await fetch(`/api/knowledgeResponse`, {
+      let apiSource=selectedModel=="sao10k/l3.1-euryale-70b"?'knowledgeResponseOpenRouter':'knowledgeResponse';
+      console.log('i ran here openrouter',selectedModel,apiSource)
+      const response = await fetch(`/api/${apiSource}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userInput: userInputValue|| userInput, chatHistory, name, knowledge, tone,selectedModel}),
@@ -146,6 +145,7 @@ export default function InteractiveAvatarKnowledge() {
       const data = await response.json();
       if (data.chatHistory !== undefined) setChatHistory(data.chatHistory);
       if (data.filteredResponseContent !== undefined) setDisplayText(data.filteredResponseContent);
+      console.log('i ran here openrouter response',data.filteredResponseContent)
 
       // // Make the avatar speak the response
       await avatar.current.speak({
@@ -299,6 +299,11 @@ export default function InteractiveAvatarKnowledge() {
     }
   }, [mediaStream, stream]);
 
+  useEffect(() => {
+    console.log("selectedModel updated:", selectedModel);
+  }, [selectedModel]);
+  
+
   return (
     <div className="flex flex-col "style={{display:'flex',justifyContent:'center',alignItems:'center'}} >
       <Card className="w-screen h-screen overflow-hidden border-none rounded-none" style={{background: 'linear-gradient(to top, #987B8C, #F0C7C2)'}}>
@@ -386,18 +391,23 @@ export default function InteractiveAvatarKnowledge() {
                   ))}
                 </Select> */}
                 
-                   {/* <Select
+                   <Select
                       placeholder="Select AI Model"
                       size="md"
                       value={selectedModel}
-                      onChange={(e) => setSelectedModel(e.target.value)} // Update selected model on change
+                      onChange={(e) => {
+                        const selectedValue = Number(e.target.value);
+                        console.log("Selected model:", models[selectedValue]);
+                        setSelectedModel(models[selectedValue]);
+
+                      }} // Update selected model on change
                     >
                     {models.map((model, index) => (
                       <SelectItem key={index} value={model}>
                        {model}
                       </SelectItem>
                     ))}
-                  </Select> */}
+                  </Select>
                   <p className="text-sm font-medium leading-none" style={{color:'#fafafa',marginTop:'1rem'}}>
                   </p>        
                   <KnowledgeExamplePopup></KnowledgeExamplePopup>                      

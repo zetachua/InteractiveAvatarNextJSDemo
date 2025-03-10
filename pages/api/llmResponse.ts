@@ -6,6 +6,7 @@ import { startupKnowledgeJsonExtract } from './promptExtractFunctions';
 import { feedbackFilter, suggestionsOptionsFilter } from './completionFilterFunctions';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
 let thematics: string[] = [];
 let selectedJsonData: StartupGroups | undefined;
 let rating=0;

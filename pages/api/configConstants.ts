@@ -17,12 +17,13 @@ export const baba_house= {
 };
 // Models
 export const models = [
-  'Deepseek-R1-Distill-Llama-70b',
-  'llama3-8b-8192',
-  'sao10k/l3.1-euryale-70b',
+  "Deepseek-R1-Distill-Llama-70b",
+  "llama3-8b-8192",
 ];
 
-export const groqModels = [
-  'Deepseek-R1-Distill-Llama-70b',
-  'llama3-8b-8192',
-];
+// "sao10k/l3.1-euryale-70b",
+
+// export const groqModels = [
+//   'Deepseek-R1-Distill-Llama-70b',
+//   'llama3-8b-8192',
+// ];
