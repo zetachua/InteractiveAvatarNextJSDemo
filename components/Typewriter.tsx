@@ -3,8 +3,8 @@ import { useState, useEffect, useRef } from "react";
 
 interface TypewriterTextProps {
   text: string;
-  feedbackText: string;
-  questionCount:number;
+  feedbackText?: string;
+  questionCount?:number;
 }
 
 const TypewriterText: React.FC<TypewriterTextProps> = ({ text, feedbackText,questionCount }) => {

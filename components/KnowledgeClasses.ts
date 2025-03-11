@@ -65,6 +65,25 @@ export interface RubricData {
   specificFeedback: RubricSpecificData;
 }
 
+export interface RubricInvestorMetricData {
+  marketValidation: number;
+  pitchDeck: number;
+  oralPresentation: number;
+}
+export interface RubricInvestorSpecificData {
+  marketValidation: string;
+  pitchDeck: string;
+  oralPresentation: string;
+}
+export interface RubricInvestorData {
+  marketValidation: number;
+  pitchDeck: number;
+  oralPresentation: number;
+  overallScore: number;
+  summary: string;
+  specificFeedback: RubricInvestorSpecificData;
+}
+
 export interface StartupGroups {
   startup_idea: string;
   target_audience: string;

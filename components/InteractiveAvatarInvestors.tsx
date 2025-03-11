@@ -26,14 +26,13 @@ import './WaveAnimation.css';
 // import {AVATARS, STT_LANGUAGE_LIST} from "@/app/lib/constants";
 import TypewriterText from "./Typewriter";
 import FeedbackPieChart from "./FeedbackPieChart";
-import { ChatHistory, FeedbackData,RubricData, RubricSpecificData } from "./KnowledgeClasses";
+import { ChatHistory, FeedbackData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
 import { Square,Microphone} from "@phosphor-icons/react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
-import RubricPiechart from "./RubricPieChart";
-import CustomerExamplePopup from "./PopupExamplesCustomer";
 import {models} from '../pages/api/configConstants'
+import RubricInvestorPiechart from "./RubricInvestorPieChart";
 
-export default function InteractiveAvatar() {
+export default function InteractiveAvatarInvestors() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [loadingRubric, setLoadingRubric] = useState(false);
   const [isLoadingRepeat, setIsLoadingRepeat] = useState(false);
@@ -58,21 +57,18 @@ export default function InteractiveAvatar() {
   const [targetAudience,setTargetAudience]=useState('');
   const [feedbackText,setFeedbackText]=useState('');
   const [rubricSummary,setRubricSummary]=useState('');
-  const [rubricSpecificFeedback,setRubricSpecificFeedback]=useState<RubricSpecificData>(
-    {
-      painPointValidation: '',
-      marketOpportunity: '',
-      customerAdoptionInsights: ''
-    });
-  const [rubricSuggestedQns,setRubricSuggestedQns]= useState<string[]>([]);
+  const [rubricSpecificFeedback,setRubricSpecificFeedback]=useState<RubricInvestorSpecificData>(
+  {
+    marketValidation: '',
+    pitchDeck: '',
+    oralPresentation: ''
+  });
   const [displayRubricAnalytics,setDisplayRubricAnalytics]=useState(false);
-  const [suggestionOptions, setSuggestionOptions] = useState<string[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [questionCount, setQuestionCount] = useState<number>(0);
   const [feedbackJson, setFeedbackJson] = useState<FeedbackData | null>(null);
   const [allRatings, setAllRatings] = useState<number>(0); 
-  const [totalRounds, setTotalRounds] = useState<number>(0); 
-  const [rubricJson, setRubricJson] = useState<RubricData | null>(null);
+  const [rubricJson, setRubricJson] = useState<RubricInvestorData | null>(null);
   const [rubricAllRatings, setRubricAllRatings] = useState<number>(0); 
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -165,35 +161,21 @@ export default function InteractiveAvatar() {
       // Fetch LLM response
       setFeedbackText('');
       setDisplayText('');
-      const response = await fetch(`/api/llmResponse`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userInput: userInputValue|| userInput, chatHistory,startupIdea,hypothesis,targetAudience, displayRubricAnalytics,selectedModel}),
-      });
-      const data = await response.json();
-      if (data.chatHistory !== undefined) setChatHistory(data.chatHistory);
-      if (data.filteredResponseContent !== undefined) setDisplayText(data.filteredResponseContent);
-      if (data.feedbackSummary !== undefined) setFeedbackText(data.feedbackSummary);
-      if (data.suggestions !== undefined) setSuggestionOptions(data.suggestions);
-
-      if(questionCount!==null && questionCount>0 && data.feedbackMetrics!==undefined && data.feedbackScore!==undefined){
-          const updateFeedbackJson=mergeJsons(feedbackJson,data.feedbackMetrics)
-          setFeedbackJson(updateFeedbackJson);
-          setAllRatings((prevState) => {
-              const newRating = data.feedbackScore || 0;
-              console.log(data.feedbackScore,prevState,"allRatings")
-              return prevState + newRating; // Add the new rating to the previous state
-          });
-          setTotalRounds((prevState)=>{ return prevState+1; });
-      }
-      setQuestionCount((prevState)=>{ return prevState+1; })
+      // const response = await fetch(`/api/qnaResponse`, {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ chatHistory,startupIdea,hypothesis,targetAudience,selectedModel}),
+      // });
+      // const data = await response.json();
+      // if (data.chatHistory !== undefined) setChatHistory(data.chatHistory);
+      // if (data.filteredResponseContent !== undefined) setDisplayText(data.filteredResponseContent);
 
       // // Make the avatar speak the response
-      await avatar.current.speak({
-        text: data.filteredResponseContent,
-        taskType: TaskType.REPEAT,
-        taskMode: TaskMode.SYNC,
-      });
+      // await avatar.current.speak({
+      //   text: data.filteredResponseContent,
+      //   taskType: TaskType.REPEAT,
+      //   taskMode: TaskMode.SYNC,
+      // });
 
       setUserInput('')
       setSelectedOptions([''])
@@ -289,18 +271,15 @@ export default function InteractiveAvatar() {
     setDisplayText('');
     setChatHistory([]);
     setRubricSummary('');
-    setSuggestionOptions([]);
     setRubricJson(null);
     setAllRatings(0);
-    setTotalRounds(0);
     setRubricAllRatings(0);
     setFeedbackJson(null);
     setRubricSpecificFeedback( {
-      painPointValidation: '',
-      marketOpportunity: '',
-      customerAdoptionInsights: ''
+      marketValidation: '',
+      pitchDeck: '',
+      oralPresentation: ''
     });
-   setRubricSuggestedQns([]);
   }
 
   function mergeJsons<T extends Record<string, number | string>>(obj1: T, obj2: T): T {
@@ -329,30 +308,41 @@ async function endSession() {
   await avatar.current?.stopAvatar();
   setStream(undefined);
 
-  try {
-    const response = await fetch("/api/rubricResponse", {
+  try{
+    const response = await fetch(`/api/pitchResponse`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ startupIdea, hypothesis, targetAudience, chatHistory }),
+      body: JSON.stringify({ chatHistory,selectedModel}),
     });
-
     const data = await response.json();
-    
-    // Once data is received, update the state and stop the spinner
+    if (data.chatHistory !== undefined) setChatHistory(data.chatHistory);
+    if (data.sentimentSummary !== undefined) setFeedbackText(data.sentimentSummary);
+
+    if(data.sentimentMetrics!==undefined && data.sentimentScore!==undefined){
+        const updateFeedbackJson=mergeJsons(feedbackJson,data.feedbackMetrics)
+        setFeedbackJson(updateFeedbackJson);
+        setAllRatings((prevState) => {
+            const newRating = data.sentimentScore || 0;
+            console.log(data.sentimentScore,prevState,"allRatings")
+            return prevState + newRating; // Add the new rating to the previous state
+        });
+    }
     if (data.rubricSummary !== undefined) setRubricSummary(data.rubricSummary);
     if (data.rubricMetrics !== undefined) setRubricJson(data.rubricMetrics);
     if (data.rubricScore !== undefined) setRubricAllRatings(data.rubricScore);
     if (data.rubricSpecificFeedback !== undefined) setRubricSpecificFeedback(data.rubricSpecificFeedback);
-    if (data.rubricSuggestedQuestions !== undefined) setRubricSuggestedQns(data.rubricSuggestedQuestions);
-
     displayRubrics();
+
   } catch (error) {
-    console.error('Error fetching rubric response:', error);
+    console.error('Error fetching pitch sentiment and rubric response:', error);
   } finally {
     // Set loading to false once the fetch is completed (either success or failure)
     setLoadingRubric(false);
   }
+
 }
+
+console.log(rubricSummary,"rubricSummary",rubricJson,"rubricJson",rubricAllRatings,"rubricScore",rubricSpecificFeedback,"rubricSpecificFeedback")
 
   const displayRubrics= ()=> {
     setDisplayRubricAnalytics(true);
@@ -423,24 +413,8 @@ async function endSession() {
               </div>
             </div>
           ) : !isLoadingSession ? (
-            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center"style={{backgroundColor:'rgba(255,255,255,0.2)',borderRadius:'50px',padding:'2rem',maxHeight:'60%'}}>
+            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center"style={{backgroundColor:'rgba(255,255,255,0.2)',borderRadius:'50px',padding:'2rem',maxHeight:'40%'}}>
               <div className="flex flex-col gap-2 w-full" style={{position:'relative'}} >
-                {/* <p className="text-sm font-medium leading-none">
-                  Custom Knowledge ID (optional)
-                </p>
-                <Input
-                  placeholder="Enter a custom knowledge ID"
-                  value={knowledgeId}
-                  onChange={(e) => setKnowledgeId(e.target.value)}
-                /> */}
-                {/* <p className="text-sm font-medium leading-none">
-                  Custom Avatar ID (optional)
-                </p>
-                <Input
-                  placeholder="Enter a custom avatar ID"
-                  value={avatarId}
-                  onChange={(e) => setAvatarId(e.target.value)}
-                /> */}
                 {/* <Select
                   placeholder="Select Avatar"
                   size="md"
@@ -494,25 +468,6 @@ async function endSession() {
                     </SelectItem>
                   ))}
                 </Select>
-                  <p className="text-sm font-medium leading-none" style={{color:'#fafafa',marginTop:'1rem'}}>
-                  
-                  </p>      
-                  <CustomerExamplePopup></CustomerExamplePopup>            
-                  <Input
-                  placeholder="Startup Idea Description (Default: Money_Savey)"
-                  value={startupIdea}
-                  onChange={(e) => setStartupIdea(e.target.value)}
-                  />
-                   <Input
-                  placeholder="Target Audience (Default: Fresh Grad)"
-                  value={targetAudience}
-                  onChange={(e) => setTargetAudience(e.target.value)}
-                  />
-                   <Input
-                  placeholder="Hypothesis to Confirm (Default: Money_Savey)"
-                  value={hypothesis}
-                  onChange={(e) => setHypothesis(e.target.value)}
-                  />
                 
               </div>
               <Button
@@ -614,7 +569,7 @@ async function endSession() {
 
         {feedbackJson && !displayRubricAnalytics && questionCount>0 && <FeedbackPieChart data={feedbackJson} overallScore={allRatings} />}
         { rubricJson && displayRubricAnalytics && 
-            <RubricPiechart data={rubricJson} overallScore={rubricAllRatings} summary={rubricSummary} specificFeedback={rubricSpecificFeedback} suggestedQuestions={rubricSuggestedQns} resetAllStates={resetAllStates} totalRounds={totalRounds} chatHistory={chatHistory}></RubricPiechart>
+            <RubricInvestorPiechart data={rubricJson} overallScore={rubricAllRatings} summary={rubricSummary} specificFeedback={rubricSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart>
         }
         {loadingRubric&&<Spinner 
           style={{

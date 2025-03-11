@@ -124,6 +124,36 @@ export const feedbackPrompt=(question:string,reply:string,startupIdea:string)=>`
       If the user's question was rude, boredom, negative, they should be around 1-2 score
 
 `
+export const sentimentPitchPrompt = (chatHistory: any) => `
+  You are an expert in analyzing the sentiment of a student's pitch to an investor about their startup idea. The student has just completed a 5-minute pitch and we are assessing the overall sentiment and effectiveness based on the following criteria:
+
+  - Clarity (1-5): Was the pitch clear, concise, and easy to understand?
+  - Relevance (1-5): Was the pitch relevant and aligned with the interests of the investor?
+  - Depth (1-5): Did the pitch provide enough insight and detail about the startup idea?
+  - Neutrality (1-5): Was the pitch delivered without bias or overly emotional language?
+  - Engagement (1-5): Based on the pitch, how engaging and compelling was the student’s approach?
+
+  Please analyze the chat history where the student describes their startup idea and pitch to the investor: ${chatHistory}
+
+  Your output should be a JSON object with:
+  - A score for each of the above categories.
+  - An **overall sentiment score** derived from the individual scores, with special emphasis on the tone, enthusiasm, and clarity of the pitch.
+  - A **feedback summary** that includes an evaluation of the student's sentiment, highlighting strengths and areas for improvement in terms of engaging the investor.
+
+  Output format:
+  {
+    "clarity": 3,
+    "relevance": 4,
+    "depth": 4,
+    "neutrality": 5,
+    "engagement": 3,
+    "overallScore": 3.8,
+    "feedbackSummary": "The pitch was clear and well-structured but could use more passion and engagement to captivate the investor. The idea is relevant but lacks depth in addressing investor concerns."
+  }
+
+  If the pitch includes any negative or overly pessimistic language, the score should reflect that, with any signs of rudeness or lack of enthusiasm scoring low (1-2). 
+  Consider the emotional tone of the student’s responses and how well they are able to engage and excite the investor about their startup idea.
+`;
 
 export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, thematicWords:any): string => 
 `     Instruction: 
@@ -222,28 +252,26 @@ export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, t
   Return a JSON object with scores and feedback.
   
   \`\`\`json
-  {
-    "marketValidation": {
-      "score": 12,
-      "feedback": "The startup has demonstrated strong market validation with 10,000+ loyal users and compelling customer feedback. However, their explanation of validation could be clearer to maximize investor confidence."
-    },
-    "pitchDeck": {
-      "score": 11,
-      "feedback": "The pitch covers the problem, market size, and value proposition well, but lacks strong defensibility arguments. The team’s expertise is mentioned but could be emphasized more."
-    },
-    "oralPresentation": {
-      "score": 13,
-      "feedback": "The presenter communicated clearly and confidently, effectively engaging the audience. However, the structure could be slightly improved to avoid minor repetition."
-    },
-    "overallScore": 12,
-    "summary": "This is a strong pitch with solid validation and a compelling presentation. Improvements in defensibility arguments and structural flow could further enhance investor interest."
-  }
+    {
+        "marketValidation": 12,
+        "pitchDeck": 11,
+        "oralPresentation": 13,
+        "overallScore": 12,
+        "summary": "This is a strong pitch with solid validation and a compelling presentation. Improvements in defensibility arguments and structural flow could further enhance investor interest.",
+        "specificFeedback": {
+          "marketValidation": "The startup has demonstrated strong market validation with 10,000+ loyal users and compelling customer feedback. However, their explanation of validation could be clearer to maximize investor confidence.",
+          "pitchDeck": "The pitch covers the problem, market size, and value proposition well, but lacks strong defensibility arguments. The team’s expertise is mentioned but could be emphasized more.",
+          "oralPresentation": "The presenter communicated clearly and confidently, effectively engaging the audience. However, the structure could be slightly improved to avoid minor repetition."
+        }
+    }
   \`\`\`
   
   If the startup’s market validation is **weak, vague, or purely theoretical**, assign a score between **1-5.**  
   
   Now, analyze the chat history and return the evaluation.
   `;
+
+
 export const knowledgePrompt =(knowledge:any,name:string,tone:string)=>`
   You are an AI twin chatbot of a persona described below. 
   Please respond as this persona with a personality, tone:"${tone}", and knowledge derived from the data below.

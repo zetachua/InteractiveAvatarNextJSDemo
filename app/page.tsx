@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@nextui-org/react";
 import InteractiveAvatar from "@/components/InteractiveAvatar";
 import InteractiveAvatarKnowledge from "@/components/InteractiveAvatarKnowledge";
+import InteractiveAvatarInvestors from "@/components/InteractiveAvatarInvestors";
 
 export default function App() {
   const [activeView, setActiveView] = useState("customer");
@@ -32,15 +33,28 @@ export default function App() {
         >
           Persona Creator Page
         </Button>
+        <Button
+          className={`${
+            activeView === "investors"
+              ? "bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white"
+              : "bg-gray-200 text-gray-700"
+          } rounded-lg`}
+          onClick={() => setActiveView("investors")}
+        >
+          Pitch to Investors Page
+        </Button>
+
       </div>
 
       {/* Conditional Component Rendering */}
       <div className="w-full h-full">
         {activeView === "customer" ? (
           <InteractiveAvatar />
-        ) : (
+        ) : activeView==="persona"? (
           <InteractiveAvatarKnowledge />
-        )}
+        ):
+          <InteractiveAvatarInvestors/>
+        }
       </div>
     </div>
   );

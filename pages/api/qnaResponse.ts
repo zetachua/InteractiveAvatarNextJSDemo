@@ -7,7 +7,7 @@ import { models } from './configConstants';
 
 let selectedJsonData: StartupGroups | undefined;
 
-const rubricResponse = async (req: NextApiRequest, res: NextApiResponse) => {
+const qnaResponse = async (req: NextApiRequest, res: NextApiResponse) => {
 if (req.method === 'POST') {
   try {
     const { startupIdea, hypothesis, targetAudience,chatHistory } = req.body;
@@ -81,5 +81,5 @@ try {
 }
 };
 
-export default rubricResponse;
+export default qnaResponse;
 

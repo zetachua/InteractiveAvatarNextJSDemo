@@ -1,4 +1,4 @@
-import { FeedbackData, RubricData } from "@/components/KnowledgeClasses";
+import { FeedbackData, RubricData, RubricInvestorData } from "@/components/KnowledgeClasses";
 
 export const suggestionsOptionsFilter = (responseContent: string,rating:number) => {
   let filteredResponseContent = responseContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
@@ -120,6 +120,61 @@ export const rubricFilter = (responseContent: string) => {
       },
       rubricSpecificFeedback: rubricDataJson.specificFeedback,
       rubricSuggestionQuestions: rubricDataJson.suggestedQuestions,
+    };
+
+  } catch (error) {
+    console.error("Error in rubricFilter function:", error);
+    return null;
+  }
+};
+
+
+
+export const rubricInvestorFilter = (responseContent: string) => {
+  console.log(responseContent, "original responseContent");
+  
+  try {
+    let rubricJson = responseContent
+      .replace(/<think>[\s\S]*?<\/think>/g, '')  // Remove <think> tags
+      .replace(/```json|```/g, '')               // Remove ```json markers
+      .trim();
+    
+    let rubricJsonMatch = rubricJson.match(/\{[\s\S]*\}/);
+    rubricJson = rubricJsonMatch ? rubricJsonMatch[0].trim() : '{}';
+    console.log("Raw rubricJson:", rubricJson);
+
+    let rubricDataJson: RubricInvestorData;
+
+    // Try to parse the JSON, or use default fallback if parsing fails
+    try {
+      rubricDataJson = JSON.parse(rubricJson);
+    } catch (error) {
+      console.error("Error parsing rubric JSON, using default values:", error);
+      // Default rubric values when no valid rubricJson is found
+      rubricDataJson = {
+        marketValidation: 3,
+        pitchDeck: 4,
+        oralPresentation: 5,
+        overallScore: 4,
+        summary: "The pitch lacks strong market validation, and the deck is not compelling. The oral presentation is basic and needs significant improvement to capture investor interest.",
+        specificFeedback: {
+          marketValidation: "The market validation is weak, with limited evidence of customer interest or traction. The student should provide more specific data or testimonials to demonstrate the product’s value and demand.",
+          pitchDeck: "The pitch deck is lacking in key areas such as market opportunity, competition analysis, and customer acquisition strategy. The team’s experience is barely mentioned, and the overall structure feels underdeveloped.",
+          oralPresentation: "The presenter spoke in a monotone, without much enthusiasm or engagement. The pitch felt rushed and lacked clarity, making it hard for investors to grasp the full value of the startup."
+        }
+      };
+    }
+
+    if (rubricDataJson.overallScore==undefined) return;
+    return {
+      rubricScore: rubricDataJson.overallScore,
+      rubricSummary: rubricDataJson.summary,
+      rubricMetrics: {
+        marketValidation: rubricDataJson.marketValidation,
+        pitchDeck: rubricDataJson.pitchDeck,
+        oralPresentation: rubricDataJson.oralPresentation,
+      },
+      rubricSpecificFeedback: rubricDataJson.specificFeedback,
     };
 
   } catch (error) {
