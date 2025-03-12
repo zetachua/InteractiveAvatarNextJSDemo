@@ -1,4 +1,4 @@
-import { FeedbackData, RubricData, RubricInvestorData } from "@/components/KnowledgeClasses";
+import { FeedbackData, Rubric2InvestorData, RubricData, RubricInvestorData } from "@/components/KnowledgeClasses";
 
 export const suggestionsOptionsFilter = (responseContent: string,rating:number) => {
   let filteredResponseContent = responseContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
@@ -173,6 +173,76 @@ export const rubricInvestorFilter = (responseContent: string) => {
         marketValidation: rubricDataJson.marketValidation,
         pitchDeck: rubricDataJson.pitchDeck,
         oralPresentation: rubricDataJson.oralPresentation,
+      },
+      rubricSpecificFeedback: rubricDataJson.specificFeedback,
+    };
+
+  } catch (error) {
+    console.error("Error in rubricFilter function:", error);
+    return null;
+  }
+};
+
+
+
+export const rubricInvestorFilter2 = (responseContent: string) => {
+  console.log(responseContent, "original responseContent rubric2");
+  
+  try {
+    let rubricJson = responseContent
+      .replace(/<think>[\s\S]*?<\/think>/g, '')  // Remove <think> tags
+      .replace(/```json|```/g, '')               // Remove ```json markers
+      .trim();
+    
+    let rubricJsonMatch = rubricJson.match(/\{[\s\S]*\}/);
+    rubricJson = rubricJsonMatch ? rubricJsonMatch[0].trim() : '{}';
+    console.log("Raw rubricJson2:", rubricJson);
+
+    let rubricDataJson: Rubric2InvestorData;
+
+    // Try to parse the JSON, or use default fallback if parsing fails
+    try {
+      rubricDataJson = JSON.parse(rubricJson);
+    } catch (error) {
+      console.error("Error parsing rubric JSON, using default values:", error);
+      // Default rubric values when no valid rubricJson is found
+      rubricDataJson = {
+          elevatorPitch: 5,
+          team: 4,
+          marketOpportunity: 5,
+          marketSize: 3,
+          solutionValueProposition: 5,
+          competitivePosition: 2,
+          tractionAwards: 3,
+          revenueModel: 4,
+          overallScore: 3.8,
+          summary: "The pitch lacks clarity and engagement, making it difficult to capture investor interest. The presentation was disorganized, and key details on market validation and differentiation were missing. While the problem was articulated, the solution lacked a compelling value proposition. Significant improvements are needed in competitive positioning, revenue modeling, and team credibility.",
+          specificFeedback: {
+            elevatorPitch: "The opening statement was generic and did not effectively hook the audience. The pitch lacked a strong narrative to engage investors.",
+            team: "The founders’ background was mentioned but failed to establish why they are the right team for this venture.",
+            marketOpportunity: "The problem was described, but the urgency and customer pain points were not well-supported by data.",
+            marketSize: "Market size estimates were vague, with no clear distinction between TAM, SAM, and SOM.",
+            solutionValueProposition: "The proposed solution was explained, but it was unclear how it significantly improves upon existing alternatives.",
+            competitivePosition: "No strong competitive advantage was demonstrated. The differentiation from existing solutions was not well-articulated.",
+            tractionAwards: "Minimal traction was presented, with little evidence of early customer validation or revenue.",
+            revenueModel: "Revenue model was loosely defined, with unclear monetization strategy and scalability concerns."
+          }        
+      };
+    }
+
+    if (rubricDataJson.overallScore==undefined) return;
+    return {
+      rubricScore: rubricDataJson.overallScore,
+      rubricSummary: rubricDataJson.summary,
+      rubricMetrics: {
+        elevatorPitch: rubricDataJson.elevatorPitch,
+        team: rubricDataJson.team,
+        marketOpportunity: rubricDataJson.marketOpportunity,
+        marketSize: rubricDataJson.marketSize,
+        solutionValueProposition: rubricDataJson.solutionValueProposition,
+        competitivePosition: rubricDataJson.competitivePosition,
+        tractionAwards: rubricDataJson.tractionAwards,
+        revenueModel: rubricDataJson.revenueModel,
       },
       rubricSpecificFeedback: rubricDataJson.specificFeedback,
     };

@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import Groq from 'groq-sdk';
-import { pitchEvaluationPrompt, sentimentPitchPrompt} from './prompts';
-import { feedbackFilter, rubricInvestorFilter } from './completionFilterFunctions';
+import { pitchEvaluationPrompt, pitchEvaluationPrompt2, sentimentPitchPrompt} from './prompts';
+import { feedbackFilter, rubricInvestorFilter, rubricInvestorFilter2 } from './completionFilterFunctions';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -12,11 +12,12 @@ const pitchResponse = async (req: NextApiRequest, res: NextApiResponse) => {
       const { userInput, chatHistory,selectedModel} = req.body;
       console.log('Request Body:', req.body);
 
-      let rubricResult,sentimentResult;
+      let rubricResult,sentimentResult,rubricResult2;
       // Run all API calls in parallel, or fetch rubric based on displayRubricAnalytics flag
-      [rubricResult,sentimentResult] = await Promise.all([
-          fetchRubric(chatHistory, "rubric", selectedModel),
-          fetchSentiment(userInput, chatHistory, "feedback",selectedModel),
+      [rubricResult2,rubricResult,sentimentResult] = await Promise.all([
+        fetchRubric(userInput,chatHistory, "rubric2", selectedModel),
+        fetchRubric(userInput,chatHistory, "rubric", selectedModel),
+        fetchSentiment(userInput, chatHistory, "sentiment",selectedModel),
         ]);
 
       let sentimentScore, sentimentSummary, sentimentMetrics;
@@ -25,7 +26,7 @@ const pitchResponse = async (req: NextApiRequest, res: NextApiResponse) => {
         sentimentSummary = sentimentResult.feedbackSummary;
         sentimentMetrics = sentimentResult.feedbackMetrics;
       } else {
-        console.log("Invalid feedback data, keeping previous values.");
+        console.log("Invalid sentiment data, keeping previous values.");
       }
 
       // Process sentiment feedback
@@ -36,7 +37,18 @@ const pitchResponse = async (req: NextApiRequest, res: NextApiResponse) => {
         rubricMetrics = rubricResult.rubricMetrics;
         rubricSpecificFeedback= rubricResult.rubricSpecificFeedback;
       } else {
-        console.log("Invalid feedback data, keeping previous values.");
+        console.log("Invalid sentiment data, keeping previous values.");
+      }
+
+      let rubricScore2, rubricSummary2, rubricMetrics2,rubricSpecificFeedback2;
+      if (rubricResult2?.rubricScore !== undefined) {
+        rubricScore2 = rubricResult2.rubricScore;
+        rubricSummary2 = rubricResult2.rubricSummary;
+        rubricMetrics2 = rubricResult2.rubricMetrics;
+        rubricSpecificFeedback2= rubricResult2.rubricSpecificFeedback;
+        console.log("Invalid sentiment data, keeping previous values.");
+      } else {
+        console.log("Invalid sentiment data, keeping previous values.");
       }
 
       // Send response
@@ -45,6 +57,10 @@ const pitchResponse = async (req: NextApiRequest, res: NextApiResponse) => {
         rubricSummary,
         rubricMetrics,
         rubricSpecificFeedback,
+        rubricScore2,
+        rubricSummary2,
+        rubricMetrics2,
+        rubricSpecificFeedback2,
         sentimentScore,
         sentimentSummary,
         sentimentMetrics,
@@ -63,9 +79,11 @@ const getGroqChatCompletion = async (userInput: string, chatHistory: any, prompt
 
   let selectedPrompt=""
   if (promptType=='rubric'){
-    selectedPrompt=pitchEvaluationPrompt(chatHistory)
-  } else if (promptType=='feedback'){
-    selectedPrompt=sentimentPitchPrompt(chatHistory)
+    selectedPrompt=pitchEvaluationPrompt(userInput)
+  } else if (promptType=='sentiment'){
+    selectedPrompt=sentimentPitchPrompt(userInput,chatHistory)
+  } else if (promptType=='rubric2'){
+    selectedPrompt=pitchEvaluationPrompt2(userInput)
   }
   console.log(promptType,"selectedPrompt",selectedPrompt)
 
@@ -87,17 +105,17 @@ const getGroqChatCompletion = async (userInput: string, chatHistory: any, prompt
 
 const fetchSentiment = async (userInput: string, chatHistory: any[], promptType: string, selectedModel:any) => {
   try {
-    const rubricRatingCompletion = await getGroqChatCompletion(userInput, chatHistory, promptType,selectedModel);
-    let responseContent = rubricRatingCompletion.choices[0].message.content;
+    const sentimentRatingCompletion = await getGroqChatCompletion(userInput, chatHistory, promptType,selectedModel);
+    let responseContent = sentimentRatingCompletion.choices[0].message.content;
 
-    if (!responseContent) {
-      throw new Error("Empty feedback response");
+    if (responseContent==undefined) {
+      throw new Error("Empty sentiment response");
     }
 
     const filteredResponse = feedbackFilter(responseContent);
 
-    if (!filteredResponse) {
-      console.log("Invalid feedback JSON format, returning null");
+    if (filteredResponse==undefined) {
+      console.log("Invalid sentiment JSON format, returning null");
       return null;  // Return null if parsing fails
     }
 
@@ -109,16 +127,21 @@ const fetchSentiment = async (userInput: string, chatHistory: any[], promptType:
 };
 
 
-const fetchRubric = async (chatHistory: any[], promptType: string,selectedModel:any) => {
+const fetchRubric = async (userInput:string, chatHistory: any[], promptType: string,selectedModel:any) => {
 try {
-  const rubricRatingCompletion = await getGroqChatCompletion('', chatHistory, promptType, selectedModel);
+  const rubricRatingCompletion = await getGroqChatCompletion(userInput, chatHistory, promptType, selectedModel);
   let responseContent = rubricRatingCompletion.choices[0].message.content;
   if (!responseContent) {
     throw new Error("Empty rubric response");
   }
 
   console.log(responseContent, "CHECK2Rubric responseContent");
-  const filteredResponse = rubricInvestorFilter(responseContent);
+  let filteredResponse;
+  if (promptType==='rubric2'){
+    filteredResponse = rubricInvestorFilter2(responseContent);
+  }else{
+    filteredResponse = rubricInvestorFilter(responseContent);
+  }
   console.log(filteredResponse, "CHECK3Rubric filteredResponse");
 
   if (!filteredResponse) {

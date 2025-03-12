@@ -26,11 +26,12 @@ import './WaveAnimation.css';
 // import {AVATARS, STT_LANGUAGE_LIST} from "@/app/lib/constants";
 import TypewriterText from "./Typewriter";
 import FeedbackPieChart from "./FeedbackPieChart";
-import { ChatHistory, FeedbackData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
+import { ChatHistory, FeedbackData, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
 import { Square,Microphone} from "@phosphor-icons/react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
-import {models} from '../pages/api/configConstants'
+import {models, tempUserInput} from '../pages/api/configConstants'
 import RubricInvestorPiechart from "./RubricInvestorPieChart";
+import RubricInvestorPiechart2 from "./RubricInvestorPieChart2";
 
 export default function InteractiveAvatarInvestors() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -63,13 +64,27 @@ export default function InteractiveAvatarInvestors() {
     pitchDeck: '',
     oralPresentation: ''
   });
+  const [rubricSummary2,setRubricSummary2]=useState('');
+  const [rubricSpecificFeedback2,setRubricSpecificFeedback2]=useState<Rubric2InvestorSpecificData>(
+    {
+      elevatorPitch:'',
+      team:'',
+      marketOpportunity:'',
+      marketSize:'',
+      solutionValueProposition:'',
+      competitivePosition:'',
+      tractionAwards: '',
+      revenueModel: '',
+    });
   const [displayRubricAnalytics,setDisplayRubricAnalytics]=useState(false);
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [questionCount, setQuestionCount] = useState<number>(0);
-  const [feedbackJson, setFeedbackJson] = useState<FeedbackData | null>(null);
-  const [allRatings, setAllRatings] = useState<number>(0); 
+  const [sentimentJson, setSentimentJson] = useState<FeedbackData | null>(null);
+  const [sentimentRatings, setSentimentScore] = useState<number>(0); 
   const [rubricJson, setRubricJson] = useState<RubricInvestorData | null>(null);
   const [rubricAllRatings, setRubricAllRatings] = useState<number>(0); 
+  const [rubricJson2, setRubricJson2] = useState<Rubric2InvestorData | null>(null);
+  const [rubricAllRatings2, setRubricAllRatings2] = useState<number>(0); 
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const transcriptRef = useRef<string>(''); 
@@ -159,8 +174,6 @@ export default function InteractiveAvatarInvestors() {
   
     try {
       // Fetch LLM response
-      setFeedbackText('');
-      setDisplayText('');
       // const response = await fetch(`/api/qnaResponse`, {
       //   method: "POST",
       //   headers: { "Content-Type": "application/json" },
@@ -177,8 +190,8 @@ export default function InteractiveAvatarInvestors() {
       //   taskMode: TaskMode.SYNC,
       // });
 
-      setUserInput('')
-      setSelectedOptions([''])
+      if(userInputValue) setUserInput(userInputValue)
+
     } catch (error) {
       console.error("Error fetching LLM response:", error);
       setDebug("Failed to fetch response from LLM");
@@ -246,7 +259,9 @@ export default function InteractiveAvatarInvestors() {
           // Stopped manually, update userInput and trigger speak
           setUserInput(transcriptRef.current || '');
           if (transcriptRef.current) {
-            handleSpeak(transcriptRef.current);
+            setUserInput(transcriptRef.current);
+            // handleSpeak(transcriptRef.current);
+            endSession();
           } else {
             setDebug('No speech detected');
           }
@@ -272,9 +287,10 @@ export default function InteractiveAvatarInvestors() {
     setChatHistory([]);
     setRubricSummary('');
     setRubricJson(null);
-    setAllRatings(0);
+    setRubricJson2(null);
+    setSentimentScore(0);
     setRubricAllRatings(0);
-    setFeedbackJson(null);
+    setSentimentJson(null);
     setRubricSpecificFeedback( {
       marketValidation: '',
       pitchDeck: '',
@@ -312,18 +328,18 @@ async function endSession() {
     const response = await fetch(`/api/pitchResponse`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chatHistory,selectedModel}),
+      body: JSON.stringify({ userInput:tempUserInput, chatHistory,selectedModel}),
     });
     const data = await response.json();
     if (data.chatHistory !== undefined) setChatHistory(data.chatHistory);
     if (data.sentimentSummary !== undefined) setFeedbackText(data.sentimentSummary);
 
     if(data.sentimentMetrics!==undefined && data.sentimentScore!==undefined){
-        const updateFeedbackJson=mergeJsons(feedbackJson,data.feedbackMetrics)
-        setFeedbackJson(updateFeedbackJson);
-        setAllRatings((prevState) => {
+        const updateSentimentJson=mergeJsons(sentimentJson,data.sentimentMetrics)
+        setSentimentJson(updateSentimentJson);
+        setSentimentScore((prevState) => {
             const newRating = data.sentimentScore || 0;
-            console.log(data.sentimentScore,prevState,"allRatings")
+            console.log(data.sentimentScore,prevState,"sentimentRatings")
             return prevState + newRating; // Add the new rating to the previous state
         });
     }
@@ -331,6 +347,11 @@ async function endSession() {
     if (data.rubricMetrics !== undefined) setRubricJson(data.rubricMetrics);
     if (data.rubricScore !== undefined) setRubricAllRatings(data.rubricScore);
     if (data.rubricSpecificFeedback !== undefined) setRubricSpecificFeedback(data.rubricSpecificFeedback);
+
+    if (data.rubricSummary2 !== undefined) setRubricSummary2(data.rubricSummary2);
+    if (data.rubricMetrics2 !== undefined) setRubricJson2(data.rubricMetrics2);
+    if (data.rubricScore2 !== undefined) setRubricAllRatings2(data.rubricScore2);
+    if (data.rubricSpecificFeedback2 !== undefined) setRubricSpecificFeedback2(data.rubricSpecificFeedback2);
     displayRubrics();
 
   } catch (error) {
@@ -342,7 +363,7 @@ async function endSession() {
 
 }
 
-console.log(rubricSummary,"rubricSummary",rubricJson,"rubricJson",rubricAllRatings,"rubricScore",rubricSpecificFeedback,"rubricSpecificFeedback")
+  console.log(rubricSummary,"rubricSummary",rubricJson,"rubricJson",rubricAllRatings,"rubricScore",rubricSpecificFeedback,"rubricSpecificFeedback")
 
   const displayRubrics= ()=> {
     setDisplayRubricAnalytics(true);
@@ -567,10 +588,11 @@ console.log(rubricSummary,"rubricSummary",rubricJson,"rubricJson",rubricAllRatin
         </>
         }
 
-        {feedbackJson && !displayRubricAnalytics && questionCount>0 && <FeedbackPieChart data={feedbackJson} overallScore={allRatings} />}
-        { rubricJson && displayRubricAnalytics && 
-            <RubricInvestorPiechart data={rubricJson} overallScore={rubricAllRatings} summary={rubricSummary} specificFeedback={rubricSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart>
-        }
+        {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentRatings} />}
+        {rubricJson && rubricJson2 && <div style={{display:'flex',gap:'1rem',position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>
+        {/* <RubricInvestorPiechart data={rubricJson} overallScore={rubricAllRatings} summary={rubricSummary} specificFeedback={rubricSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart> */}
+         <RubricInvestorPiechart2 data={rubricJson2} overallScore={rubricAllRatings2} summary={rubricSummary2} specificFeedback={rubricSpecificFeedback2} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart2>
+        </div>}
         {loadingRubric&&<Spinner 
           style={{
             color:'white',

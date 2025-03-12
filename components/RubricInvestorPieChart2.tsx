@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, Text } from 'recharts';
-import { ChatHistory, RubricInvestorMetricData, RubricInvestorSpecificData } from './KnowledgeClasses';
+import { ChatHistory, Rubric2InvestorMetricData, Rubric2InvestorSpecificData } from './KnowledgeClasses';
 import { Button } from '@nextui-org/button';
 import Section from './Section';
 
 // Props for the component
-interface RubricInvestorPieChartProps {
+interface RubricInvestorPieChartProps2 {
   chatHistory: ChatHistory[]; // Instead of `chatHistory: ''`
   resetAllStates:()=>void;
   summary: string;
   totalRounds:number;
-  specificFeedback: RubricInvestorSpecificData;
-  data?: RubricInvestorMetricData; // Optional data
+  specificFeedback: Rubric2InvestorSpecificData;
+  data?: Rubric2InvestorMetricData; // Optional data
   overallScore?: number; // New prop for the overall score
 }
 
-const RubricInvestorPiechart: React.FC<RubricInvestorPieChartProps> = ({
+const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
   data,
   chatHistory,
   overallScore,
@@ -24,17 +24,21 @@ const RubricInvestorPiechart: React.FC<RubricInvestorPieChartProps> = ({
   specificFeedback,
   resetAllStates,
 }) => {
-  const feedbackEntries = Object.entries(specificFeedback || {}); // Convert object to array
 
   // Ensure data is always a valid rubricData object
-  const rubricData: RubricInvestorMetricData =
+  const rubricData: Rubric2InvestorMetricData =
     typeof data === 'object' && data !== null
       ? data
       :    
       {
-        marketValidation: 0,
-        pitchDeck: 0,
-        oralPresentation: 0
+        elevatorPitch: 0,
+        team: 0,
+        marketOpportunity: 0,
+        marketSize: 0,
+        solutionValueProposition: 0,
+        competitivePosition: 0,
+        tractionAwards: 0,
+        revenueModel: 0,
       };
 
   const copyToClipboard = (text: string) => {
@@ -51,10 +55,18 @@ const RubricInvestorPiechart: React.FC<RubricInvestorPieChartProps> = ({
 
   // Combine all the data into one string with paragraphs
   const combinedText = `${summary}
-  ${specificFeedback?.marketValidation}
-  ${specificFeedback?.pitchDeck}
-  ${specificFeedback?.oralPresentation}
+  ${specificFeedback?.elevatorPitch}
+  ${specificFeedback?.team}
+  ${specificFeedback?.marketOpportunity}
+  ${specificFeedback?.marketSize}
+  ${specificFeedback?.solutionValueProposition}
+  ${specificFeedback?.competitivePosition}
+  ${specificFeedback?.tractionAwards}
+  ${specificFeedback?.revenueModel}
   `;
+
+  const feedbackEntries = Object.entries(specificFeedback || {}); // Convert object to array
+
   const downloadTextFile = () => {
     // Convert chatHistory array to a formatted string
     const chatText = chatHistory
@@ -95,9 +107,10 @@ const RubricInvestorPiechart: React.FC<RubricInvestorPieChartProps> = ({
         justifyContent: 'center',
         alignItems: 'center',
         flexWrap: 'wrap',
-        height:'100%',
         position:'relative',
+        height:'100%',
         width:'100%',
+        zIndex:'1001',
       }}
     >
       <Button
@@ -109,7 +122,6 @@ const RubricInvestorPiechart: React.FC<RubricInvestorPieChartProps> = ({
           position: 'absolute',
           left: '50%',
           top: '0%',
-          zIndex:'1001',
           transform: 'translate(-50%,-50%) scale(1.6)',
         }}
         onClick={() => {
@@ -140,7 +152,7 @@ const RubricInvestorPiechart: React.FC<RubricInvestorPieChartProps> = ({
             marginBottom:'-2rem'
           }}
         >
-          <b>Rubric1 Overall</b>
+          <b>Rubric2 Overall</b>
           <div style={{ fontSize: '16px', padding: '0.5rem' }}>{summary}</div>
         </div>
         <div
@@ -151,16 +163,16 @@ const RubricInvestorPiechart: React.FC<RubricInvestorPieChartProps> = ({
             borderRadius: '10px',
             zIndex: '1000',
             position: 'absolute',
-            top: '31%',
+            top: '23.5%',
             left: '50%',
             transform: 'translate(-50%,-50%)',
             color: '#000',
             backgroundColor: '#fff',
           }}
         >
-          {roundedOverallScore}/15
+          {roundedOverallScore}/10
         </div>
-        <PieChart width={450} height={500}>
+        <PieChart width={450} height={600}>
           <Pie
             data={chartData}
             dataKey="value"
@@ -187,7 +199,7 @@ const RubricInvestorPiechart: React.FC<RubricInvestorPieChartProps> = ({
             width: '100%',
           }}
         >
-          {feedbackEntries.map(([metric, feedback]) => (
+         {feedbackEntries.map(([metric, feedback]) => (
             <Section key={metric} title={metric} feedback={feedback} />
           ))}
         </div>
@@ -207,8 +219,8 @@ const RubricInvestorPiechart: React.FC<RubricInvestorPieChartProps> = ({
           }}
         >
           Copy All
-        </button>
-        <button
+        </button> */}
+        {/* <button
          style={{
           position: 'absolute',
           right: '2%',
@@ -232,4 +244,4 @@ const RubricInvestorPiechart: React.FC<RubricInvestorPieChartProps> = ({
   );
 };
 
-export default RubricInvestorPiechart;
+export default RubricInvestorPiechart2;

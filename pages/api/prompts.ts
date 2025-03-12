@@ -124,7 +124,7 @@ export const feedbackPrompt=(question:string,reply:string,startupIdea:string)=>`
       If the user's question was rude, boredom, negative, they should be around 1-2 score
 
 `
-export const sentimentPitchPrompt = (chatHistory: any) => `
+export const sentimentPitchPrompt = (userInput:any,chatHistory: any) => `
   You are an expert in analyzing the sentiment of a student's pitch to an investor about their startup idea. The student has just completed a 5-minute pitch and we are assessing the overall sentiment and effectiveness based on the following criteria:
 
   - Clarity (1-5): Was the pitch clear, concise, and easy to understand?
@@ -133,7 +133,9 @@ export const sentimentPitchPrompt = (chatHistory: any) => `
   - Neutrality (1-5): Was the pitch delivered without bias or overly emotional language?
   - Engagement (1-5): Based on the pitch, how engaging and compelling was the student’s approach?
 
-  Please analyze the chat history where the student describes their startup idea and pitch to the investor: ${chatHistory}
+  Please analyze the chat history and user input where the student describes their startup idea and pitch to the investor: 
+  Chat History:${chatHistory}  
+  User Input: ${userInput}
 
   Your output should be a JSON object with:
   - A score for each of the above categories.
@@ -194,12 +196,103 @@ export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, t
         3. Clever plot
         4. Deep short conclusion
   `
+  export const pitchEvaluationPrompt2 = (userInput:string) => `
+  You are an expert evaluator assessing startup pitches based on STRICT investor standards. Given the following conversation history of a startup pitch discussion:
 
-  export const pitchEvaluationPrompt = (chatHistory: string) => `
-  You are an expert evaluator assessing startup pitches based on **STRICT** investor standards. Given the following conversation history of a startup pitch discussion:
+  User Input:
+  ${userInput}
+
+  Evaluate the pitch based on the following criteria:
+
+  ### 1. Elevator Pitch (10 points)
+    - Does it provide a clear, concise statement that captures attention?
+    - Does it effectively explain the business, service, or product?
+    - Is the core problem clearly described?
+    - Is the vision compelling and memorable?
+
+  #### Scoring Guide:
+  - 1-4 points → Weak pitch. Unclear, unfocused, fails to explain the business concept or problem being solved.
+  - 5-7 points → Average pitch. Basic explanation of business and problem, but lacks compelling elements or unique vision.
+  - 8-10 points → Strong pitch. Clear, concise, attention-grabbing statement that effectively communicates the business, problem, and vision with compelling language.
+
+  ### 2. Team (10 points)
+    - Does the presentation highlight relevant experience, successes, or failures?
+    - Is there evidence of leadership experience and education?
+    - Do they convincingly demonstrate why they're the right team to execute this business plan?
+    - Are advisors (if any) effectively leveraged?
+
+  #### Scoring Guide:
+  - 1-4 points → Weak team presentation. Limited relevant experience mentioned, no clear reason why this team can execute the vision.
+  - 5-7 points → Average team presentation. Some relevant experience and credentials, but incomplete picture of why they're uniquely qualified.
+  - 8-10 points → Strong team presentation. Impressive relevant experience, past successes, and clear explanation of why this specific team is ideal for executing this business plan.
+
+  ### 3. Market Opportunity (10 points)
+    - Is the problem being solved clearly explained?
+    - Is there evidence that customers urgently want this problem solved?
+    - Does it address the customer's "#1 problem" rather than a secondary concern?
+    - Are supporting statistics provided to validate the opportunity?
+
+  #### Scoring Guide:
+  - 1-4 points → Weak opportunity. Problem definition is vague, no evidence customers want it solved, seems like a minor inconvenience.
+  - 5-7 points → Average opportunity. Problem is defined but lacks urgency or strong evidence of customer demand.
+  - 8-10 points → Strong opportunity. Clearly defined, urgent problem with compelling evidence that it's a top priority for customers, supported by convincing statistics.
+
+  ### 4. Market Size (10 points)
+    - Is the Total Addressable Market (TAM) clearly defined in revenue terms?
+    - Is the Serviceable Available Market (SAM) appropriately segmented?
+    - Is the Serviceable Obtainable Market (SOM) realistic for initial capture?
+    - Does it describe market evolution and why we're at an inflection point?
+
+  #### Scoring Guide:
+  - 1-4 points → Weak market sizing. Market size not quantified or unrealistically inflated, no breakdown of TAM/SAM/SOM.
+  - 5-7 points → Average market sizing. Basic market size figures presented, but lacking detailed segmentation or explanation.
+  - 8-10 points → Strong market sizing. Comprehensive, well-researched market sizing with clear TAM/SAM/SOM breakdown and logical explanation of initial target market and expansion potential.
+
+  ### 5. Solution & Value Proposition (10 points)
+    - Is the solution approach unique and clearly explained?
+    - Is the core value proposition to customers compelling?
+    - Do they articulate their unfair advantage?
+    - Is there a demonstration or visual representation of the solution?
+
+  ### **Output Format:**  
+  Return a JSON object with scores and feedback.
+
+  \`\`\`json
+  {
+    "elevatorPitch": 8,
+    "team": 6,
+    "marketOpportunity": 7,
+    "marketSize": 5,
+    "solutionValueProposition": 8,
+    "competitivePosition": 4,
+    "tractionAwards": 6,
+    "revenueModel": 7,
+    "overallScore": 6.4,
+    "summary": "The pitch lacks strong market validation, and the deck is not compelling. The oral presentation is basic and needs significant improvement to capture investor interest. However, the pitch opened with a compelling statement and presented a clear value proposition. Key areas to improve include competitive differentiation, market sizing details, and team positioning.",
+    "specificFeedback": {
+      "elevatorPitch": "The pitch opened with a compelling statement about [specific aspect], but could have been more focused on [improvement area].",
+      "team": "The founders demonstrated relevant experience in [industry/domain], but didn't fully articulate why they specifically are positioned to succeed.",
+      "marketOpportunity": "The problem statement was clear regarding [specific pain point], but lacked sufficient evidence of customer urgency.",
+      "marketSize": "TAM was presented as $X billion, but the breakdown between SAM and SOM wasn't sufficiently detailed.",
+      "solutionValueProposition": "The solution's unique approach to [specific aspect] was well-articulated, but the unfair advantage could be strengthened.",
+      "competitivePosition": "Competitors were identified, but the 10x improvement claim wasn't sufficiently substantiated.",
+      "tractionAwards": "Highlighted X early customers and Y% monthly growth, but could benefit from more specific success metrics.",
+      "revenueModel": "The subscription model was clearly explained with pricing tiers, but LTV/CAC calculations weren't fully developed."
+    }
+  }
+  \`\`\`
+
+  If the startup's pitch is weak, vague, or purely theoretical in multiple areas, the overall score should reflect this accordingly.
+
+  Now, analyze the chat history and return the evaluation.
   
-  Chat History:
-  ${chatHistory}
+  Strictly return ONLY a JSON object. Do not include explanations, markdown, or any other text.
+  `;
+
+  export const pitchEvaluationPrompt = (userInput:string) => `
+  You are an expert evaluator assessing startup pitches based on **STRICT** investor standards. Given the following conversation history of a startup pitch discussion:
+  User Input:
+  ${userInput}
   
   Evaluate the pitch based on the following criteria:
   
@@ -250,7 +343,9 @@ export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, t
   
   ### **Output Format:**  
   Return a JSON object with scores and feedback.
-  
+  #### feedback
+  - give feedback on the pitch, what was good and what could be improved, bevery specific. ask questions that could prompt improvement as well.
+
   \`\`\`json
     {
         "marketValidation": 12,

@@ -84,6 +84,40 @@ export interface RubricInvestorData {
   specificFeedback: RubricInvestorSpecificData;
 }
 
+export interface Rubric2InvestorMetricData {
+  elevatorPitch: number;
+  team: number;
+  marketOpportunity: number;
+  marketSize: number;
+  solutionValueProposition: number;
+  competitivePosition: number;
+  tractionAwards: number;
+  revenueModel: number;
+}
+export interface Rubric2InvestorSpecificData {
+  elevatorPitch: string;
+  team: string;
+  marketOpportunity: string;
+  marketSize: string;
+  solutionValueProposition: string;
+  competitivePosition: string;
+  tractionAwards: string;
+  revenueModel: string;
+}
+export interface Rubric2InvestorData {
+  elevatorPitch: number;
+  team: number;
+  marketOpportunity: number;
+  marketSize: number;
+  solutionValueProposition: number;
+  competitivePosition: number;
+  tractionAwards: number;
+  revenueModel: number;
+  overallScore: number;
+  summary: string;
+  specificFeedback: Rubric2InvestorSpecificData;
+}
+
 export interface StartupGroups {
   startup_idea: string;
   target_audience: string;
