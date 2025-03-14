@@ -392,12 +392,15 @@ export const qnaPrompt = (userInput:string, chatHistory:string) => `
   Here is the user's latest input: ${userInput}
   It could be the pitch, if the user is pitching, or a response to your previous question.
 
+  In some cases, the chat history or user input may not make sense as no sanity checks are performed. In such cases,
+  do your best to ask a relevant question based on the information provided.
+
   Only return a JSON object with a single key-value pair:
   - response: Your very brief comment on the user's latest input, if there is one, and the question you are about to ask.
 
   Example output:
-  {{
+  {
     "response": "That's an interesting point. How do you plan to scale your operations?",
-  }}
+  }
 
 `
