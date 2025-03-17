@@ -1,22 +1,26 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import Groq from 'groq-sdk';
-import { pitchEvaluationPrompt, pitchEvaluationPrompt2, sentimentPitchPrompt} from './prompts';
-import { feedbackFilter, rubricInvestorFilter, rubricInvestorFilter2 } from './completionFilterFunctions';
+import { pitchEvaluationPrompt, pitchEvaluationPrompt2, pitchEvaluationPrompt3, sentimentPitchPrompt} from './prompts';
+import { feedbackFilter, rubricInvestorFilter, rubricInvestorFilter2, rubricInvestorFilter3 } from './completionFilterFunctions';
+import OpenAI from 'openai';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+// Initialize DeepSeek client
+const deepseek = new OpenAI({
+  baseURL: 'https://api.deepseek.com',
+  apiKey: process.env.DEEPSEEK_API_KEY
+});
 
-
-const pitchResponse = async (req: NextApiRequest, res: NextApiResponse) => {
+const pitchEvaluationResponse = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
     try {
       const { userInput, chatHistory,selectedModel} = req.body;
-      console.log('Request Body:', req.body);
 
       let rubricResult,sentimentResult,rubricResult2;
       // Run all API calls in parallel, or fetch rubric based on displayRubricAnalytics flag
-      [rubricResult2,rubricResult,sentimentResult] = await Promise.all([
+      [rubricResult2,sentimentResult] = await Promise.all([
         fetchRubric(userInput,chatHistory, "rubric2", selectedModel),
-        fetchRubric(userInput,chatHistory, "rubric", selectedModel),
+        // fetchRubric(userInput,chatHistory, "rubric", selectedModel),
         fetchSentiment(userInput, chatHistory, "sentiment",selectedModel),
         ]);
 
@@ -30,15 +34,15 @@ const pitchResponse = async (req: NextApiRequest, res: NextApiResponse) => {
       }
 
       // Process sentiment feedback
-      let rubricScore, rubricSummary, rubricMetrics,rubricSpecificFeedback;
-      if (rubricResult?.rubricScore !== undefined) {
-        rubricScore = rubricResult.rubricScore;
-        rubricSummary = rubricResult.rubricSummary;
-        rubricMetrics = rubricResult.rubricMetrics;
-        rubricSpecificFeedback= rubricResult.rubricSpecificFeedback;
-      } else {
-        console.log("Invalid sentiment data, keeping previous values.");
-      }
+      // let rubricScore, rubricSummary, rubricMetrics,rubricSpecificFeedback;
+      // if (rubricResult?.rubricScore !== undefined) {
+      //   rubricScore = rubricResult.rubricScore;
+      //   rubricSummary = rubricResult.rubricSummary;
+      //   rubricMetrics = rubricResult.rubricMetrics;
+      //   rubricSpecificFeedback= rubricResult.rubricSpecificFeedback;
+      // } else {
+      //   console.log("Invalid sentiment data, keeping previous values.");
+      // }
 
       let rubricScore2, rubricSummary2, rubricMetrics2,rubricSpecificFeedback2;
       if (rubricResult2?.rubricScore !== undefined) {
@@ -53,10 +57,10 @@ const pitchResponse = async (req: NextApiRequest, res: NextApiResponse) => {
 
       // Send response
       res.status(200).json({
-        rubricScore,
-        rubricSummary,
-        rubricMetrics,
-        rubricSpecificFeedback,
+      // rubricScore,
+      // rubricSummary,
+      // rubricMetrics,
+      // rubricSpecificFeedback,
         rubricScore2,
         rubricSummary2,
         rubricMetrics2,
@@ -85,7 +89,7 @@ const getGroqChatCompletion = async (userInput: string, chatHistory: any, prompt
   } else if (promptType=='rubric2'){
     selectedPrompt=pitchEvaluationPrompt2(userInput)
   }
-  console.log(promptType,"selectedPrompt",selectedPrompt)
+  console.log("Selected Prompt pitch evaluation response",selectedPrompt)
 
   return groq.chat.completions.create({
     messages: [
@@ -101,6 +105,27 @@ const getGroqChatCompletion = async (userInput: string, chatHistory: any, prompt
     ],
     model: selectedModel,
   });
+};
+const getDeepSeekChatCompletion = async (userInput: string, chatHistory: any) => {
+  const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
+
+  let selectedPrompt = pitchEvaluationPrompt3(userInput);
+  console.log("Selected Prompt pitch evaluation response", selectedPrompt);
+
+  const chatCompletion = await deepseek.chat.completions.create({
+      messages: [
+          // Combine system and user message as in the example
+          ...validChatHistory,
+          {
+            role: 'user',
+            content: selectedPrompt,
+          },
+      ],
+      max_completion_tokens: 8000,
+      model:  "deepseek-reasoner", 
+  });
+
+  return chatCompletion;
 };
 
 const fetchSentiment = async (userInput: string, chatHistory: any[], promptType: string, selectedModel:any) => {
@@ -129,26 +154,32 @@ const fetchSentiment = async (userInput: string, chatHistory: any[], promptType:
 
 const fetchRubric = async (userInput:string, chatHistory: any[], promptType: string,selectedModel:any) => {
 try {
-  const rubricRatingCompletion = await getGroqChatCompletion(userInput, chatHistory, promptType, selectedModel);
+  let rubricRatingCompletion;
+  if(promptType==='rubric2') {
+    rubricRatingCompletion = await getDeepSeekChatCompletion(userInput, chatHistory);
+    console.log("first step passed deepseek")
+  }  
+  else {
+    rubricRatingCompletion = await getGroqChatCompletion(userInput, chatHistory, promptType, selectedModel);
+  }
+
   let responseContent = rubricRatingCompletion.choices[0].message.content;
+
   if (!responseContent) {
     throw new Error("Empty rubric response");
   }
 
-  console.log(responseContent, "CHECK2Rubric responseContent");
   let filteredResponse;
   if (promptType==='rubric2'){
     filteredResponse = rubricInvestorFilter2(responseContent);
   }else{
     filteredResponse = rubricInvestorFilter(responseContent);
   }
-  console.log(filteredResponse, "CHECK3Rubric filteredResponse");
 
   if (!filteredResponse) {
     console.log("Invalid rubric JSON format, returning null");
     return null;  // Return null if parsing fails
   }
-
   return filteredResponse;
 } catch (error) {
   console.error("Error in fetchRubric:", error);
@@ -156,5 +187,5 @@ try {
 }
 };
 
-export default pitchResponse;
+export default pitchEvaluationResponse;
 

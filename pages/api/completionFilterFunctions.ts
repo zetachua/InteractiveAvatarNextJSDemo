@@ -1,4 +1,4 @@
-import { FeedbackData, Rubric2InvestorData, RubricData, RubricInvestorData } from "@/components/KnowledgeClasses";
+import { FeedbackData, QnaData, Rubric2InvestorData, RubricData, RubricInvestorData } from "@/components/KnowledgeClasses";
 
 export const suggestionsOptionsFilter = (responseContent: string,rating:number) => {
   let filteredResponseContent = responseContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
@@ -49,7 +49,7 @@ export const feedbackFilter = (responseContent: string) => {
       
     let feedbackJsonMatch = feedbackJson.match(/\{[\s\S]*\}/);
     feedbackJson = feedbackJsonMatch ? feedbackJsonMatch[0].trim() : '{}';
-    console.log("Raw feedbackJson:", feedbackJson);
+    // console.log("Raw feedbackJson:", feedbackJson);
 
     const feedbackDataJson: FeedbackData = JSON.parse(feedbackJson);
 
@@ -128,10 +128,8 @@ export const rubricFilter = (responseContent: string) => {
   }
 };
 
-
-
 export const rubricInvestorFilter = (responseContent: string) => {
-  console.log(responseContent, "original responseContent");
+  console.log(responseContent, "Prompt 1 Investor Response Content");
   
   try {
     let rubricJson = responseContent
@@ -141,7 +139,7 @@ export const rubricInvestorFilter = (responseContent: string) => {
     
     let rubricJsonMatch = rubricJson.match(/\{[\s\S]*\}/);
     rubricJson = rubricJsonMatch ? rubricJsonMatch[0].trim() : '{}';
-    console.log("Raw rubricJson:", rubricJson);
+    console.log("Prompt 1 Response Json:", rubricJson);
 
     let rubricDataJson: RubricInvestorData;
 
@@ -186,7 +184,7 @@ export const rubricInvestorFilter = (responseContent: string) => {
 
 
 export const rubricInvestorFilter2 = (responseContent: string) => {
-  console.log(responseContent, "original responseContent rubric2");
+  console.log(responseContent, "Prompt 2 Investor Response Content");
   
   try {
     let rubricJson = responseContent
@@ -196,7 +194,7 @@ export const rubricInvestorFilter2 = (responseContent: string) => {
     
     let rubricJsonMatch = rubricJson.match(/\{[\s\S]*\}/);
     rubricJson = rubricJsonMatch ? rubricJsonMatch[0].trim() : '{}';
-    console.log("Raw rubricJson2:", rubricJson);
+    console.log("Prompt 2 Response Json:", rubricJson);
 
     let rubricDataJson: Rubric2InvestorData;
 
@@ -250,5 +248,105 @@ export const rubricInvestorFilter2 = (responseContent: string) => {
   } catch (error) {
     console.error("Error in rubricFilter function:", error);
     return null;
+  }
+};
+
+export const rubricInvestorFilter3 = (responseContent: string) => {
+  console.log(responseContent, "Prompt 3 Investor Response Content");
+
+  try {
+    // Clean up the response content by removing unnecessary code markers and whitespace
+    let rubricJson = responseContent
+      .replace(/<think>[\s\S]*?<\/think>/g, '')  // Remove <think> tags
+      .replace(/```json|```/g, '')              // Remove ```json markers
+      .trim();
+
+    // Extract JSON from the content (ensuring we handle the wrapping JSON structure)
+    let rubricJsonMatch = rubricJson.match(/\{[\s\S]*\}/);
+    rubricJson = rubricJsonMatch ? rubricJsonMatch[0].trim() : '{}';
+    console.log("Prompt 3 Response Json:", rubricJson);
+
+    let rubricDataJson: any;
+
+    // Try to parse the JSON, or use default fallback if parsing fails
+    try {
+      rubricDataJson = JSON.parse(rubricJson);
+    } catch (error) {
+      console.error("Error parsing rubric JSON, using default values:", error);
+      // Default rubric values when no valid rubricJson is found
+      rubricDataJson = {
+        elevatorPitch: { score: 5, feedback: "The pitch lacks clarity." },
+        team: { score: 4, feedback: "The team background is not strong enough." },
+        marketOpportunity: { score: 5, feedback: "Market opportunity is vague." },
+        marketSize: { score: 3, feedback: "Market size is not well-defined." },
+        solutionValueProposition: { score: 5, feedback: "Solution lacks differentiation." },
+        competitivePosition: { score: 2, feedback: "No clear competitive advantage." },
+        tractionAwards: { score: 3, feedback: "Traction is minimal." },
+        revenueModel: { score: 4, feedback: "Revenue model is unclear." },
+        overallScore: 3.8,
+        summary: "The pitch lacks clarity and engagement, making it difficult to capture investor interest.",
+        specificFeedback: {
+          elevatorPitch: "The opening statement was generic and lacked a strong narrative.",
+          team: "The founders’ background was not compelling enough.",
+          marketOpportunity: "The customer pain points were not backed by sufficient data.",
+          marketSize: "No clear distinction between TAM, SAM, and SOM.",
+          solutionValueProposition: "The solution's impact on the market was unclear.",
+          competitivePosition: "The competition was not well-articulated.",
+          tractionAwards: "Minimal evidence of early customer validation.",
+          revenueModel: "Revenue model lacks clarity in terms of scalability."
+        }
+      };
+    }
+
+    if (!rubricDataJson || rubricDataJson.overallScore === undefined) return null;
+
+    // Format the response for investor rubric
+    return {
+      rubricScore: rubricDataJson.overallScore,
+      rubricSummary: rubricDataJson.summary,
+      rubricMetrics: {
+        elevatorPitch: rubricDataJson.elevatorPitch.score,
+        team: rubricDataJson.team.score,
+        marketOpportunity: rubricDataJson.marketOpportunity.score,
+        marketSize: rubricDataJson.marketSize.score,
+        solutionValueProposition: rubricDataJson.solutionValueProposition.score,
+        competitivePosition: rubricDataJson.competitivePosition.score,
+        tractionAwards: rubricDataJson.tractionAwards.score,
+        revenueModel: rubricDataJson.revenueModel.score,
+      },
+      rubricSpecificFeedback: rubricDataJson.specificFeedback,
+    };
+
+  } catch (error) {
+    console.error("Error in rubricFilter function:", error);
+    return null;
+  }
+};
+
+
+export const qnaFilter = (responseContent: string) => {
+  try {
+    let qnaJson = responseContent
+      .replace(/<think>[\s\S]*?<\/think>/g, '')  // Remove <think> tags
+      .replace(/```json|```/g, '')               // Remove ```json markers
+      .trim();
+      
+    let qnaJsonMatch = qnaJson.match(/\{[\s\S]*\}/);
+    qnaJson = qnaJsonMatch ? qnaJsonMatch[0].trim() : '{}';
+
+    // Validate if JSON is properly structured
+    const qnaDataJson: any = JSON.parse(qnaJson);
+    
+    if (!qnaDataJson || typeof qnaDataJson !== "object") {
+      throw new Error("Invalid JSON structure");
+    }
+    
+    console.log("Raw qnaJson:", qnaJson, "question", qnaDataJson.response);
+    
+    return qnaDataJson.response ?? "Could not extract question, sorry could you repeat that?";
+
+  } catch (error) {
+    console.error("Error parsing JSON:", error, "Raw input:", responseContent);
+    return "Error in response format";
   }
 };

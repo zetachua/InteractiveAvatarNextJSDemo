@@ -10,7 +10,6 @@ const knowledgeResponse = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
     try {
       const {  userInput, chatHistory, name, knowledge, tone,selectedModel} = req.body;
-      console.log('Request Body:', req.body);
       let chatCompletion;
       [chatCompletion] = await Promise.all([
           getGroqChatCompletion(knowledge,userInput, chatHistory,name,tone,selectedModel),

@@ -1,18 +1,19 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, Text } from 'recharts';
 import { ChatHistory, Rubric2InvestorMetricData, Rubric2InvestorSpecificData } from './KnowledgeClasses';
 import { Button } from '@nextui-org/button';
 import Section from './Section';
+import rubricData from './test.json'; // Import the JSON file
 
 // Props for the component
 interface RubricInvestorPieChartProps2 {
-  chatHistory: ChatHistory[]; // Instead of `chatHistory: ''`
-  resetAllStates:()=>void;
-  summary: string;
-  totalRounds:number;
-  specificFeedback: Rubric2InvestorSpecificData;
+  chatHistory: ChatHistory[];
+  resetAllStates: () => void;
+  summary?: string; // Make optional since we're providing default from JSON
+  totalRounds: number;
+  specificFeedback?: Rubric2InvestorSpecificData; // Make optional
   data?: Rubric2InvestorMetricData; // Optional data
-  overallScore?: number; // New prop for the overall score
+  overallScore?: number; // Optional overall score
 }
 
 const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
@@ -24,25 +25,13 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
   specificFeedback,
   resetAllStates,
 }) => {
-
-  // Ensure data is always a valid rubricData object
-  const rubricData: Rubric2InvestorMetricData =
-    typeof data === 'object' && data !== null
-      ? data
-      :    
-      {
-        elevatorPitch: 0,
-        team: 0,
-        marketOpportunity: 0,
-        marketSize: 0,
-        solutionValueProposition: 0,
-        competitivePosition: 0,
-        tractionAwards: 0,
-        revenueModel: 0,
-      };
+  // Use JSON data as fallback/default values
+  const rubricMetrics: Rubric2InvestorMetricData = data || rubricData.rubricMetrics;
+  const rubricSummary: string = summary || rubricData.rubricSummary;
+  const rubricSpecificFeedback: Rubric2InvestorSpecificData = specificFeedback || rubricData.rubricSpecificFeedback;
+  const rubricOverallScore: number = overallScore || rubricData.rubricScore;
 
   const copyToClipboard = (text: string) => {
-    // Copy the summary text to clipboard
     navigator.clipboard
       .writeText(text)
       .then(() => {
@@ -53,25 +42,23 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
       });
   };
 
-  // Combine all the data into one string with paragraphs
-  const combinedText = `${summary}
-  ${specificFeedback?.elevatorPitch}
-  ${specificFeedback?.team}
-  ${specificFeedback?.marketOpportunity}
-  ${specificFeedback?.marketSize}
-  ${specificFeedback?.solutionValueProposition}
-  ${specificFeedback?.competitivePosition}
-  ${specificFeedback?.tractionAwards}
-  ${specificFeedback?.revenueModel}
+  const combinedText = `${rubricSummary}
+  ${rubricSpecificFeedback?.elevatorPitch}
+  ${rubricSpecificFeedback?.team}
+  ${rubricSpecificFeedback?.marketOpportunity}
+  ${rubricSpecificFeedback?.marketSize}
+  ${rubricSpecificFeedback?.solutionValueProposition}
+  ${rubricSpecificFeedback?.competitivePosition}
+  ${rubricSpecificFeedback?.tractionAwards}
+  ${rubricSpecificFeedback?.revenueModel}
   `;
 
-  const feedbackEntries = Object.entries(specificFeedback || {}); // Convert object to array
+  const feedbackEntries = Object.entries(rubricSpecificFeedback || {});
 
   const downloadTextFile = () => {
-    // Convert chatHistory array to a formatted string
     const chatText = chatHistory
       .map((message) => `${message.role.toUpperCase()}: ${message.content}`)
-      .join("\n"); // Join messages with line breaks
+      .join("\n");
   
     const blob = new Blob([chatText], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
@@ -85,18 +72,16 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
     URL.revokeObjectURL(url);
   };
   
-  // Convert the data into the format required for the PieChart
-  const chartData = Object.entries(rubricData).map(([key, value]) => ({
-    name: key.charAt(0).toUpperCase() + key.slice(1), // Capitalize first letter
-    value: value as number, // Ensure TypeScript recognizes this as a number
+  const chartData = Object.entries(rubricMetrics).map(([key, value]) => ({
+    name: key.charAt(0).toUpperCase() + key.slice(1),
+    value: value as number,
   }));
 
-  // Define colors for each section
   const COLORS = ['#A8DADC', '#FBAFC5', '#E1FAEE'];
 
   const roundedOverallScore =
-    overallScore !== undefined
-      ? Math.ceil((overallScore + Number.EPSILON) * 10) / 10
+    rubricOverallScore !== undefined
+      ? Math.ceil((rubricOverallScore + Number.EPSILON) * 10) / 10
       : 0;
 
   return (
@@ -107,12 +92,13 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
         justifyContent: 'center',
         alignItems: 'center',
         flexWrap: 'wrap',
-        position:'relative',
-        height:'100%',
-        width:'100%',
-        zIndex:'1001',
+        position: 'relative',
+        height: '100%',
+        width: '100%',
+        zIndex: '1001',
       }}
     >
+      {/* Rest of your component remains the same, just update the props usage */}
       <Button
         className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
         size="md"
@@ -126,8 +112,8 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
         }}
         onClick={() => {
           resetAllStates();
-          window.location.reload()
-        }} // Refresh the page
+          window.location.reload();
+        }}
       >
         Restart Round
       </Button>
@@ -149,11 +135,11 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
             textAlign: 'center',
             width: '90%',
             fontSize: '24px',
-            marginBottom:'-2rem'
+            marginBottom: '-2rem'
           }}
         >
           <b>Rubric2 Overall</b>
-          <div style={{ fontSize: '16px', padding: '0.5rem' }}>{summary}</div>
+          <div style={{ fontSize: '16px', padding: '0.5rem' }}>{rubricSummary}</div>
         </div>
         <div
           style={{
@@ -199,47 +185,11 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
             width: '100%',
           }}
         >
-         {feedbackEntries.map(([metric, feedback]) => (
+          {feedbackEntries.map(([metric, feedback]) => (
             <Section key={metric} title={metric} feedback={feedback} />
           ))}
         </div>
-        {/* <button
-          onClick={() => copyToClipboard(combinedText)}
-          style={{
-            position: 'absolute',
-            right: '2%',
-            top: '1%',
-            padding: '0.5rem 1rem',
-            border: 'none',
-            background: 'rgba(255,255,255,0.4)',
-            borderRadius: '50px',
-            color: '#fff',
-            cursor: 'pointer',
-            fontSize: '16px',
-          }}
-        >
-          Copy All
-        </button> */}
-        {/* <button
-         style={{
-          position: 'absolute',
-          right: '2%',
-          top: '5%',
-          padding: '0.5rem 1rem',
-          border: 'none',
-          background: 'rgba(255,255,255,0.4)',
-          borderRadius: '50px',
-          color: '#fff',
-          cursor: 'pointer',
-          fontSize: '16px',
-        }}
-          onClick={() => downloadTextFile()}
-        >
-          Download ChatHistory
-        </button> */}
-
       </div>
-  
     </div>
   );
 };

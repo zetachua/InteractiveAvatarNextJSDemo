@@ -9,7 +9,6 @@ const knowledgeResponseOpenRouter = async (req: NextApiRequest, res: NextApiResp
 
   try {
     const { userInput, chatHistory, name, knowledge, tone, selectedModel } = req.body;
-    console.log('Request Body OpenRouter:', req.body);
 
     // Fetch chat completion from OpenRouter
     const chatCompletion = await getOpenRouterChatCompletion(

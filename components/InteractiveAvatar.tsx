@@ -78,7 +78,6 @@ export default function InteractiveAvatar() {
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const transcriptRef = useRef<string>(''); 
   const [selectedModel, setSelectedModel] = useState<string>('');
-
   async function fetchAccessToken() {
     try {
       const response = await fetch("/api/get-access-token", {
@@ -587,6 +586,7 @@ async function endSession() {
           >
           {isRecording ? <div className={`wave`} />: <>Talk <Microphone size={14} /></>}
         </Button>
+
           {/* <Input
             placeholder="Type your message..."
             value={userInput}

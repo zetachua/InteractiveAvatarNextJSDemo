@@ -1,53 +1,26 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { StartupGroups } from '@/components/KnowledgeClasses';
-import { rubricFilter } from './completionFilterFunctions';
-import { getGroqChatCompletion } from './llmResponse';
-import { startupKnowledgeJsonExtract } from './promptExtractFunctions';
+import { qnaFilter } from './completionFilterFunctions';
 import { models } from './configConstants';
+import Groq from 'groq-sdk';
+import { qnaPrompt } from './prompts';
 
-let selectedJsonData: StartupGroups | undefined;
+const groq = new Groq ({ apiKey: process.env.GROQ_API_KEY });
 
 const qnaResponse = async (req: NextApiRequest, res: NextApiResponse) => {
 if (req.method === 'POST') {
   try {
-    const { startupIdea, hypothesis, targetAudience,chatHistory } = req.body;
-    console.log('Fetching rubric for:',chatHistory);
+    const { userInput,chatHistory} = req.body;
+    console.log('Request Body QnaResponse:',chatHistory);
 
-    if (!selectedJsonData) {
-      const { selectedCase } = await startupKnowledgeJsonExtract(startupIdea, hypothesis, targetAudience);
-      selectedJsonData = selectedCase;
-      console.log("i have a startup description rubric")
-    }
-
-    const rubricResult = await fetchRubric(chatHistory, selectedJsonData, "rubric", "");
-
-    if (!rubricResult || rubricResult.rubricSpecificFeedback === undefined) {
-      return res.status(200).json({ 
-          rubricMetrics:{
-            painPointValidation: 1,
-            marketOpportunity: 1,
-            customerAdoptionInsights: 1,
-          },
-          rubricScore: 1,
-          rubricSuggestedQuestions: [
-            "What challenges do you face with your current solutions, and how important is it for you to find a better option?",
-            "What would convince you to try a new product or service to address this issue, and how much would you be willing to invest in it?"
-          ],
-          rubricSummary: "No startup idea or interview data was provided to evaluate. As a result, all scores are set to a baseline of 1 out of 5. To provide a meaningful assessment, specific details about the problem, target market, and customer insights are needed. The suggested questions can help gather initial validation data.",
-          rubricSpecificFeedback: {
-            painPointValidation: "Without data, there’s no evidence of a validated pain point. Gathering insights on user challenges is a critical first step.",
-            marketOpportunity: "No information available to assess market size, revenue potential, or competitive landscape. Market research is needed to evaluate opportunity.",
-            customerAdoptionInsights: "Lack of data prevents analysis of customer behavior, urgency, or willingness to adopt a solution. User interviews could uncover these insights."
-          }
-      });
-    }
+    const questionResponse = await fetchQna(userInput, chatHistory);
 
     res.status(200).json({
-      rubricScore: rubricResult.rubricScore,
-      rubricSummary: rubricResult.rubricSummary,
-      rubricMetrics: rubricResult.rubricMetrics,
-      rubricSuggestedQuestions: rubricResult.rubricSuggestionQuestions,
-      rubricSpecificFeedback: rubricResult.rubricSpecificFeedback
+      chatHistory: [
+        ...chatHistory,
+        { role: 'user', content: userInput },
+        { role: 'assistant', content: questionResponse },
+      ],
+      questionResponse
     });
 
   } catch (error) {
@@ -57,29 +30,54 @@ if (req.method === 'POST') {
 }
 };
 
-const fetchRubric = async (chatHistory: any[], selectedJsonData: any, promptType: string, feedback: string) => {
+const fetchQna = async (userInput:string,chatHistory: any[]) => {
 try {
-  const rubricRatingCompletion = await getGroqChatCompletion('', chatHistory, promptType, '', selectedJsonData,models[0]);
-  let responseContent = rubricRatingCompletion.choices[0].message.content;
+  const completion = await getGroqChatCompletion(userInput, chatHistory, models[0]);
+  let responseContent = completion.choices[0].message.content;
   if (!responseContent) {
     throw new Error("Empty rubric response");
   }
 
-  console.log(responseContent, "CHECK2Rubric responseContent");
-  const filteredResponse = rubricFilter(responseContent);
-  console.log(filteredResponse, "CHECK3Rubric filteredResponse");
+  const questionResponse = qnaFilter(responseContent);
 
-  if (!filteredResponse) {
+  if (!questionResponse) {
     console.log("Invalid rubric JSON format, returning null");
     return null;  // Return null if parsing fails
   }
 
-  return filteredResponse;
+  return questionResponse;
+
 } catch (error) {
-  console.error("Error in fetchRubric:", error);
+  console.error("Error in fetchQna:", error);
   return null;  // Return null if an error occurs
 }
 };
+
+
+// Function to fetch chat completion from Groq
+const getGroqChatCompletion = async (userInput: string, chatHistory: any, selectedModel:any) => {
+  const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
+
+  let selectedPrompt= qnaPrompt(userInput,validChatHistory);
+
+  console.log("selected prompt qna response",selectedPrompt)
+
+  return groq.chat.completions.create({
+    messages: [
+      {
+        role: 'system',
+        content: selectedPrompt,
+      },
+      ...validChatHistory,
+      {
+        role: 'user',
+        content: userInput,
+      },
+    ],
+    model: selectedModel,
+  });
+};
+
 
 export default qnaResponse;
 

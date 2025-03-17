@@ -26,6 +26,10 @@ export interface StoryBook {
 }
 
 
+export interface QnaData {
+  question:string;
+}
+
 export interface FeedbackData {
   clarity: number;
   relevance: number;
@@ -104,6 +108,7 @@ export interface Rubric2InvestorSpecificData {
   tractionAwards: string;
   revenueModel: string;
 }
+
 export interface Rubric2InvestorData {
   elevatorPitch: number;
   team: number;

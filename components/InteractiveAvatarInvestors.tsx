@@ -19,7 +19,10 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useMemoizedFn, usePrevious } from "ahooks";
 import './WaveAnimation.css';
-
+interface Pause {
+  start: number;
+  end: number;
+}
 
 // import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 
@@ -32,6 +35,7 @@ import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 import {models, tempUserInput} from '../pages/api/configConstants'
 import RubricInvestorPiechart from "./RubricInvestorPieChart";
 import RubricInvestorPiechart2 from "./RubricInvestorPieChart2";
+import CountdownTimer from "./Countdown";
 
 export default function InteractiveAvatarInvestors() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -53,9 +57,6 @@ export default function InteractiveAvatarInvestors() {
   const [chatMode, setChatMode] = useState("text_mode");
   const [isUserTalking, setIsUserTalking] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatHistory[]>([]);
-  const [startupIdea,setStartupIdea]=useState('');
-  const [hypothesis,setHypothesis]=useState('');
-  const [targetAudience,setTargetAudience]=useState('');
   const [feedbackText,setFeedbackText]=useState('');
   const [rubricSummary,setRubricSummary]=useState('');
   const [rubricSpecificFeedback,setRubricSpecificFeedback]=useState<RubricInvestorSpecificData>(
@@ -86,9 +87,34 @@ export default function InteractiveAvatarInvestors() {
   const [rubricJson2, setRubricJson2] = useState<Rubric2InvestorData | null>(null);
   const [rubricAllRatings2, setRubricAllRatings2] = useState<number>(0); 
   const [isRecording, setIsRecording] = useState<boolean>(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  // const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<MediaRecorder | null>(null);
   const transcriptRef = useRef<string>(''); 
   const [selectedModel, setSelectedModel] = useState<string>('');
+  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
+  const [isTimeUp, setIsTimeUp] = useState(false);
+  const [callCount, setCallCount] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  const [pauses, setPauses] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (timeLeft <= 0) {
+      setIsTimeUp(true);
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+        setIsRecording(false);
+      }
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft((prevTime) => prevTime - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft]);
+
 
   async function fetchAccessToken() {
     try {
@@ -112,6 +138,7 @@ export default function InteractiveAvatarInvestors() {
   }
 
   async function startSession() {
+    setIsTimeUp(false);
     setIsLoadingSession(true);
     setDisplayRubricAnalytics(false);
     const newToken = await fetchAccessToken();
@@ -173,24 +200,26 @@ export default function InteractiveAvatarInvestors() {
     }
   
     try {
+      console.log(userInputValue,chatHistory,"im here userInput","chatHistory")
       // Fetch LLM response
-      // const response = await fetch(`/api/qnaResponse`, {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ chatHistory,startupIdea,hypothesis,targetAudience,selectedModel}),
-      // });
-      // const data = await response.json();
-      // if (data.chatHistory !== undefined) setChatHistory(data.chatHistory);
-      // if (data.filteredResponseContent !== undefined) setDisplayText(data.filteredResponseContent);
+      const response = await fetch(`/api/qnaResponse`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userInput:userInputValue,chatHistory}),
+      });
+      const data = await response.json();
+      if (data.chatHistory !== undefined) setChatHistory(data.chatHistory);
+      if (data.questionResponse !== undefined) setDisplayText(data.questionResponse);
 
-      // // Make the avatar speak the response
-      // await avatar.current.speak({
-      //   text: data.filteredResponseContent,
-      //   taskType: TaskType.REPEAT,
-      //   taskMode: TaskMode.SYNC,
-      // });
+      // Make the avatar speak the response
+      await avatar.current.speak({
+        text: data.questionResponse,
+        taskType: TaskType.REPEAT,
+        taskMode: TaskMode.SYNC,
+      });
 
       if(userInputValue) setUserInput(userInputValue)
+        console.log(userInput,"userInput i have value")
 
     } catch (error) {
       console.error("Error fetching LLM response:", error);
@@ -212,74 +241,73 @@ export default function InteractiveAvatarInvestors() {
       });
   }
 
-  const toggleSpeechToText = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setDebug('Speech Recognition API not supported in this browser');
-      return;
-    }
+  // const toggleSpeechToText = () => {
+  //   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  //   if (!SpeechRecognition) {
+  //     setDebug('Speech Recognition API not supported in this browser');
+  //     return;
+  //   }
+  //   setCallCount((prevCount) => prevCount + 1); // Increment call count
 
-    if (!isRecording) {
-      // Start recording
-      const recognition = new SpeechRecognition();
-      recognitionRef.current = recognition;
-      recognition.lang = 'en-US';
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-      recognition.continuous = true;
+  //   if (!isRecording) {
+  //     // Start recording
+  //     const recognition = new SpeechRecognition();
+  //     recognitionRef.current = recognition;
+  //     recognition.lang = 'en-US';
+  //     recognition.interimResults = false;
+  //     recognition.maxAlternatives = 1;
+  //     recognition.continuous = true;
 
-      transcriptRef.current = ''; // Reset transcript
+  //     transcriptRef.current = ''; // Reset transcript
 
-      recognition.onstart = () => {
-        console.log('Speech recognition started');
-      };
+  //     recognition.onstart = () => {
+  //       console.log('Speech recognition started');
+  //     };
 
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
-        const newTranscript = Array.from(event.results)
-          .map((result) => result[0].transcript)
-          .join(' ');
-        transcriptRef.current = newTranscript;
-        console.log('Transcript updated:', transcriptRef.current);
-      };
+  //     recognition.onresult = (event: SpeechRecognitionEvent) => {
+  //       const newTranscript = Array.from(event.results)
+  //         .map((result) => result[0].transcript)
+  //         .join(' ');
+  //       transcriptRef.current = newTranscript;
+  //       console.log('Transcript updated:', transcriptRef.current);
+  //     };
 
-      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error('Speech recognition error:', event.error);
-        setDebug(`Speech recognition error: ${event.error}`);
-        setIsRecording(false);
-        recognitionRef.current = null;
-      };
+  //     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+  //       console.error('Speech recognition error:', event.error);
+  //       setDebug(`Speech recognition error: ${event.error}`);
+  //       setIsRecording(false);
+  //       recognitionRef.current = null;
+  //     };
 
-      recognition.onend = () => {
-        console.log('Speech recognition ended, current transcript:', transcriptRef.current);
-        if (isRecording) {
-          // Restart if ended unexpectedly
-          console.log('Restarting recognition...');
-          recognition.start();
-        } else {
-          // Stopped manually, update userInput and trigger speak
-          setUserInput(transcriptRef.current || '');
-          if (transcriptRef.current) {
-            setUserInput(transcriptRef.current);
-            // handleSpeak(transcriptRef.current);
-            endSession();
-          } else {
-            setDebug('No speech detected');
-          }
-          recognitionRef.current = null;
-        }
-      };
+  //     recognition.onend = () => {
+  //       console.log('Speech recognition ended, current transcript:', transcriptRef.current);
+  //       if (isRecording) {
+  //         // Restart if ended unexpectedly
+  //         console.log('Restarting recognition...');
+  //         recognition.start();
+  //       } else {
+  //         // Stopped manually, update userInput and trigger speak
+  //         setUserInput(transcriptRef.current || '');
+  //         if (transcriptRef.current) {
+  //           handleSpeak(transcriptRef.current);
+  //         } else {
+  //           setDebug('No speech detected');
+  //         }
+  //         recognitionRef.current = null;
+  //       }
+  //     };
 
-      recognition.start();
-      setIsRecording(true);
-      setDebug('');
-    } else {
-      // Stop recording
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-        setIsRecording(false);
-      }
-    }
-  };
+  //     recognition.start();
+  //     setIsRecording(true);
+  //     setDebug('');
+  //   } else {
+  //     // Stop recording
+  //     if (recognitionRef.current) {
+  //       recognitionRef.current.stop();
+  //       setIsRecording(false);
+  //     }
+  //   }
+  // };
 
   const resetAllStates=()=>{
     setFeedbackText('');
@@ -297,6 +325,89 @@ export default function InteractiveAvatarInvestors() {
       oralPresentation: ''
     });
   }
+
+  const toggleSpeechToText = async () => {
+    const currentCallCount = callCount + 1;
+    setCallCount(currentCallCount);
+
+    if (isRecording) {
+      stopRecording();
+    } else {
+      await startRecording(currentCallCount);
+    }
+  };const startRecording = async (currentCallCount: number) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      let localChunks: Blob[] = []; // Use a local array instead of state for real-time updates
+  
+      mediaRecorder.ondataavailable = (event: BlobEvent) => {
+        if (event.data.size > 0) {
+          localChunks.push(event.data);
+          console.log(`Chunk received, size: ${event.data.size}`);
+        }
+      };
+  
+      mediaRecorder.onstop = async () => {
+        console.log(`Total chunks: ${localChunks.length}`);
+        const audioBlob = new Blob(localChunks, { type: 'audio/webm' });
+        console.log(`Blob created, size: ${audioBlob.size}, type: ${audioBlob.type}`);
+  
+        if (audioBlob.size === 0) {
+          setDebug('Error: Recorded audio is empty');
+          return;
+        }
+  
+        await transcribeAudio(audioBlob, currentCallCount);
+        stream.getTracks().forEach((track) => track.stop());
+        localChunks = []; // Reset local chunks
+      };
+  
+      mediaRecorder.start(100); // Collect data every 100ms
+      recognitionRef.current = mediaRecorder;
+      setIsRecording(true);
+      setDebug('Recording started...');
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      setDebug('Error starting recording');
+    }
+  };
+  
+  const stopRecording = () => {
+    if (recognitionRef.current && recognitionRef.current.state !== 'inactive') {
+      recognitionRef.current.stop();
+    }
+    setIsRecording(false);
+    setDebug('Recording stopped...');
+  };
+  
+  const transcribeAudio = async (audioBlob: Blob, currentCallCount: number) => {
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'audio.webm');
+    console.log('Sending audio blob, type:', audioBlob.type);
+  
+    try {
+      const response = await fetch('http://127.0.0.1:5000/transcribe', {
+        method: 'POST',
+        body: formData,
+      });
+  
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Failed to transcribe audio: ${response.status} - ${text}`);
+      }
+  
+      const data = await response.json();
+      console.log('Transcription:', data.text);
+      setUserInput(data.text);
+      handleSpeak(data.text);
+      transcriptRef.current = data.text;
+      setDebug('Transcription successful!');
+    } catch (error) {
+      console.error('Error during transcription:', error);
+      setDebug('Error during transcription');
+    }
+  };
 
   function mergeJsons<T extends Record<string, number | string>>(obj1: T, obj2: T): T {
     const mergedObj: T = { ...obj1 };
@@ -325,16 +436,15 @@ async function endSession() {
   setStream(undefined);
 
   try{
-    const response = await fetch(`/api/pitchResponse`, {
+    const response = await fetch(`/api/pitchEvaluationResponse`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userInput:tempUserInput, chatHistory,selectedModel}),
+      body: JSON.stringify({ userInput, chatHistory,selectedModel}),
     });
     const data = await response.json();
-    if (data.chatHistory !== undefined) setChatHistory(data.chatHistory);
-    if (data.sentimentSummary !== undefined) setFeedbackText(data.sentimentSummary);
+    if (data?.sentimentSummary !== undefined) setFeedbackText(data.sentimentSummary);
 
-    if(data.sentimentMetrics!==undefined && data.sentimentScore!==undefined){
+    if(data?.sentimentMetrics!==undefined && data.sentimentScore!==undefined){
         const updateSentimentJson=mergeJsons(sentimentJson,data.sentimentMetrics)
         setSentimentJson(updateSentimentJson);
         setSentimentScore((prevState) => {
@@ -343,10 +453,10 @@ async function endSession() {
             return prevState + newRating; // Add the new rating to the previous state
         });
     }
-    if (data.rubricSummary !== undefined) setRubricSummary(data.rubricSummary);
-    if (data.rubricMetrics !== undefined) setRubricJson(data.rubricMetrics);
-    if (data.rubricScore !== undefined) setRubricAllRatings(data.rubricScore);
-    if (data.rubricSpecificFeedback !== undefined) setRubricSpecificFeedback(data.rubricSpecificFeedback);
+    if (data?.rubricSummary !== undefined) setRubricSummary(data.rubricSummary);
+    if (data?.rubricMetrics !== undefined) setRubricJson(data.rubricMetrics);
+    if (data?.rubricScore !== undefined) setRubricAllRatings(data.rubricScore);
+    if (data?.rubricSpecificFeedback !== undefined) setRubricSpecificFeedback(data.rubricSpecificFeedback);
 
     if (data.rubricSummary2 !== undefined) setRubricSummary2(data.rubricSummary2);
     if (data.rubricMetrics2 !== undefined) setRubricJson2(data.rubricMetrics2);
@@ -401,6 +511,8 @@ async function endSession() {
       };
     }
   }, [mediaStream, stream]);
+
+
 
   return (
     <div className="flex flex-col "style={{display:'flex',justifyContent:'center',alignItems:'center'}} >
@@ -504,8 +616,9 @@ async function endSession() {
             <Spinner color="default" size="lg" />
           )}
         </CardBody>
+       { stream && callCount === 1 && <CountdownTimer isTimeUp={isTimeUp} timeLeft={timeLeft}></CountdownTimer>}
 
-        { stream && <>
+        {stream && <>
         <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>
 
         <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
@@ -563,6 +676,20 @@ async function endSession() {
           >
           {isRecording ? <div className={`wave`} />: <>Talk <Microphone size={14} /></>}
         </Button>
+        <div>
+            <h3>Pauses:</h3>
+            {pauses.length > 0 ? (
+              <ul>
+                {pauses.map((pause, index) => (
+                  <li key={index}>
+                    Pause from {pause.pauseStart}s to {pause.pauseEnd}s, duration: {pause.pauseDuration}s
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No pauses detected</p>
+            )}
+          </div>
           {/* <Input
             placeholder="Type your message..."
             value={userInput}
@@ -589,7 +716,7 @@ async function endSession() {
         }
 
         {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentRatings} />}
-        {rubricJson && rubricJson2 && <div style={{display:'flex',gap:'1rem',position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>
+        {rubricJson2 && <div style={{display:'flex',gap:'1rem',position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>
         {/* <RubricInvestorPiechart data={rubricJson} overallScore={rubricAllRatings} summary={rubricSummary} specificFeedback={rubricSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart> */}
          <RubricInvestorPiechart2 data={rubricJson2} overallScore={rubricAllRatings2} summary={rubricSummary2} specificFeedback={rubricSpecificFeedback2} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart2>
         </div>}
