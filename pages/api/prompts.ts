@@ -124,8 +124,8 @@ export const feedbackPrompt=(question:string,reply:string,startupIdea:string)=>`
       If the user's question was rude, boredom, negative, they should be around 1-2 score
 
 `
-export const sentimentPitchPrompt = (userInput:any,chatHistory: any) => `
-  You are an expert in analyzing the sentiment of a student's pitch to an investor about their startup idea. The student has just completed a 5-minute pitch and we are assessing the overall sentiment and effectiveness based on the following criteria:
+export const sentimentPitchPrompt = (userInput: any, chatHistory: any) => `
+  You are an expert in analyzing the sentiment and effectiveness of a student's pitch to an investor about their startup idea. The student has just completed a 5-minute pitch, and we are assessing it based on the following criteria:
 
   - Clarity (1-5): Was the pitch clear, concise, and easy to understand?
   - Relevance (1-5): Was the pitch relevant and aligned with the interests of the investor?
@@ -134,13 +134,19 @@ export const sentimentPitchPrompt = (userInput:any,chatHistory: any) => `
   - Engagement (1-5): Based on the pitch, how engaging and compelling was the student’s approach?
 
   Please analyze the chat history and user input where the student describes their startup idea and pitch to the investor: 
-  Chat History:${chatHistory}  
+  Chat History: ${chatHistory}  
   User Input: ${userInput}
 
   Your output should be a JSON object with:
-  - A score for each of the above categories.
-  - An **overall sentiment score** derived from the individual scores, with special emphasis on the tone, enthusiasm, and clarity of the pitch.
-  - A **feedback summary** that includes an evaluation of the student's sentiment, highlighting strengths and areas for improvement in terms of engaging the investor.
+  - A score (1-5) for each of the above categories.
+  - An **overall sentiment score** (1-5, with decimals allowed) derived from the individual scores, with special emphasis on the tone, enthusiasm, and clarity of the pitch.
+  - A **specificFeedback** object containing detailed feedback for each criterion, highlighting what was done well and areas for improvement. Use the following structure for each feedback entry:
+    - "clarity": "The pitch [specific strength], but could improve by [specific area]."
+    - "relevance": "The pitch addressed [specific investor interest], but could better align with [specific improvement]."
+    - "depth": "The pitch provided detail on [specific aspect], but lacked [specific missing element]."
+    - "neutrality": "The tone was [specific observation], but could adjust [specific suggestion]."
+    - "engagement": "The delivery showed [specific strength], but could enhance [specific area]."
+  - A **feedbackSummary** that provides an overall evaluation of the student's sentiment, highlighting strengths and areas for improvement in engaging the investor.
 
   Output format:
   {
@@ -150,11 +156,17 @@ export const sentimentPitchPrompt = (userInput:any,chatHistory: any) => `
     "neutrality": 5,
     "engagement": 3,
     "overallScore": 3.8,
+    "specificFeedback": {
+      "clarity": "The pitch opened with a clear explanation of the problem, but could improve by reducing jargon for broader accessibility.",
+      "relevance": "The pitch addressed the investor's focus on scalability, but could better align with their interest in short-term ROI.",
+      "depth": "The pitch provided detail on the product’s features, but lacked a breakdown of market validation data.",
+      "neutrality": "The tone was professional and unbiased, but could adjust to show more controlled enthusiasm.",
+      "engagement": "The delivery showed confidence in the solution, but could enhance storytelling to hook the investor early."
+    },
     "feedbackSummary": "The pitch was clear and well-structured but could use more passion and engagement to captivate the investor. The idea is relevant but lacks depth in addressing investor concerns."
   }
 
-  If the pitch includes any negative or overly pessimistic language, the score should reflect that, with any signs of rudeness or lack of enthusiasm scoring low (1-2). 
-  Consider the emotional tone of the student’s responses and how well they are able to engage and excite the investor about their startup idea.
+  If the pitch includes negative or overly pessimistic language, reflect this in the scores (e.g., 1-2) and feedback, noting specific instances. Penalize rudeness, lack of enthusiasm, or excessive bias similarly. Consider the emotional tone of the student’s responses and how well they engage and excite the investor about their startup idea.
 `;
 
 export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, thematicWords:any): string => 

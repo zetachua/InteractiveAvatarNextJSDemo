@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import Groq from 'groq-sdk';
 import { pitchEvaluationPrompt, pitchEvaluationPrompt2, pitchEvaluationPrompt3, sentimentPitchPrompt} from './prompts';
-import { feedbackFilter, rubricInvestorFilter, rubricInvestorFilter2, rubricInvestorFilter3 } from './completionFilterFunctions';
+import { feedbackFilter, rubricInvestorFilter, rubricInvestorFilter2 } from './completionFilterFunctions';
 import OpenAI from 'openai';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
@@ -24,11 +24,12 @@ const pitchEvaluationResponse = async (req: NextApiRequest, res: NextApiResponse
         fetchSentiment(userInput, chatHistory, "sentiment",selectedModel),
         ]);
 
-      let sentimentScore, sentimentSummary, sentimentMetrics;
+      let sentimentScore, sentimentSummary, sentimentMetrics,sentimentSpecifics;
       if (sentimentResult?.feedbackScore !== undefined) {
         sentimentScore = sentimentResult.feedbackScore;
         sentimentSummary = sentimentResult.feedbackSummary;
         sentimentMetrics = sentimentResult.feedbackMetrics;
+        sentimentSpecifics= sentimentResult.feedbackSpecific;
       } else {
         console.log("Invalid sentiment data, keeping previous values.");
       }
@@ -50,11 +51,11 @@ const pitchEvaluationResponse = async (req: NextApiRequest, res: NextApiResponse
         rubricSummary2 = rubricResult2.rubricSummary;
         rubricMetrics2 = rubricResult2.rubricMetrics;
         rubricSpecificFeedback2= rubricResult2.rubricSpecificFeedback;
-        console.log("Invalid sentiment data, keeping previous values.");
+        console.log(rubricScore2,rubricSummary2,rubricMetrics2,rubricSpecificFeedback2,"results deep seek api 4");
       } else {
-        console.log("Invalid sentiment data, keeping previous values.");
+        console.log("Invalid rubric data, keeping previous values.");
       }
-
+      console.log("im exited deep seek api 5",rubricResult2)
       // Send response
       res.status(200).json({
       // rubricScore,
@@ -68,6 +69,7 @@ const pitchEvaluationResponse = async (req: NextApiRequest, res: NextApiResponse
         sentimentScore,
         sentimentSummary,
         sentimentMetrics,
+        sentimentSpecifics
       });
 
     } catch (error) {
@@ -89,7 +91,7 @@ const getGroqChatCompletion = async (userInput: string, chatHistory: any, prompt
   } else if (promptType=='rubric2'){
     selectedPrompt=pitchEvaluationPrompt2(userInput)
   }
-  console.log("Selected Prompt pitch evaluation response",selectedPrompt)
+  console.log("Selected Prompt pitch evaluation response",selectedPrompt,promptType)
 
   return groq.chat.completions.create({
     messages: [
@@ -110,7 +112,7 @@ const getDeepSeekChatCompletion = async (userInput: string, chatHistory: any) =>
   const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
 
   let selectedPrompt = pitchEvaluationPrompt3(userInput);
-  console.log("Selected Prompt pitch evaluation response", selectedPrompt);
+  console.log("Selected Prompt pitch evaluation response deepseek api 1", selectedPrompt);
 
   const chatCompletion = await deepseek.chat.completions.create({
       messages: [
@@ -157,14 +159,14 @@ try {
   let rubricRatingCompletion;
   if(promptType==='rubric2') {
     rubricRatingCompletion = await getDeepSeekChatCompletion(userInput, chatHistory);
-    console.log("first step passed deepseek")
+    console.log(rubricRatingCompletion,"completion i should be calling here deepseek api 1.5")
   }  
   else {
     rubricRatingCompletion = await getGroqChatCompletion(userInput, chatHistory, promptType, selectedModel);
   }
-
   let responseContent = rubricRatingCompletion.choices[0].message.content;
 
+  console.log(responseContent,"responseContent deepseek api 2")
   if (!responseContent) {
     throw new Error("Empty rubric response");
   }
@@ -175,6 +177,7 @@ try {
   }else{
     filteredResponse = rubricInvestorFilter(responseContent);
   }
+  console.log(filteredResponse,"filteredResponse deepseek api 3")
 
   if (!filteredResponse) {
     console.log("Invalid rubric JSON format, returning null");

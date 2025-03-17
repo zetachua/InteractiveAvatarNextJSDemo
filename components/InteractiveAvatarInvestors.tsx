@@ -29,13 +29,14 @@ interface Pause {
 // import {AVATARS, STT_LANGUAGE_LIST} from "@/app/lib/constants";
 import TypewriterText from "./Typewriter";
 import FeedbackPieChart from "./FeedbackPieChart";
-import { ChatHistory, FeedbackData, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
+import { ChatHistory, FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
 import { Square,Microphone} from "@phosphor-icons/react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 import {models, tempUserInput} from '../pages/api/configConstants'
 import RubricInvestorPiechart from "./RubricInvestorPieChart";
 import RubricInvestorPiechart2 from "./RubricInvestorPieChart2";
 import CountdownTimer from "./Countdown";
+import SentimentInvestorPiechart from "./SentimentInvestorPieChart";
 
 export default function InteractiveAvatarInvestors() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -81,17 +82,34 @@ export default function InteractiveAvatarInvestors() {
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [questionCount, setQuestionCount] = useState<number>(0);
   const [sentimentJson, setSentimentJson] = useState<FeedbackData | null>(null);
-  const [sentimentRatings, setSentimentScore] = useState<number>(0); 
+  const [sentimentMetrics, setSentimentMetrics] = useState<FeedbackMetricData>(
+    {
+      clarity: 0,
+      relevance:0,
+      depth: 0,
+      neutrality: 0,
+      engagement:0,
+    }
+  );
+  const [sentimentSpecificFeedback, setSentimentSpecificFeedback] = useState<FeedbackSpecificMetrics>(
+    {
+    clarity: "",
+    relevance: "",
+    depth: "",
+    neutrality: "",
+    engagement: "",
+  });
+  const [sentimentScore, setSentimentScore] = useState<number>(0); 
   const [rubricJson, setRubricJson] = useState<RubricInvestorData | null>(null);
   const [rubricAllRatings, setRubricAllRatings] = useState<number>(0); 
   const [rubricJson2, setRubricJson2] = useState<Rubric2InvestorData | null>(null);
   const [rubricAllRatings2, setRubricAllRatings2] = useState<number>(0); 
   const [isRecording, setIsRecording] = useState<boolean>(false);
-  // const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const recognitionRef = useRef<MediaRecorder | null>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  // const recognitionRef = useRef<MediaRecorder | null>(null);
   const transcriptRef = useRef<string>(''); 
   const [selectedModel, setSelectedModel] = useState<string>('');
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(400); // 5 minutes in seconds
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [callCount, setCallCount] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -115,7 +133,7 @@ export default function InteractiveAvatarInvestors() {
     return () => clearInterval(timer);
   }, [timeLeft]);
 
-
+console.log(chatHistory,"chatHistory")
   async function fetchAccessToken() {
     try {
       const response = await fetch("/api/get-access-token", {
@@ -241,73 +259,73 @@ export default function InteractiveAvatarInvestors() {
       });
   }
 
-  // const toggleSpeechToText = () => {
-  //   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  //   if (!SpeechRecognition) {
-  //     setDebug('Speech Recognition API not supported in this browser');
-  //     return;
-  //   }
-  //   setCallCount((prevCount) => prevCount + 1); // Increment call count
+  const toggleSpeechToText = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setDebug('Speech Recognition API not supported in this browser');
+      return;
+    }
+    setCallCount((prevCount) => prevCount + 1); // Increment call count
 
-  //   if (!isRecording) {
-  //     // Start recording
-  //     const recognition = new SpeechRecognition();
-  //     recognitionRef.current = recognition;
-  //     recognition.lang = 'en-US';
-  //     recognition.interimResults = false;
-  //     recognition.maxAlternatives = 1;
-  //     recognition.continuous = true;
+    if (!isRecording) {
+      // Start recording
+      const recognition = new SpeechRecognition();
+      recognitionRef.current = recognition;
+      recognition.lang = 'en-US';
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+      recognition.continuous = true;
 
-  //     transcriptRef.current = ''; // Reset transcript
+      transcriptRef.current = ''; // Reset transcript
 
-  //     recognition.onstart = () => {
-  //       console.log('Speech recognition started');
-  //     };
+      recognition.onstart = () => {
+        console.log('Speech recognition started');
+      };
 
-  //     recognition.onresult = (event: SpeechRecognitionEvent) => {
-  //       const newTranscript = Array.from(event.results)
-  //         .map((result) => result[0].transcript)
-  //         .join(' ');
-  //       transcriptRef.current = newTranscript;
-  //       console.log('Transcript updated:', transcriptRef.current);
-  //     };
+      recognition.onresult = (event: SpeechRecognitionEvent) => {
+        const newTranscript = Array.from(event.results)
+          .map((result) => result[0].transcript)
+          .join(' ');
+        transcriptRef.current = newTranscript;
+        console.log('Transcript updated:', transcriptRef.current);
+      };
 
-  //     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-  //       console.error('Speech recognition error:', event.error);
-  //       setDebug(`Speech recognition error: ${event.error}`);
-  //       setIsRecording(false);
-  //       recognitionRef.current = null;
-  //     };
+      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+        console.error('Speech recognition error:', event.error);
+        setDebug(`Speech recognition error: ${event.error}`);
+        setIsRecording(false);
+        recognitionRef.current = null;
+      };
 
-  //     recognition.onend = () => {
-  //       console.log('Speech recognition ended, current transcript:', transcriptRef.current);
-  //       if (isRecording) {
-  //         // Restart if ended unexpectedly
-  //         console.log('Restarting recognition...');
-  //         recognition.start();
-  //       } else {
-  //         // Stopped manually, update userInput and trigger speak
-  //         setUserInput(transcriptRef.current || '');
-  //         if (transcriptRef.current) {
-  //           handleSpeak(transcriptRef.current);
-  //         } else {
-  //           setDebug('No speech detected');
-  //         }
-  //         recognitionRef.current = null;
-  //       }
-  //     };
+      recognition.onend = () => {
+        console.log('Speech recognition ended, current transcript:', transcriptRef.current);
+        if (isRecording) {
+          // Restart if ended unexpectedly
+          console.log('Restarting recognition...');
+          recognition.start();
+        } else {
+          // Stopped manually, update userInput and trigger speak
+          setUserInput(transcriptRef.current || '');
+          if (transcriptRef.current) {
+            handleSpeak(transcriptRef.current);
+          } else {
+            setDebug('No speech detected');
+          }
+          recognitionRef.current = null;
+        }
+      };
 
-  //     recognition.start();
-  //     setIsRecording(true);
-  //     setDebug('');
-  //   } else {
-  //     // Stop recording
-  //     if (recognitionRef.current) {
-  //       recognitionRef.current.stop();
-  //       setIsRecording(false);
-  //     }
-  //   }
-  // };
+      recognition.start();
+      setIsRecording(true);
+      setDebug('');
+    } else {
+      // Stop recording
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+        setIsRecording(false);
+      }
+    }
+  };
 
   const resetAllStates=()=>{
     setFeedbackText('');
@@ -319,6 +337,22 @@ export default function InteractiveAvatarInvestors() {
     setSentimentScore(0);
     setRubricAllRatings(0);
     setSentimentJson(null);
+    setSentimentMetrics({
+      clarity: 0,
+      relevance:0,
+      depth: 0,
+      neutrality: 0,
+      engagement:0,
+    });
+    setSentimentSpecificFeedback(
+      {
+        clarity: "",
+        relevance: "",
+        depth: "",
+        neutrality: "",
+        engagement: "",
+      }
+    ),
     setRubricSpecificFeedback( {
       marketValidation: '',
       pitchDeck: '',
@@ -326,89 +360,89 @@ export default function InteractiveAvatarInvestors() {
     });
   }
 
-  const toggleSpeechToText = async () => {
-    const currentCallCount = callCount + 1;
-    setCallCount(currentCallCount);
+  // const toggleSpeechToText = async () => {
+  //   const currentCallCount = callCount + 1;
+  //   setCallCount(currentCallCount);
 
-    if (isRecording) {
-      stopRecording();
-    } else {
-      await startRecording(currentCallCount);
-    }
-  };const startRecording = async (currentCallCount: number) => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-      let localChunks: Blob[] = []; // Use a local array instead of state for real-time updates
+  //   if (isRecording) {
+  //     stopRecording();
+  //   } else {
+  //     await startRecording(currentCallCount);
+  //   }
+  // };const startRecording = async (currentCallCount: number) => {
+  //   try {
+  //     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  //     const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+  //     let localChunks: Blob[] = []; // Use a local array instead of state for real-time updates
   
-      mediaRecorder.ondataavailable = (event: BlobEvent) => {
-        if (event.data.size > 0) {
-          localChunks.push(event.data);
-          console.log(`Chunk received, size: ${event.data.size}`);
-        }
-      };
+  //     mediaRecorder.ondataavailable = (event: BlobEvent) => {
+  //       if (event.data.size > 0) {
+  //         localChunks.push(event.data);
+  //         console.log(`Chunk received, size: ${event.data.size}`);
+  //       }
+  //     };
   
-      mediaRecorder.onstop = async () => {
-        console.log(`Total chunks: ${localChunks.length}`);
-        const audioBlob = new Blob(localChunks, { type: 'audio/webm' });
-        console.log(`Blob created, size: ${audioBlob.size}, type: ${audioBlob.type}`);
+  //     mediaRecorder.onstop = async () => {
+  //       console.log(`Total chunks: ${localChunks.length}`);
+  //       const audioBlob = new Blob(localChunks, { type: 'audio/webm' });
+  //       console.log(`Blob created, size: ${audioBlob.size}, type: ${audioBlob.type}`);
   
-        if (audioBlob.size === 0) {
-          setDebug('Error: Recorded audio is empty');
-          return;
-        }
+  //       if (audioBlob.size === 0) {
+  //         setDebug('Error: Recorded audio is empty');
+  //         return;
+  //       }
   
-        await transcribeAudio(audioBlob, currentCallCount);
-        stream.getTracks().forEach((track) => track.stop());
-        localChunks = []; // Reset local chunks
-      };
+  //       await transcribeAudio(audioBlob, currentCallCount);
+  //       stream.getTracks().forEach((track) => track.stop());
+  //       localChunks = []; // Reset local chunks
+  //     };
   
-      mediaRecorder.start(100); // Collect data every 100ms
-      recognitionRef.current = mediaRecorder;
-      setIsRecording(true);
-      setDebug('Recording started...');
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      setDebug('Error starting recording');
-    }
-  };
+  //     mediaRecorder.start(100); // Collect data every 100ms
+  //     recognitionRef.current = mediaRecorder;
+  //     setIsRecording(true);
+  //     setDebug('Recording started...');
+  //   } catch (error) {
+  //     console.error('Error starting recording:', error);
+  //     setDebug('Error starting recording');
+  //   }
+  // };
   
-  const stopRecording = () => {
-    if (recognitionRef.current && recognitionRef.current.state !== 'inactive') {
-      recognitionRef.current.stop();
-    }
-    setIsRecording(false);
-    setDebug('Recording stopped...');
-  };
+  // const stopRecording = () => {
+  //   if (recognitionRef.current && recognitionRef.current.state !== 'inactive') {
+  //     recognitionRef.current.stop();
+  //   }
+  //   setIsRecording(false);
+  //   setDebug('Recording stopped...');
+  // };
   
-  const transcribeAudio = async (audioBlob: Blob, currentCallCount: number) => {
-    const formData = new FormData();
-    formData.append('audio', audioBlob, 'audio.webm');
-    console.log('Sending audio blob, type:', audioBlob.type);
+  // const transcribeAudio = async (audioBlob: Blob, currentCallCount: number) => {
+  //   const formData = new FormData();
+  //   formData.append('audio', audioBlob, 'audio.webm');
+  //   console.log('Sending audio blob, type:', audioBlob.type);
   
-    try {
-      // const response = await fetch('http://127.0.0.1:5000/transcribe', {
-        const response = await fetch('https://interactive-avatar-next-js-demo-olive.vercel.app/transcribe', {
-          method: 'POST',
-        body: formData,
-      });
+  //   try {
+  //     const response = await fetch('http://127.0.0.1:5000/transcribe', {
+  //       // const response = await fetch('https://interactive-avatar-next-js-demo-olive.vercel.app/transcribe', {
+  //         method: 'POST',
+  //       body: formData,
+  //     });
   
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Failed to transcribe audio: ${response.status} - ${text}`);
-      }
+  //     if (!response.ok) {
+  //       const text = await response.text();
+  //       throw new Error(`Failed to transcribe audio: ${response.status} - ${text}`);
+  //     }
   
-      const data = await response.json();
-      console.log('Transcription:', data.text);
-      setUserInput(data.text);
-      handleSpeak(data.text);
-      transcriptRef.current = data.text;
-      setDebug('Transcription successful!');
-    } catch (error) {
-      console.error('Error during transcription:', error);
-      setDebug('Error during transcription');
-    }
-  };
+  //     const data = await response.json();
+  //     console.log('Transcription:', data.text);
+  //     setUserInput(data.text);
+  //     handleSpeak(data.text);
+  //     transcriptRef.current = data.text;
+  //     setDebug('Transcription successful!');
+  //   } catch (error) {
+  //     console.error('Error during transcription:', error);
+  //     setDebug('Error during transcription');
+  //   }
+  // };
 
   function mergeJsons<T extends Record<string, number | string>>(obj1: T, obj2: T): T {
     const mergedObj: T = { ...obj1 };
@@ -444,16 +478,14 @@ async function endSession() {
     });
     const data = await response.json();
     if (data?.sentimentSummary !== undefined) setFeedbackText(data.sentimentSummary);
-
+    if (data?.sentimentSpecifics !== undefined) setSentimentSpecificFeedback(data.sentimentSpecifics);
     if(data?.sentimentMetrics!==undefined && data.sentimentScore!==undefined){
         const updateSentimentJson=mergeJsons(sentimentJson,data.sentimentMetrics)
         setSentimentJson(updateSentimentJson);
-        setSentimentScore((prevState) => {
-            const newRating = data.sentimentScore || 0;
-            console.log(data.sentimentScore,prevState,"sentimentRatings")
-            return prevState + newRating; // Add the new rating to the previous state
-        });
+        setSentimentMetrics(data.sentimentMetrics);
+        setSentimentScore(data.sentimentScore);
     }
+
     if (data?.rubricSummary !== undefined) setRubricSummary(data.rubricSummary);
     if (data?.rubricMetrics !== undefined) setRubricJson(data.rubricMetrics);
     if (data?.rubricScore !== undefined) setRubricAllRatings(data.rubricScore);
@@ -677,7 +709,7 @@ async function endSession() {
           >
           {isRecording ? <div className={`wave`} />: <>Talk <Microphone size={14} /></>}
         </Button>
-        <div>
+        {/* <div>
             <h3>Pauses:</h3>
             {pauses.length > 0 ? (
               <ul>
@@ -690,8 +722,15 @@ async function endSession() {
             ) : (
               <p>No pauses detected</p>
             )}
-          </div>
-          {/* <Input
+          </div> */}
+          
+          <Button
+            onClick={handleInterrupt}
+            style={{ margin: '0.5rem',opacity:displayRubricAnalytics?'50%':'100%',background:'rgba(255,255,255,0.1)'}}
+          >
+            <Square weight="fill"/>
+          </Button> 
+          <Input
             placeholder="Type your message..."
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
@@ -700,26 +739,21 @@ async function endSession() {
 
             />
            <Button
-           onClick={()=>handleSpeak()}
+           onClick={()=>handleSpeak(userInput)}
            isDisabled={!userInput.trim() || isLoadingRepeat}
            style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
             >
            {isLoadingRepeat ? <Spinner /> :  "Send"}
-          </Button> */}
-          <Button
-            onClick={handleInterrupt}
-            style={{ margin: '0.5rem',opacity:displayRubricAnalytics?'50%':'100%',background:'rgba(255,255,255,0.1)'}}
-          >
-            <Square weight="fill"/>
-          </Button> 
+          </Button>
         </div>
         </>
         }
 
-        {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentRatings} />}
-        {rubricJson2 && <div style={{display:'flex',gap:'1rem',position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>
+        {/* {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentScore} />} */}
+        {sentimentJson && rubricJson2 && <div style={{display:'flex',gap:'1rem',position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>
         {/* <RubricInvestorPiechart data={rubricJson} overallScore={rubricAllRatings} summary={rubricSummary} specificFeedback={rubricSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart> */}
-         <RubricInvestorPiechart2 data={rubricJson2} overallScore={rubricAllRatings2} summary={rubricSummary2} specificFeedback={rubricSpecificFeedback2} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart2>
+        <RubricInvestorPiechart2 data={rubricJson2} overallScore={rubricAllRatings2} summary={rubricSummary2} specificFeedback={rubricSpecificFeedback2} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart2>
+         <SentimentInvestorPiechart data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0}></SentimentInvestorPiechart>
         </div>}
         {loadingRubric&&<Spinner 
           style={{

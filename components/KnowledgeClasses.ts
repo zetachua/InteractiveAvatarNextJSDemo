@@ -38,6 +38,15 @@ export interface FeedbackData {
   engagement: number;
   overallScore: number;
   feedbackSummary: string;
+  specificFeedback:FeedbackSpecificMetrics;
+}
+
+export interface FeedbackSpecificMetrics {
+  clarity: string;
+  relevance: string;
+  depth: string;
+  neutrality: string;
+  engagement: string;
 }
 
 export interface FeedbackMetricData {
@@ -123,6 +132,54 @@ export interface Rubric2InvestorData {
   specificFeedback: Rubric2InvestorSpecificData;
 }
 
+
+export interface Rubric3InvestorSpecificData {
+  elevatorPitch: string;
+  team: string;
+  marketOpportunity: string;
+  marketSize: string;
+  solutionValueProposition: string;
+  competitivePosition: string;
+  tractionAwards: string;
+  revenueModel: string;
+}
+
+export interface Rubric3InvestorData {
+  elevatorPitch: {
+    score:number;
+    feedback:string;
+  };
+  team:{
+    score:number;
+    feedback:string;
+  };
+  marketOpportunity: {
+    score:number;
+    feedback:string;
+  };
+  marketSize: {
+    score:number;
+    feedback:string;
+  };
+  solutionValueProposition: {
+    score:number;
+    feedback:string;
+  };
+  competitivePosition: {
+    score:number;
+    feedback:string;
+  };
+  tractionAwards: {
+    score:number;
+    feedback:string;
+  };
+  revenueModel: {
+    score:number;
+    feedback:string;
+  };
+  overallScore: number;
+  summary: string;
+}
 export interface StartupGroups {
   startup_idea: string;
   target_audience: string;
