@@ -387,8 +387,9 @@ export default function InteractiveAvatarInvestors() {
     console.log('Sending audio blob, type:', audioBlob.type);
   
     try {
-      const response = await fetch('http://127.0.0.1:5000/transcribe', {
-        method: 'POST',
+      // const response = await fetch('http://127.0.0.1:5000/transcribe', {
+        const response = await fetch('https://interactive-avatar-next-js-demo-olive.vercel.app/transcribe', {
+          method: 'POST',
         body: formData,
       });
   
