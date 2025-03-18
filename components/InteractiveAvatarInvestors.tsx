@@ -109,7 +109,7 @@ export default function InteractiveAvatarInvestors() {
   // const recognitionRef = useRef<MediaRecorder | null>(null);
   const transcriptRef = useRef<string>(''); 
   const [selectedModel, setSelectedModel] = useState<string>('');
-  const [timeLeft, setTimeLeft] = useState(400); // 5 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [callCount, setCallCount] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -117,7 +117,7 @@ export default function InteractiveAvatarInvestors() {
   const [pauses, setPauses] = useState<any[]>([]);
 
   useEffect(() => {
-    if (timeLeft <= 0) {
+    if (callCount == 2 || timeLeft <= 0) {
       setIsTimeUp(true);
       if (recognitionRef.current) {
         recognitionRef.current.stop();
@@ -131,7 +131,7 @@ export default function InteractiveAvatarInvestors() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft]);
+  }, [callCount, timeLeft]);
 
 console.log(chatHistory,"chatHistory")
   async function fetchAccessToken() {
@@ -649,7 +649,9 @@ async function endSession() {
             <Spinner color="default" size="lg" />
           )}
         </CardBody>
-       { stream && callCount === 1 && <CountdownTimer isTimeUp={isTimeUp} timeLeft={timeLeft}></CountdownTimer>}
+        { stream && 
+          <CountdownTimer isTimeUp={isTimeUp} timeLeft={timeLeft}></CountdownTimer>
+        }
 
         {stream && <>
         <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>
