@@ -14,6 +14,7 @@ if (req.method === 'POST') {
 
     const questionResponse = await fetchQna(userInput, chatHistory);
 
+
     res.status(200).json({
       chatHistory: [
         ...chatHistory,

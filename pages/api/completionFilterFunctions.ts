@@ -295,7 +295,7 @@ export const qnaFilter = (responseContent: string) => {
     
     console.log("Raw qnaJson:", qnaJson, "question", qnaDataJson.response);
     
-    return qnaDataJson.response ?? "Could not extract question, sorry could you repeat that?";
+    return qnaDataJson.response ?? "Sorry I wasn't able to catch that. Could you please rephrase or try again?";
 
   } catch (error) {
     console.error("Error parsing JSON:", error, "Raw input:", responseContent);

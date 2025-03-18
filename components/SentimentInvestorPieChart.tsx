@@ -79,24 +79,6 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
         zIndex: '1001',
       }}
     >
-      <Button
-        className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
-        size="md"
-        variant="shadow"
-        style={{
-          width: '200px',
-          position: 'absolute',
-          left: '50%',
-          top: '0%',
-          transform: 'translate(-50%,-50%) scale(1.6)',
-        }}
-        onClick={() => {
-          resetAllStates();
-          window.location.reload();
-        }}
-      >
-        Restart Round
-      </Button>
 
       <div
         style={{
@@ -118,25 +100,25 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
             marginBottom: '-2rem'
           }}
         >
-          <b>Rubric2 Overall</b>
+          <b>Sentiment Overall</b>
           <div style={{ fontSize: '16px', padding: '0.5rem' }}>{feedbackSummary}</div>
         </div>
         <div
           style={{
             fontWeight: 600,
             fontSize: '24px',
-            padding: '0rem 1.2rem 0rem 1.2rem',
             borderRadius: '10px',
+            padding: '0rem 1.2rem 0rem 1.2rem',
             zIndex: '1000',
             position: 'absolute',
-            top: '19%',
+            top: '27%',
             left: '50%',
             transform: 'translate(-50%,-50%)',
             color: '#000',
             backgroundColor: '#fff',
           }}
         >
-          {roundedOverallScore}/10
+          {roundedOverallScore}/5
         </div>
         <PieChart width={450} height={600}>
           <Pie

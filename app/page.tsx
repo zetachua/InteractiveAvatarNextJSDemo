@@ -7,12 +7,22 @@ import InteractiveAvatarKnowledge from "@/components/InteractiveAvatarKnowledge"
 import InteractiveAvatarInvestors from "@/components/InteractiveAvatarInvestors";
 
 export default function App() {
-  const [activeView, setActiveView] = useState("customer");
+  const [activeView, setActiveView] = useState("investors");
 
   return (
     <div className="w-screen h-screen relative">
       {/* Button Navigation - Absolute Positioned */}
       <div className="absolute top-4 left-4 flex gap-4 z-10">
+        <Button
+          className={`${
+            activeView === "investors"
+              ? "bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white"
+              : "bg-gray-200 text-gray-700"
+          } rounded-lg`}
+          onClick={() => setActiveView("investors")}
+        >
+          Pitch to Investors Page
+        </Button>
         <Button
           className={`${
             activeView === "customer"
@@ -33,17 +43,6 @@ export default function App() {
         >
           Persona Creator Page
         </Button>
-        <Button
-          className={`${
-            activeView === "investors"
-              ? "bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white"
-              : "bg-gray-200 text-gray-700"
-          } rounded-lg`}
-          onClick={() => setActiveView("investors")}
-        >
-          Pitch to Investors Page
-        </Button>
-
       </div>
 
       {/* Conditional Component Rendering */}

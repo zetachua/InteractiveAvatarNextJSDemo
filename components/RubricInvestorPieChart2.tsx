@@ -160,7 +160,7 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
             borderRadius: '10px',
             zIndex: '1000',
             position: 'absolute',
-            top: '19%',
+            top: '15%',
             left: '50%',
             transform: 'translate(-50%,-50%)',
             color: '#000',

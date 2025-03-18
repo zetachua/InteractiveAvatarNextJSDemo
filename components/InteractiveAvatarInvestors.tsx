@@ -218,7 +218,6 @@ console.log(chatHistory,"chatHistory")
     }
   
     try {
-      console.log(userInputValue,chatHistory,"im here userInput","chatHistory")
       // Fetch LLM response
       const response = await fetch(`/api/qnaResponse`, {
         method: "POST",
@@ -228,6 +227,7 @@ console.log(chatHistory,"chatHistory")
       const data = await response.json();
       if (data.chatHistory !== undefined) setChatHistory(data.chatHistory);
       if (data.questionResponse !== undefined) setDisplayText(data.questionResponse);
+      console.log(data.questionResponse,"im here userInput","chatHistory")
 
       // Make the avatar speak the response
       await avatar.current.speak({
@@ -656,7 +656,7 @@ async function endSession() {
 
         <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
           <div style={{display:!displayRubricAnalytics && !isLoadingSession?'flex':'none',width:'100%',justifyContent:'center',alignItems:'center'}}>
-            <div style={{backgroundColor:'rgba(255,255,255,0.1)',textAlign:'center',padding:'1rem',maxWidth:'60%',minWidth:'30%',borderRadius:'10px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',bottom:'9%',left:'50%'}}> 
+            <div style={{backgroundColor:'rgba(255,255,255,0.1)',textAlign:'center',padding:'1rem',maxWidth:'60%',minWidth:'30%',maxHeight:'100px',overflowY:'scroll',scrollbarWidth:'none',borderRadius:'10px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',bottom:'9%',left:'50%'}}> 
               {isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput} 
             </div>
          {/* { !hideSuggestions && suggestionOptions?.map((option, index) => (

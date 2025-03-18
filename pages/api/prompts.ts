@@ -522,7 +522,102 @@ export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, t
   
   Now, analyze the chat history and return the evaluation.
   `;
+  
+  // Prompt for Metric 1: Elevator Pitch, Team, Market Opportunity
+export const pitchEvaluationPromptMetric1 = (userInput: string) => `
+You are an experienced venture capitalist and startup mentor. I will provide you with a transcript of a startup pitch. Your task is to analyze the pitch and provide detailed, constructive, and actionable feedback for improvement. Focus ONLY on the following three aspects:
 
+1. **Elevator Pitch**
+2. **Team**
+3. **Market Opportunity**
+
+Follow these guidelines for feedback:
+- **Recap:** Summarize what the pitch conveyed about each aspect in a concise sentence.
+- **Suggestions:** Provide specific, actionable recommendations for improvement, including at least one concrete example or step, prefixed with "Suggestions:".
+- Assign a numeric score (1-10) for each aspect based on your evaluation.
+
+Your output must be a valid JSON object with the following keys:
+- "elevatorPitch"
+- "team"
+- "marketOpportunity"
+
+For each key, the value should be an object with:
+- "score": A numeric score (1-10)
+- "feedback": A single string 
+
+**Example Format:**
+{
+  "elevatorPitch": { "score": 6, "feedback": "The pitch opened with a statement about improving supply chain efficiency but lacked a clear problem-solution hook. Suggestions: Refine the elevator pitch to start with a memorable one-liner, e.g., 'We streamline supply chains with AI-driven insights.'" },
+  "team": { "score": 5, "feedback": " The team mentioned backgrounds in logistics and software, but didn’t connect these to specific achievements. Suggestions: Highlight a specific achievement, e.g., 'Led a logistics project saving 20% costs.'" },
+  "marketOpportunity": { "score": 7, "feedback": "The pitch identified supply chain inefficiencies as a widespread issue. Suggestions: Strengthen validation with data, e.g., 'Include a statistic on inefficiency costs.'" }
+}
+
+Analyze the following pitch transcript and produce your JSON output:
+${userInput}
+`;
+
+// Prompt for Metric 2: Market Size, Solution & Value Proposition, Competitive Positioning
+export const pitchEvaluationPromptMetric2 = (userInput: string) => `
+You are an experienced venture capitalist and startup mentor. I will provide you with a transcript of a startup pitch. Your task is to analyze the pitch and provide detailed, constructive, and actionable feedback for improvement. Focus ONLY on the following three aspects:
+
+1. **Market Size**
+2. **Solution & Value Proposition**
+3. **Competitive Positioning**
+
+Follow these guidelines for feedback:
+- **Recap:** Summarize what the pitch conveyed about each aspect in a concise sentence.
+- **Suggestions:** Provide specific, actionable recommendations for improvement, including at least one concrete example or step, prefixed with "Suggestions:".
+- Assign a numeric score (1-10) for each aspect based on your evaluation.
+
+Your output must be a valid JSON object with the following keys:
+- "marketSize"
+- "solutionValueProposition"
+- "competitivePosition"
+
+For each key, the value should be an object with:
+- "score": A numeric score (1-10)
+- "feedback": A single string 
+
+**Example Format:**
+{
+  "marketSize": { "score": 6, "feedback": "A TAM of $50B was mentioned, but no breakdown into SAM or SOM was provided. Suggestions: Break down market size into TAM, SAM, and SOM with credible sources." },
+  "solutionValueProposition": { "score": 7, "feedback": "The solution uses AI for supply chain optimization. Suggestions: Emphasize a unique advantage, e.g., 'Highlight a patented algorithm.'" },
+  "competitivePosition": { "score": 4, "feedback": "Competitors were not mentioned. Suggestions: Identify key competitors, e.g., 'Unlike Competitor X, we offer real-time analytics.'" }
+}
+
+Analyze the following pitch transcript and produce your JSON output:
+${userInput}
+`;
+
+// Prompt for Metric 3: Traction/Awards, Revenue/Business Model
+export const pitchEvaluationPromptMetric3 = (userInput: string) => `
+You are an experienced venture capitalist and startup mentor. I will provide you with a transcript of a startup pitch. Your task is to analyze the pitch and provide detailed, constructive, and actionable feedback for improvement. Focus ONLY on the following two aspects:
+
+1. **Traction/Awards**
+2. **Revenue/Business Model**
+
+Follow these guidelines for feedback:
+- **Recap:** Summarize what the pitch conveyed about each aspect in a concise sentence.
+- **Suggestions:** Provide specific, actionable recommendations for improvement, including at least one concrete example or step, prefixed with "Suggestions:".
+- Assign a numeric score (1-10) for each aspect based on your evaluation.
+
+Your output must be a valid JSON object with the following keys:
+- "tractionAwards"
+- "revenueModel"
+
+For each key, the value should be an object with:
+- "score": A numeric score (1-10)
+- "feedback": A single string 
+
+**Example Format:**
+{
+  "tractionAwards": { "score": 7, "feedback": "Early pilot with a logistics firm was noted. Suggestions: Quantify traction with metrics, e.g., 'Report 50 pilot users.'" },
+  "revenueModel": { "score": 6, "feedback": "A subscription model was described. Suggestions: Detail pricing tiers, e.g., '$10/month basic.'" }
+}
+
+Analyze the following pitch transcript and produce your JSON output:
+${userInput}
+`;
 
 export const knowledgePrompt =(knowledge:any,name:string,tone:string)=>`
   You are an AI twin chatbot of a persona described below. 
