@@ -527,35 +527,40 @@ export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, t
   
   Now, analyze the chat history and return the evaluation.
   `;
+  
   export const pitchEvaluationPromptMetric1 = (userInput: string) => `
   You are an experienced venture capitalist. I will give you a transcript of a startup pitch. Please evaluate it on these three areas:
   
-  1. **Elevator Pitch**
-  2. **Team**
-  3. **Market Opportunity**
+  1. **Elevator Pitch**: Ensure the founder’s one-liner or opening is crystal clear about what the startup does and why it matters.
+  2. **Team**: When critiquing the team section, look for whether the founders have convincingly connected their backgrounds to the business.
+  3. **Market Opportunity**: Check if the pitch clearly defines the customer problem and the overall opportunity. Feedback here should ensure the founder isn’t solving a problem only *they* have – it needs to be widespread and important to a large group.
   
   **Guidelines**:
-  - **Recap**: Identify and quote key parts of the pitch related to each aspect. Summarize them concisely. Use only the provided transcript; do not invent or assume additional details.
-  - **Suggestions**: Based on your evaluation, provide one actionable recommendation for each area.
-  - **Score**: Provide a score (1-10) for each area with justifications drawn solely from the pitch transcript.
+  - **Recap**: Identify and quote key parts of the pitch related to each aspect. Summarize them concisely. Use only the explicit text in the provided transcript: ${userInput}. Do not invent or assume additional details.
+  - **Suggestions**: Provide one actionable recommendation based solely on the pitch’s explicit content. Additionally, include a comparison to real-world market data or industry benchmarks you are aware of (e.g., typical pitch standards, team success metrics, market growth rates). If you lack specific data, note where such a comparison would be valuable and suggest what kind of statistic could be used.
+  - **Score**: Provide a score (1-10) for each area with justifications drawn solely from the pitch transcript, supplemented by any relevant general market knowledge you have.
   
-  **Important**: 
-  - If any of the areas (Elevator Pitch, Team, or Market Opportunity) are missing, insufficient, or unclear in the provided transcript, return a score of 1 with an explanation that the information is missing or inadequate.
-  - Do not generate fictional companies, details, or examples beyond what is explicitly stated in the transcript. If the transcript lacks content, reflect that in the feedback and scores.
+  **Pre-Fetched Market Statistics**:
+  ${marketStats}
+  
+  **Strict Constraints**:
+  - If any of the areas (Elevator Pitch, Team, or Market Opportunity) are missing, insufficient, or unclear in the provided transcript, assign a score of 1 and state in the feedback: "The transcript lacks information about [criterion], so it cannot be evaluated. Suggest: [specific suggestion with real-world comparison]."
+  - Do not generate fictional companies, details, or examples beyond what is explicitly stated in the transcript. If the transcript lacks content, reflect that in the feedback and scores, and suggest how real-world data could improve it.
+  - For each criterion, explicitly check the transcript text before proceeding. If no relevant details are present, do not invent an analysis.
 
-  **Example (for structure only)**:
+  **Example (for structure and comparison style)**:
   {
     "elevatorPitch": { 
       "score": 6, 
-      "feedback": "The pitch mentions the problem of inefficient supply chains but lacks a compelling hook. Suggest: 'We optimize supply chains with AI-driven insights to reduce costs by 15% in the first year.'" 
+      "feedback": "The pitch mentions the problem of inefficient supply chains but lacks a compelling hook. Suggest: 'Craft a hook like 'We cut logistics costs by 15% with AI.' Top pitches often grab attention in 10 seconds—e.g., Airbnb’s 'Book rooms with locals' took off fast.'" 
     },
     "team": { 
       "score": 5, 
-      "feedback": "The team mentions relevant backgrounds but doesn't provide past successes. Suggest: 'The team has helped logistics companies reduce costs by 15% in the past year.'" 
+      "feedback": "The team mentions relevant backgrounds but lacks past successes. Suggest: 'Highlight achievements, e.g., 'Led X to $1M revenue.' Successful startups like Stripe had founders with prior exits—can you show similar wins?'" 
     },
     "marketOpportunity": { 
       "score": 7, 
-      "feedback": "The pitch mentions a $10M market but does not break it down into SAM or SOM. Suggest: 'The AI market for logistics is projected to grow 15% annually, reaching $30B by 2030.'" 
+      "feedback": "The pitch mentions a $10M market but lacks SAM/SOM breakdown. Suggest: 'Detail SAM/SOM—e.g., 'Our $10M targets logistics SMEs.' The logistics tech market hit $20B in 2023 with a 10% CAGR—how does your slice compare?'" 
     }
   }
   
@@ -566,64 +571,71 @@ export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, t
 export const pitchEvaluationPromptMetric2 = (userInput: string) => `
   You are an experienced venture capitalist. I will give you a transcript of a startup pitch. Please evaluate it on three key aspects:
   
-  1. **Market Size**
-  2. **Solution & Value Proposition**
-  3. **Competitive Positioning**
+  1. **Market Size**: The pitch should give investors a sense of how large the potential payoff is if the startup succeeds.
+  2. **Solution & Value Proposition** Evaluate how well the startup’s solution is described and whether the unique value proposition stands out. Founders sometimes get too technical or fail to articulate what makes their solution special.
+  3. **Competitive Positioning** Founders should acknowledge competitors and articulate how they stand out. A common mistake is either ignoring competitors or showing a clichéd 2x2 chart without real insight. 
   
   **Guidelines**:
   - **Recap**: Quote and summarize key information about each area from the pitch. Use only the explicit text in the provided transcript: ${userInput}. Do not invent, assume, or add details beyond what is stated.
-  - **Suggestions**: Provide one clear and actionable suggestion based solely on the pitch’s explicit content.
-  - **Score**: Assign a numeric score (1-10) for each area, with justifications drawn only from the quoted text and your analysis of it.
+  - **Suggestions**: Provide one clear and actionable suggestion based solely on the pitch’s explicit content. Additionally, include a comparison to real-world market data or industry benchmarks you are aware of (e.g., market growth rates, typical solution metrics, competitor standards). If you lack specific data, note where such a comparison would be valuable and suggest what kind of statistic could be used.
+  - **Score**: Assign a numeric score (1-10) for each area, with justifications drawn only from the quoted text and your analysis of it, supplemented by any relevant general market knowledge you have.
   
-  **Strict Constraints**:
-  - If any of the areas (Market Size, Solution & Value Proposition, or Competitive Positioning) are missing, insufficient, or unclear in the provided transcript, assign a score of 1 and state in the feedback: "The transcript lacks information about [criterion], so it cannot be evaluated. Suggest: [specific suggestion]."
-  - Do not generate fictional companies, features, or details (e.g., 'AI-powered insights,' 'real-time monitoring') unless explicitly mentioned in the transcript. If the transcript is minimal (e.g., "HELLO"), reflect that lack of content in all scores and feedback.
-  - For each criterion, explicitly check the transcript text before proceeding. If no relevant details are present, do not proceed with an invented analysis.
+  **Pre-Fetched Market Statistics**:
+  ${marketStats}
 
-  **Example (for structure only)**:
+  **Strict Constraints**:
+  - If any of the areas (Market Size, Solution & Value Proposition, or Competitive Positioning) are missing, insufficient, or unclear in the provided transcript, assign a score of 1 and state in the feedback: "The transcript lacks information about [criterion], so it cannot be evaluated."
+  - Do not generate fictional companies, features, or details unless explicitly mentioned in the transcript. If the transcript is minimal (e.g., "HELLO"), reflect that lack of content in all scores and feedback.
+  - For each criterion, explicitly check the transcript text first. If no relevant details are present, do not invent an analysis. Instead, suggest how real-world data (e.g., market size in billions, growth rates, competitor metrics) could strengthen the pitch.
+
+  **Example (for structure and comparison style)**:
   {
     "marketSize": { 
       "score": 6, 
-      "feedback": "The pitch mentions a $5M TAM but doesn't break it down into SAM or SOM. Suggest: 'Provide data on the addressable market by breaking down SAM and SOM. For example, the global AI market is expected to grow by 12% annually, reaching $15B by 2028.'" 
+      "feedback": "The pitch mentions a $5M TAM but doesn't break it down into SAM or SOM. Suggest: 'Provide data on the addressable market by breaking down SAM and SOM. For comparison, the global AI market is projected to reach $500B by 2025 with a 37% CAGR—how does your $5M fit into this?'" 
     },
     "solutionValueProposition": { 
       "score": 7, 
-      "feedback": "The pitch talks about AI for supply chain optimization but doesn't mention any unique features. Suggest: 'Highlight a proprietary feature such as a patented algorithm or exclusive data insights.'" 
+      "feedback": "The pitch talks about AI for supply chain optimization but doesn't mention unique features. Suggest: 'Highlight a proprietary feature like a patented algorithm. For context, top supply chain solutions often claim 15-20% cost reductions—can you quantify your impact similarly?'" 
     },
     "competitivePosition": { 
       "score": 4, 
-      "feedback": "No competitors were mentioned in the pitch. Suggest: 'Identify key competitors, e.g., 'Unlike Competitor X, our solution uses real-time AI analytics, reducing operational costs by 15%.'" 
+      "feedback": "No competitors were mentioned in the pitch. Suggest: 'Identify key competitors, e.g., 'Unlike Competitor X, we offer Y.' For reference, leaders like Flexport have a $8B valuation—how do you stack up?'" 
     }
   }
   
-  Analyze this pitch transcript and provide your JSON output. Use only the following text as the pitch transcript, without adding or imagining content:
+  Analyze this pitch transcript and provide your JSON output. Use only the following text as the pitch transcript, without adding or imagining content beyond it:
   ${userInput}
 `;
 
 export const pitchEvaluationPromptMetric3 = (userInput: string) => `
   You are an experienced venture capitalist. I will give you a transcript of a startup pitch. Please evaluate it based on these two aspects:
   
-  1. **Traction/Awards**
-  2. **Revenue/Business Model**
+  1. **Traction/Awards**: is any evidence that the business is moving forward (users, revenues, partnerships, product milestones). Strong pitches show traction to build credibility.
+  2. **Revenue/Business Model**: Many pitches falter in explaining how the startup will make money, ensure the founder has clearly outlined their revenue streams or business model.
   
   **Guidelines**:
-  - **Recap**: Quote key details related to each aspect from the pitch. Use only the provided transcript; do not invent or assume additional details.
-  - **Suggestions**: Provide one actionable piece of advice based solely on your evaluation of the transcript.
-  - **Score**: Assign a score (1-10) for each area, justifying the score with your quotes and feedback.
+  - **Recap**: Quote key details related to each aspect from the pitch. Use only the explicit text in the provided transcript: ${userInput}. Do not invent or assume additional details.
+  - **Suggestions**: Provide one actionable piece of advice based solely on the pitch’s explicit content. Additionally, include a comparison to real-world market data or industry benchmarks you are aware of (e.g., typical traction metrics, revenue model standards). If you lack specific data, note where such a comparison would be valuable and suggest what kind of statistic could be used.
+  - **Score**: Assign a score (1-10) for each area, justifying the score with your quotes and feedback, supplemented by any relevant general market knowledge you have.
   
-  **Important**: 
-  - If any of the areas (Traction/Awards or Revenue/Business Model) are missing or insufficient in the pitch, return a score of 1 and explain the lack of information.
-  - Do not generate fictional companies, details, or examples beyond what is explicitly stated in the transcript. If the transcript lacks content, reflect that in the feedback and scores.
+  **Pre-Fetched Market Statistics**:
+  ${marketStats}
+  
+  **Strict Constraints**:
+  - If any of the areas (Traction/Awards or Revenue/Business Model) are missing or insufficient in the pitch, assign a score of 1 and state in the feedback: "The transcript lacks information about [criterion], so it cannot be evaluated. Suggest: [specific suggestion with real-world comparison]."
+  - Do not generate fictional companies, details, or examples beyond what is explicitly stated in the transcript. If the transcript lacks content, reflect that in the feedback and scores, and suggest how real-world data could improve it.
+  - For each criterion, explicitly check the transcript text before proceeding. If no relevant details are present, do not invent an analysis.
 
-  **Example (for structure only)**:
+  **Example (for structure and comparison style)**:
   {
     "tractionAwards": { 
       "score": 7, 
-      "feedback": "The pitch mentions a pilot with a logistics firm, but no concrete metrics were provided. Suggest: 'Quantify traction—e.g., 'We onboarded 50 pilot users and reduced operational costs by 15%.'" 
+      "feedback": "The pitch mentions a pilot with a logistics firm but lacks metrics. Suggest: 'Quantify traction, e.g., '50 users, $100K revenue.' Startups like Rivian showed 10K pre-orders early—can you show similar momentum?'" 
     },
     "revenueModel": { 
       "score": 6, 
-      "feedback": "The pitch mentions a subscription model but lacks pricing details. Suggest: 'Clarify pricing tiers, e.g., '$10/month for SMBs and $50/month for enterprises.'" 
+      "feedback": "The pitch mentions a subscription model but lacks pricing. Suggest: 'Specify tiers, e.g., '$10/month for SMBs.' SaaS leaders like Zoom average $100 ARPU—how does your model compare?'" 
     }
   }
   
@@ -668,3 +680,15 @@ export const qnaPrompt = (userInput:string, chatHistory:any) => `
   }
 
 `
+
+export const marketStats = `
+**Pre-Fetched Market Statistics (Updated March 2025)**:
+- **SaaS Market**: $253B TAM, 18% CAGR (Statista 2025).
+- **AI Market**: $733B TAM, 37.3% CAGR (Statista 2025).
+- **Logistics Tech**: $20B TAM, 10% CAGR (McKinsey 2024).
+- **Fintech**: $4T TAM, 15% CAGR (CB Insights 2025).
+- **Typical SaaS ARPU**: $100/user (Zoom benchmark, 2024).
+- **Supply Chain AI Savings**: 15-20% cost reduction (McKinsey 2024).
+- **Startup Traction Benchmark**: 10K users or $1M ARR for Series A (PitchBook 2025).
+- **Competitor Valuation**: Stripe at $95B (CB Insights 2025).
+`;
