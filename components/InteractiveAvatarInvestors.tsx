@@ -79,7 +79,6 @@ export default function InteractiveAvatarInvestors() {
       revenueModel: '',
     });
   const [displayRubricAnalytics,setDisplayRubricAnalytics]=useState(false);
-  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [questionCount, setQuestionCount] = useState<number>(0);
   const [sentimentJson, setSentimentJson] = useState<FeedbackData | null>(null);
   const [sentimentMetrics, setSentimentMetrics] = useState<FeedbackMetricData>(
@@ -105,8 +104,8 @@ export default function InteractiveAvatarInvestors() {
   const [rubricJson2, setRubricJson2] = useState<Rubric2InvestorData | null>(null);
   const [rubricAllRatings2, setRubricAllRatings2] = useState<number>(0); 
   const [isRecording, setIsRecording] = useState<boolean>(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-  // const recognitionRef = useRef<MediaRecorder | null>(null);
+  // const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<MediaRecorder | null>(null);
   const transcriptRef = useRef<string>(''); 
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
@@ -201,6 +200,7 @@ console.log(chatHistory,"chatHistory")
         useSilencePrompt: false
       });
       setChatMode("voice_mode");
+      resetAllStates();
       console.log("i did run")
     } catch (error) {
       console.error("Error starting avatar session:", error);
@@ -227,7 +227,7 @@ console.log(chatHistory,"chatHistory")
       const data = await response.json();
       if (data.chatHistory !== undefined) setChatHistory(data.chatHistory);
       if (data.questionResponse !== undefined) setDisplayText(data.questionResponse);
-      console.log(data.questionResponse,"im here userInput","chatHistory")
+      console.log(userInputValue,chatHistory,"im here userInput","chatHistory")
 
       // Make the avatar speak the response
       await avatar.current.speak({
@@ -237,7 +237,6 @@ console.log(chatHistory,"chatHistory")
       });
 
       if(userInputValue) setUserInput(userInputValue)
-        console.log(userInput,"userInput i have value")
 
     } catch (error) {
       console.error("Error fetching LLM response:", error);
@@ -259,73 +258,73 @@ console.log(chatHistory,"chatHistory")
       });
   }
 
-  const toggleSpeechToText = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setDebug('Speech Recognition API not supported in this browser');
-      return;
-    }
-    setCallCount((prevCount) => prevCount + 1); // Increment call count
+  // const toggleSpeechToText = () => {
+  //   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  //   if (!SpeechRecognition) {
+  //     setDebug('Speech Recognition API not supported in this browser');
+  //     return;
+  //   }
+  //   setCallCount((prevCount) => prevCount + 1); // Increment call count
 
-    if (!isRecording) {
-      // Start recording
-      const recognition = new SpeechRecognition();
-      recognitionRef.current = recognition;
-      recognition.lang = 'en-US';
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-      recognition.continuous = true;
+  //   if (!isRecording) {
+  //     // Start recording
+  //     const recognition = new SpeechRecognition();
+  //     recognitionRef.current = recognition;
+  //     recognition.lang = 'en-US';
+  //     recognition.interimResults = false;
+  //     recognition.maxAlternatives = 1;
+  //     recognition.continuous = true;
 
-      transcriptRef.current = ''; // Reset transcript
+  //     transcriptRef.current = ''; // Reset transcript
 
-      recognition.onstart = () => {
-        console.log('Speech recognition started');
-      };
+  //     recognition.onstart = () => {
+  //       console.log('Speech recognition started');
+  //     };
 
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
-        const newTranscript = Array.from(event.results)
-          .map((result) => result[0].transcript)
-          .join(' ');
-        transcriptRef.current = newTranscript;
-        console.log('Transcript updated:', transcriptRef.current);
-      };
+  //     recognition.onresult = (event: SpeechRecognitionEvent) => {
+  //       const newTranscript = Array.from(event.results)
+  //         .map((result) => result[0].transcript)
+  //         .join(' ');
+  //       transcriptRef.current = newTranscript;
+  //       console.log('Transcript updated:', transcriptRef.current);
+  //     };
 
-      recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-        console.error('Speech recognition error:', event.error);
-        setDebug(`Speech recognition error: ${event.error}`);
-        setIsRecording(false);
-        recognitionRef.current = null;
-      };
+  //     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+  //       console.error('Speech recognition error:', event.error);
+  //       setDebug(`Speech recognition error: ${event.error}`);
+  //       setIsRecording(false);
+  //       recognitionRef.current = null;
+  //     };
 
-      recognition.onend = () => {
-        console.log('Speech recognition ended, current transcript:', transcriptRef.current);
-        if (isRecording) {
-          // Restart if ended unexpectedly
-          console.log('Restarting recognition...');
-          recognition.start();
-        } else {
-          // Stopped manually, update userInput and trigger speak
-          setUserInput(transcriptRef.current || '');
-          if (transcriptRef.current) {
-            handleSpeak(transcriptRef.current);
-          } else {
-            setDebug('No speech detected');
-          }
-          recognitionRef.current = null;
-        }
-      };
+  //     recognition.onend = () => {
+  //       console.log('Speech recognition ended, current transcript:', transcriptRef.current);
+  //       if (isRecording) {
+  //         // Restart if ended unexpectedly
+  //         console.log('Restarting recognition...');
+  //         recognition.start();
+  //       } else {
+  //         // Stopped manually, update userInput and trigger speak
+  //         setUserInput(transcriptRef.current || '');
+  //         if (transcriptRef.current) {
+  //           handleSpeak(transcriptRef.current);
+  //         } else {
+  //           setDebug('No speech detected');
+  //         }
+  //         recognitionRef.current = null;
+  //       }
+  //     };
 
-      recognition.start();
-      setIsRecording(true);
-      setDebug('');
-    } else {
-      // Stop recording
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-        setIsRecording(false);
-      }
-    }
-  };
+  //     recognition.start();
+  //     setIsRecording(true);
+  //     setDebug('');
+  //   } else {
+  //     // Stop recording
+  //     if (recognitionRef.current) {
+  //       recognitionRef.current.stop();
+  //       setIsRecording(false);
+  //     }
+  //   }
+  // };
 
   const resetAllStates=()=>{
     setFeedbackText('');
@@ -360,89 +359,96 @@ console.log(chatHistory,"chatHistory")
     });
   }
 
-  // const toggleSpeechToText = async () => {
-  //   const currentCallCount = callCount + 1;
-  //   setCallCount(currentCallCount);
+  const toggleSpeechToText = async () => {
+    const currentCallCount = callCount + 1;
+    setCallCount(currentCallCount);
 
-  //   if (isRecording) {
-  //     stopRecording();
-  //   } else {
-  //     await startRecording(currentCallCount);
-  //   }
-  // };const startRecording = async (currentCallCount: number) => {
-  //   try {
-  //     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-  //     const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-  //     let localChunks: Blob[] = []; // Use a local array instead of state for real-time updates
+    if (isRecording) {
+      stopRecording();
+    } else {
+      await startRecording(currentCallCount);
+    }
+  };
   
-  //     mediaRecorder.ondataavailable = (event: BlobEvent) => {
-  //       if (event.data.size > 0) {
-  //         localChunks.push(event.data);
-  //         console.log(`Chunk received, size: ${event.data.size}`);
-  //       }
-  //     };
+  const startRecording = async (currentCallCount: number) => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      let localChunks: Blob[] = []; // Use a local array instead of state for real-time updates
+
+      mediaRecorder.ondataavailable = (event: BlobEvent) => {
+        if (event.data.size > 0) {
+          localChunks.push(event.data);
+          console.log(`Chunk received, size: ${event.data.size}`);
+        }
+      };
   
-  //     mediaRecorder.onstop = async () => {
-  //       console.log(`Total chunks: ${localChunks.length}`);
-  //       const audioBlob = new Blob(localChunks, { type: 'audio/webm' });
-  //       console.log(`Blob created, size: ${audioBlob.size}, type: ${audioBlob.type}`);
+      mediaRecorder.onstop = async () => {
+        console.log(`Total chunks: ${localChunks.length}`);
+        const audioBlob = new Blob(localChunks, { type: 'audio/webm' });
+        console.log(`Blob created, size: ${audioBlob.size}, type: ${audioBlob.type}`);
   
-  //       if (audioBlob.size === 0) {
-  //         setDebug('Error: Recorded audio is empty');
-  //         return;
-  //       }
+        if (audioBlob.size === 0) {
+          setDebug('Error: Recorded audio is empty');
+          return;
+        }
   
-  //       await transcribeAudio(audioBlob, currentCallCount);
-  //       stream.getTracks().forEach((track) => track.stop());
-  //       localChunks = []; // Reset local chunks
-  //     };
+        await transcribeAudio(audioBlob, currentCallCount);
+        stream.getTracks().forEach((track) => track.stop());
+        localChunks = []; // Reset local chunks
+      };
   
-  //     mediaRecorder.start(100); // Collect data every 100ms
-  //     recognitionRef.current = mediaRecorder;
-  //     setIsRecording(true);
-  //     setDebug('Recording started...');
-  //   } catch (error) {
-  //     console.error('Error starting recording:', error);
-  //     setDebug('Error starting recording');
-  //   }
-  // };
+      mediaRecorder.start(100); // Collect data every 100ms
+      recognitionRef.current = mediaRecorder;
+      setIsRecording(true);
+      setDebug('Recording started...');
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      setDebug('Error starting recording');
+    }
+  };
   
-  // const stopRecording = () => {
-  //   if (recognitionRef.current && recognitionRef.current.state !== 'inactive') {
-  //     recognitionRef.current.stop();
-  //   }
-  //   setIsRecording(false);
-  //   setDebug('Recording stopped...');
-  // };
+  const stopRecording = () => {
+    if (recognitionRef.current && recognitionRef.current.state !== 'inactive') {
+      recognitionRef.current.stop();
+    }
+    setIsRecording(false);
+    setDebug('Recording stopped...');
+  };
   
-  // const transcribeAudio = async (audioBlob: Blob, currentCallCount: number) => {
-  //   const formData = new FormData();
-  //   formData.append('audio', audioBlob, 'audio.webm');
-  //   console.log('Sending audio blob, type:', audioBlob.type);
+  const transcribeAudio = async (audioBlob: Blob, currentCallCount: number) => {
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'audio.webm');
+    console.log('Sending audio blob, type:', audioBlob.type);
   
-  //   try {
-  //     const response = await fetch('http://127.0.0.1:5000/transcribe', {
-  //       // const response = await fetch('https://interactive-avatar-next-js-demo-olive.vercel.app/transcribe', {
-  //         method: 'POST',
-  //       body: formData,
-  //     });
+    // Use the correct endpoint URL depending on the environment (local or production)
+    const apiUrl =
+      process.env.NODE_ENV === 'development'
+        ? 'http://127.0.0.1:5000/transcribe' // local server
+        : 'https://interactive-avatar-next-js-demo-olive.vercel.app/transcribe'; // production server (Vercel)
   
-  //     if (!response.ok) {
-  //       const text = await response.text();
-  //       throw new Error(`Failed to transcribe audio: ${response.status} - ${text}`);
-  //     }
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        body: formData,
+      });
   
-  //     const data = await response.json();
-  //     console.log('Transcription:', data.text);
-  //     setUserInput(data.text);
-  //     handleSpeak(data.text);
-  //     transcriptRef.current = data.text;
-  //     setDebug('Transcription successful!');
-  //   } catch (error) {
-  //     console.error('Error during transcription:', error);
-  //     setDebug('Error during transcription');
-  //   }
-  // };
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Failed to transcribe audio: ${response.status} - ${text}`);
+      }
+  
+      const data = await response.json();
+      console.log('Transcription:', data.text);
+      setUserInput(data.text);
+      handleSpeak(data.text);
+      transcriptRef.current = data.text;
+      setDebug('Transcription successful!');
+    } catch (error) {
+      console.error('Error during transcription:', error);
+      setDebug('Error during transcription');
+    }
+  };  
 
   function mergeJsons<T extends Record<string, number | string>>(obj1: T, obj2: T): T {
     const mergedObj: T = { ...obj1 };
@@ -479,12 +485,12 @@ async function endSession() {
     const data = await response.json();
     if (data?.sentimentSummary !== undefined) setFeedbackText(data.sentimentSummary);
     if (data?.sentimentSpecifics !== undefined) setSentimentSpecificFeedback(data.sentimentSpecifics);
-    if(data?.sentimentMetrics!==undefined && data.sentimentScore!==undefined){
+    if (data?.sentimentMetrics!==undefined){
         const updateSentimentJson=mergeJsons(sentimentJson,data.sentimentMetrics)
         setSentimentJson(updateSentimentJson);
         setSentimentMetrics(data.sentimentMetrics);
-        setSentimentScore(data.sentimentScore);
     }
+    if (data.sentimentScore!==undefined) setSentimentScore(data.sentimentScore);
 
     if (data?.rubricSummary !== undefined) setRubricSummary(data.rubricSummary);
     if (data?.rubricMetrics !== undefined) setRubricJson(data.rubricMetrics);

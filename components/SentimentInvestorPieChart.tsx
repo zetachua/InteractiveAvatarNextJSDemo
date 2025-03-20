@@ -39,6 +39,7 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
     neutrality,
     engagement,
   };
+  console.log(overallScore,"overallScore")
 
   // Construct the chart data
   const chartData = Object.entries(rubricMetrics).map(([key, value]) => ({

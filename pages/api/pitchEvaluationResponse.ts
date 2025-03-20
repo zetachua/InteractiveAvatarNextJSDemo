@@ -12,10 +12,10 @@ const deepseek = new OpenAI({
 });
 
 const pitchEvaluationResponse = async (req: NextApiRequest, res: NextApiResponse) => {
+
   if (req.method === 'POST') {
     try {
       const { userInput, chatHistory,selectedModel} = req.body;
-
       let rubricResult,sentimentResult,rubricResult2;
       // Run all API calls in parallel, or fetch rubric based on displayRubricAnalytics flag
       [rubricResult2,sentimentResult] = await Promise.all([
@@ -34,7 +34,7 @@ const pitchEvaluationResponse = async (req: NextApiRequest, res: NextApiResponse
         console.log("Invalid sentiment data, keeping previous values.");
       }
 
-      // Process sentiment feedback
+      // Process rubric1 feedback
       // let rubricScore, rubricSummary, rubricMetrics,rubricSpecificFeedback;
       // if (rubricResult?.rubricScore !== undefined) {
       //   rubricScore = rubricResult.rubricScore;
@@ -51,7 +51,6 @@ const pitchEvaluationResponse = async (req: NextApiRequest, res: NextApiResponse
         rubricSummary2 = rubricResult2.rubricSummary;
         rubricMetrics2 = rubricResult2.rubricMetrics;
         rubricSpecificFeedback2= rubricResult2.rubricSpecificFeedback;
-        console.log(rubricScore2,rubricSummary2,rubricMetrics2,rubricSpecificFeedback2,"results deep seek api 4");
       } else {
         console.log("Invalid rubric data, keeping previous values.");
       }
@@ -84,15 +83,11 @@ const getGroqChatCompletion = async (userInput: string, chatHistory: any, prompt
   const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
 
   let selectedPrompt=""
-  if (promptType=='rubric'){
-    selectedPrompt=pitchEvaluationPrompt(userInput)
-  } else if (promptType=='sentiment'){
+  if (promptType=='sentiment'){
     selectedPrompt=sentimentPitchPrompt(userInput,chatHistory)
   } else if (promptType=='rubric2'){
     selectedPrompt=pitchEvaluationPrompt2(userInput)
   }
-  console.log("Selected Prompt pitch evaluation response",selectedPrompt,promptType)
-
   return groq.chat.completions.create({
     messages: [
       {
@@ -127,9 +122,6 @@ const getDeepSeekMetric3 = async (userInput: string, chatHistory: any) => {
 
 const getDeepSeekChatCompletionForMetric = async (userInput: string, chatHistory: any, prompt: string) => {
   const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
-
-  console.log(`Calling DeepSeek for prompt: ${prompt.substring(0, 50)}...`);
-
   // const chatCompletion = await deepseek.chat.completions.create({
   //   messages: [
   //     ...validChatHistory,
@@ -142,13 +134,17 @@ const getDeepSeekChatCompletionForMetric = async (userInput: string, chatHistory
   //   model: "deepseek-reasoner",
   // });
 
-
   const chatCompletion = await groq.chat.completions.create({
     messages: [
         ...validChatHistory,
         {
-          role: 'user',
+          role: 'system',
           content: prompt,
+        },
+        ...validChatHistory,
+        {
+          role: 'user',
+          content: userInput,
         },
       ],
     model: 'Deepseek-R1-Distill-Llama-70b',
@@ -156,43 +152,43 @@ const getDeepSeekChatCompletionForMetric = async (userInput: string, chatHistory
   return chatCompletion;
 };
 
-const getDeepSeekChatCompletion = async (userInput: string, chatHistory: any) => {
-  const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
+// const getDeepSeekChatCompletion = async (userInput: string, chatHistory: any, selectedModel:any) => {
+//   const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
 
-  let selectedPrompt = pitchEvaluationPrompt3(userInput);
-  console.log("Selected Prompt pitch evaluation response deepseek api 1", selectedPrompt);
+//   let selectedPrompt = pitchEvaluationPrompt3(userInput);
+//   console.log("Selected Prompt pitch evaluation response deepseek api 1", selectedPrompt);
 
-  // const chatCompletion = await deepseek.chat.completions.create({
-  //     messages: [
-  //         // Combine system and user message as in the example
-  //         ...validChatHistory,
-  //         {
-  //           role: 'user',
-  //           content: selectedPrompt,
-  //         },
-  //     ],
-  //     max_completion_tokens: 8000,
-  //     model:  "deepseek-reasoner", 
-  // });
+//   // const chatCompletion = await deepseek.chat.completions.create({
+//   //     messages: [
+//   //         // Combine system and user message as in the example
+//   //         ...validChatHistory,
+//   //         {
+//   //           role: 'user',
+//   //           content: selectedPrompt,
+//   //         },
+//   //     ],
+//   //     max_completion_tokens: 8000,
+//   //     model:  "deepseek-reasoner", 
+//   // });
 
 
-  const chatCompletion = await groq.chat.completions.create({
-    messages: [
-      {
-        role: 'system',
-        content: selectedPrompt,
-      },
-      ...validChatHistory,
-      {
-        role: 'user',
-        content: userInput,
-      },
-    ],
-    model: 'Deepseek-R1-Distill-Llama-70b',
-  });
+//   const chatCompletion = await groq.chat.completions.create({
+//     messages: [
+//       {
+//         role: 'system',
+//         content: selectedPrompt,
+//       },
+//       ...validChatHistory,
+//       {
+//         role: 'user',
+//         content: userInput,
+//       },
+//     ],
+//     model: selectedModel,
+//   });
 
-  return chatCompletion;
-};
+//   return chatCompletion;
+// };
 
 const fetchSentiment = async (userInput: string, chatHistory: any[], promptType: string, selectedModel:any) => {
   try {
@@ -218,41 +214,41 @@ const fetchSentiment = async (userInput: string, chatHistory: any[], promptType:
 };
 
 
-const fetchRubric = async (userInput:string, chatHistory: any[], promptType: string,selectedModel:any) => {
-try {
-  let rubricRatingCompletion;
-  if(promptType==='rubric2') {
-    rubricRatingCompletion = await getDeepSeekChatCompletion(userInput, chatHistory);
-    console.log(rubricRatingCompletion,"completion i should be calling here deepseek api 1.5")
-  }  
-  else {
-    rubricRatingCompletion = await getGroqChatCompletion(userInput, chatHistory, promptType, selectedModel);
-  }
-  let responseContent = rubricRatingCompletion.choices[0].message.content;
+// const fetchRubric = async (userInput:string, chatHistory: any[], promptType: string,selectedModel:any) => {
+// try {
+//   let rubricRatingCompletion;
+//   if(promptType==='rubric2') {
+//     rubricRatingCompletion = await getDeepSeekChatCompletion(userInput, chatHistory,selectedModel);
+//     console.log(rubricRatingCompletion,"completion i should be calling here deepseek api 1.5")
+//   }  
+//   else {
+//     rubricRatingCompletion = await getGroqChatCompletion(userInput, chatHistory, promptType, selectedModel);
+//   }
+//   let responseContent = rubricRatingCompletion.choices[0].message.content;
 
-  console.log(responseContent,"responseContent deepseek api 2")
-  if (!responseContent) {
-    throw new Error("Empty rubric response");
-  }
+//   console.log(responseContent,"responseContent deepseek api 2")
+//   if (!responseContent) {
+//     throw new Error("Empty rubric response");
+//   }
 
-  let filteredResponse;
-  if (promptType==='rubric2'){
-    filteredResponse = rubricInvestorFilter2(responseContent);
-  }else{
-    filteredResponse = rubricInvestorFilter(responseContent);
-  }
-  console.log(filteredResponse,"filteredResponse deepseek api 3")
+//   let filteredResponse;
+//   if (promptType==='rubric2'){
+//     filteredResponse = rubricInvestorFilter2(responseContent);
+//   }else{
+//     filteredResponse = rubricInvestorFilter(responseContent);
+//   }
+//   console.log(filteredResponse,"filteredResponse deepseek api 3")
 
-  if (!filteredResponse) {
-    console.log("Invalid rubric JSON format, returning null");
-    return null;  // Return null if parsing fails
-  }
-  return filteredResponse;
-} catch (error) {
-  console.error("Error in fetchRubric:", error);
-  return null;  // Return null if an error occurs
-}
-};
+//   if (!filteredResponse) {
+//     console.log("Invalid rubric JSON format, returning null");
+//     return null;  // Return null if parsing fails
+//   }
+//   return filteredResponse;
+// } catch (error) {
+//   console.error("Error in fetchRubric:", error);
+//   return null;  // Return null if an error occurs
+// }
+// };
 
 const fetchRubric2 = async (userInput: string, chatHistory: any[], promptType: string, selectedModel: any) => {
   try {
@@ -280,14 +276,12 @@ const fetchRubric2 = async (userInput: string, chatHistory: any[], promptType: s
           },
         ],
       };
-      console.log(rubricRatingCompletion, "completion after merging deepseek api 1.5");
     } else {
       rubricRatingCompletion = await getGroqChatCompletion(userInput, chatHistory, promptType, selectedModel);
     }
 
     let responseContent = rubricRatingCompletion.choices[0].message.content;
 
-    console.log(responseContent, "responseContent deepseek api 2");
     if (!responseContent) {
       throw new Error("Empty rubric response");
     }
@@ -298,7 +292,6 @@ const fetchRubric2 = async (userInput: string, chatHistory: any[], promptType: s
     } else {
       filteredResponse = rubricInvestorFilter(responseContent);
     }
-    console.log(filteredResponse, "filteredResponse deepseek api 3");
 
     if (!filteredResponse) {
       console.log("Invalid rubric JSON format, returning null");
@@ -339,6 +332,9 @@ const mergeDeepSeekOutputs = (metric1: any, metric2: any, metric3: any): string 
       const suggestions = feedback?.suggestions || "Unable to evaluate due to missing data.";
       return `${recap}. ${suggestions}`;
     };
+    if (!metric1 || !metric2 || !metric3) {
+      throw new Error("One or more metrics have invalid JSON.");
+    }
 
     // Log raw responses for debugging
     console.log("Metric 1 Raw Response:", metric1.choices[0].message.content);
@@ -353,7 +349,7 @@ const mergeDeepSeekOutputs = (metric1: any, metric2: any, metric3: any): string 
     // Validate and transform each metric, ensuring feedback is a string
     const defaultMetric = {
       score: 0,
-      feedback: "Recap: Not provided Suggestions: Unable to evaluate due to missing data."
+      feedback: "Not provided. Unable to evaluate due to missing data."
     };
 
     const validatedMetric1 = {
@@ -448,25 +444,25 @@ const mergeDeepSeekOutputs = (metric1: any, metric2: any, metric3: any): string 
     console.error("Error merging DeepSeek outputs:", error);
     // Return a default JSON string to allow the pipeline to continue
     const defaultData = {
-      elevatorPitch: { score: 0, feedback: "Recap: Not provided Suggestions: Unable to evaluate due to parsing error." },
-      team: { score: 0, feedback: "Recap: Not provided Suggestions: Unable to evaluate due to parsing error." },
-      marketOpportunity: { score: 0, feedback: "Recap: Not provided Suggestions: Unable to evaluate due to parsing error." },
-      marketSize: { score: 0, feedback: "Recap: Not provided Suggestions: Unable to evaluate due to parsing error." },
-      solutionValueProposition: { score: 0, feedback: "Recap: Not provided Suggestions: Unable to evaluate due to parsing error." },
-      competitivePosition: { score: 0, feedback: "Recap: Not provided Suggestions: Unable to evaluate due to parsing error." },
-      tractionAwards: { score: 0, feedback: "Recap: Not provided Suggestions: Unable to evaluate due to parsing error." },
-      revenueModel: { score: 0, feedback: "Recap: Not provided Suggestions: Unable to evaluate due to parsing error." },
+      elevatorPitch: { score: 0, feedback: "Not provided. Unable to evaluate due to parsing error." },
+      team: { score: 0, feedback: "Not provided. Unable to evaluate due to parsing error." },
+      marketOpportunity: { score: 0, feedback: "Not provided. Unable to evaluate due to parsing error." },
+      marketSize: { score: 0, feedback: "Not provided. Unable to evaluate due to parsing error." },
+      solutionValueProposition: { score: 0, feedback: "Not provided. Unable to evaluate due to parsing error." },
+      competitivePosition: { score: 0, feedback: "Not provided. Unable to evaluate due to parsing error." },
+      tractionAwards: { score: 0, feedback: "Not provided. Unable to evaluate due to parsing error." },
+      revenueModel: { score: 0, feedback: "Not provided. Unable to evaluate due to parsing error." },
       overallScore: 0,
       summary: "Failed to evaluate pitch due to parsing errors in DeepSeek responses.",
       rubricSpecificFeedback: {
-        elevatorPitch: "Recap: Not provided Suggestions: Unable to evaluate due to parsing error.",
-        team: "Recap: Not provided Suggestions: Unable to evaluate due to parsing error.",
-        marketOpportunity: "Recap: Not provided Suggestions: Unable to evaluate due to parsing error.",
-        marketSize: "Recap: Not provided Suggestions: Unable to evaluate due to parsing error.",
-        solutionValueProposition: "Recap: Not provided Suggestions: Unable to evaluate due to parsing error.",
-        competitivePosition: "Recap: Not provided Suggestions: Unable to evaluate due to parsing error.",
-        tractionAwards: "Recap: Not provided Suggestions: Unable to evaluate due to parsing error.",
-        revenueModel: "Recap: Not provided Suggestions: Unable to evaluate due to parsing error.",
+        elevatorPitch: "Not provided.Unable to evaluate due to parsing error.",
+        team: "Not provided. Unable to evaluate due to parsing error.",
+        marketOpportunity: "Not provided. Unable to evaluate due to parsing error.",
+        marketSize: "Not provided. Unable to evaluate due to parsing error.",
+        solutionValueProposition: "Not provided. Unable to evaluate due to parsing error.",
+        competitivePosition: "Not provided. Unable to evaluate due to parsing error.",
+        tractionAwards: "Not provided. Unable to evaluate due to parsing error.",
+        revenueModel: "Not provided. Unable to evaluate due to parsing error.",
       },
     };
     return JSON.stringify(defaultData);

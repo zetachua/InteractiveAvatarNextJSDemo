@@ -3,7 +3,6 @@ import { PieChart, Pie, Cell, Tooltip, Legend, Text } from 'recharts';
 import { ChatHistory, Rubric2InvestorMetricData, Rubric2InvestorSpecificData } from './KnowledgeClasses';
 import { Button } from '@nextui-org/button';
 import Section from './Section';
-import rubricData from './test.json'; // Import the JSON file
 
 // Props for the component
 interface RubricInvestorPieChartProps2 {
@@ -26,11 +25,11 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
   resetAllStates,
 }) => {
   // Use JSON data as fallback/default values
-  const rubricMetrics: Rubric2InvestorMetricData = data || rubricData.rubricMetrics;
-  const rubricSummary: string = summary || rubricData.rubricSummary;
-  const rubricSpecificFeedback: Rubric2InvestorSpecificData = specificFeedback || rubricData.rubricSpecificFeedback;
-  const rubricOverallScore: number = overallScore || rubricData.rubricScore;
-
+  const rubricMetrics: Rubric2InvestorMetricData = data ?? {} as Rubric2InvestorMetricData;
+  const rubricSummary: string = summary ?? ''; 
+  const rubricSpecificFeedback: Rubric2InvestorSpecificData = specificFeedback ?? {} as Rubric2InvestorSpecificData; 
+  const rubricOverallScore: number = overallScore ?? 0; 
+  
   const copyToClipboard = (text: string) => {
     navigator.clipboard
       .writeText(text)

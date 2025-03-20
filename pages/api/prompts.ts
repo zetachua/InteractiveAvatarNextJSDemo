@@ -133,20 +133,25 @@ export const sentimentPitchPrompt = (userInput: any, chatHistory: any) => `
   - Neutrality (1-5): Was the pitch delivered without bias or overly emotional language?
   - Engagement (1-5): Based on the pitch, how engaging and compelling was the student’s approach?
 
-  Please analyze the chat history and user input where the student describes their startup idea and pitch to the investor: 
-  Chat History: ${chatHistory}  
-  User Input: ${userInput}
+  **Instructions**:
+  - Analyze only the provided chat history and user input as the pitch content: 
+    - Chat History: ${chatHistory}  
+    - User Input: ${userInput}
+  - Use only the explicit text provided. Do not invent or assume additional details, companies, or pitch content beyond what is stated.
+  - If the chat history or user input lacks sufficient information to evaluate any criterion, assign a score of 1 and explain in the feedback that the information is missing or inadequate.
+  - Base all scores and feedback solely on the tone, content, and details present in the provided text, without fabricating examples or scenarios.
 
   Your output should be a JSON object with:
   - A score (1-5) for each of the above categories.
-  - An **overall sentiment score** (1-5, with decimals allowed) derived from the individual scores, with special emphasis on the tone, enthusiasm, and clarity of the pitch.
+  - An **overall sentiment score** (1-5, with decimals allowed) derived from the individual scores, with special emphasis on the tone, enthusiasm, and clarity of the pitch based only on the provided text.
   - A **specificFeedback** object containing detailed feedback for each criterion, highlighting what was done well and areas for improvement. Use the following structure for each feedback entry:
     - "clarity": "The pitch [specific strength], but could improve by [specific area]."
     - "relevance": "The pitch addressed [specific investor interest], but could better align with [specific improvement]."
     - "depth": "The pitch provided detail on [specific aspect], but lacked [specific missing element]."
     - "neutrality": "The tone was [specific observation], but could adjust [specific suggestion]."
     - "engagement": "The delivery showed [specific strength], but could enhance [specific area]."
-  - A **feedbackSummary** that provides an overall evaluation of the student's sentiment, highlighting strengths and areas for improvement in engaging the investor.
+    - If information is missing, state: "The pitch provided no [criterion] information, so it’s unclear. Suggest: [specific suggestion]."
+  - A **feedbackSummary** that provides an overall evaluation of the student's sentiment based only on the provided text, highlighting strengths and areas for improvement in engaging the investor.
 
   Output format:
   {
@@ -166,7 +171,7 @@ export const sentimentPitchPrompt = (userInput: any, chatHistory: any) => `
     "feedbackSummary": "The pitch was clear and well-structured but could use more passion and engagement to captivate the investor. The idea is relevant but lacks depth in addressing investor concerns."
   }
 
-  If the pitch includes negative or overly pessimistic language, reflect this in the scores (e.g., 1-2) and feedback, noting specific instances. Penalize rudeness, lack of enthusiasm, or excessive bias similarly. Consider the emotional tone of the student’s responses and how well they engage and excite the investor about their startup idea.
+  If the pitch includes negative or overly pessimistic language, reflect this in the scores (e.g., 1-2) and feedback, noting specific instances from the text. Penalize rudeness, lack of enthusiasm, or excessive bias similarly, but only if evident in the provided input. Consider the emotional tone of the student’s responses and how well they engage and excite the investor about their startup idea, based solely on the explicit content provided.
 `;
 
 export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, thematicWords:any): string => 
@@ -522,101 +527,108 @@ export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, t
   
   Now, analyze the chat history and return the evaluation.
   `;
+  export const pitchEvaluationPromptMetric1 = (userInput: string) => `
+  You are an experienced venture capitalist. I will give you a transcript of a startup pitch. Please evaluate it on these three areas:
   
-  // Prompt for Metric 1: Elevator Pitch, Team, Market Opportunity
-export const pitchEvaluationPromptMetric1 = (userInput: string) => `
-You are an experienced venture capitalist and startup mentor. I will provide you with a transcript of a startup pitch. Your task is to analyze the pitch and provide detailed, constructive, and actionable feedback for improvement. Focus ONLY on the following three aspects:
+  1. **Elevator Pitch**
+  2. **Team**
+  3. **Market Opportunity**
+  
+  **Guidelines**:
+  - **Recap**: Identify and quote key parts of the pitch related to each aspect. Summarize them concisely. Use only the provided transcript; do not invent or assume additional details.
+  - **Suggestions**: Based on your evaluation, provide one actionable recommendation for each area.
+  - **Score**: Provide a score (1-10) for each area with justifications drawn solely from the pitch transcript.
+  
+  **Important**: 
+  - If any of the areas (Elevator Pitch, Team, or Market Opportunity) are missing, insufficient, or unclear in the provided transcript, return a score of 1 with an explanation that the information is missing or inadequate.
+  - Do not generate fictional companies, details, or examples beyond what is explicitly stated in the transcript. If the transcript lacks content, reflect that in the feedback and scores.
 
-1. **Elevator Pitch**
-2. **Team**
-3. **Market Opportunity**
-
-Follow these guidelines for feedback:
-- **Recap:** Summarize what the pitch conveyed about each aspect in a concise sentence.
-- **Suggestions:** Provide specific, actionable recommendations for improvement, including at least one concrete example or step, prefixed with "Suggestions:".
-- Assign a numeric score (1-10) for each aspect based on your evaluation.
-
-Your output must be a valid JSON object with the following keys:
-- "elevatorPitch"
-- "team"
-- "marketOpportunity"
-
-For each key, the value should be an object with:
-- "score": A numeric score (1-10)
-- "feedback": A single string 
-
-**Example Format:**
-{
-  "elevatorPitch": { "score": 6, "feedback": "The pitch opened with a statement about improving supply chain efficiency but lacked a clear problem-solution hook. Suggestions: Refine the elevator pitch to start with a memorable one-liner, e.g., 'We streamline supply chains with AI-driven insights.'" },
-  "team": { "score": 5, "feedback": " The team mentioned backgrounds in logistics and software, but didn’t connect these to specific achievements. Suggestions: Highlight a specific achievement, e.g., 'Led a logistics project saving 20% costs.'" },
-  "marketOpportunity": { "score": 7, "feedback": "The pitch identified supply chain inefficiencies as a widespread issue. Suggestions: Strengthen validation with data, e.g., 'Include a statistic on inefficiency costs.'" }
-}
-
-Analyze the following pitch transcript and produce your JSON output:
-${userInput}
+  **Example (for structure only)**:
+  {
+    "elevatorPitch": { 
+      "score": 6, 
+      "feedback": "The pitch mentions the problem of inefficient supply chains but lacks a compelling hook. Suggest: 'We optimize supply chains with AI-driven insights to reduce costs by 15% in the first year.'" 
+    },
+    "team": { 
+      "score": 5, 
+      "feedback": "The team mentions relevant backgrounds but doesn't provide past successes. Suggest: 'The team has helped logistics companies reduce costs by 15% in the past year.'" 
+    },
+    "marketOpportunity": { 
+      "score": 7, 
+      "feedback": "The pitch mentions a $10M market but does not break it down into SAM or SOM. Suggest: 'The AI market for logistics is projected to grow 15% annually, reaching $30B by 2030.'" 
+    }
+  }
+  
+  Analyze this pitch transcript and provide your JSON output. Use only the following text as the pitch transcript, without adding or imagining content:
+  ${userInput}
 `;
 
-// Prompt for Metric 2: Market Size, Solution & Value Proposition, Competitive Positioning
 export const pitchEvaluationPromptMetric2 = (userInput: string) => `
-You are an experienced venture capitalist and startup mentor. I will provide you with a transcript of a startup pitch. Your task is to analyze the pitch and provide detailed, constructive, and actionable feedback for improvement. Focus ONLY on the following three aspects:
+  You are an experienced venture capitalist. I will give you a transcript of a startup pitch. Please evaluate it on three key aspects:
+  
+  1. **Market Size**
+  2. **Solution & Value Proposition**
+  3. **Competitive Positioning**
+  
+  **Guidelines**:
+  - **Recap**: Quote and summarize key information about each area from the pitch. Use only the explicit text in the provided transcript: ${userInput}. Do not invent, assume, or add details beyond what is stated.
+  - **Suggestions**: Provide one clear and actionable suggestion based solely on the pitch’s explicit content.
+  - **Score**: Assign a numeric score (1-10) for each area, with justifications drawn only from the quoted text and your analysis of it.
+  
+  **Strict Constraints**:
+  - If any of the areas (Market Size, Solution & Value Proposition, or Competitive Positioning) are missing, insufficient, or unclear in the provided transcript, assign a score of 1 and state in the feedback: "The transcript lacks information about [criterion], so it cannot be evaluated. Suggest: [specific suggestion]."
+  - Do not generate fictional companies, features, or details (e.g., 'AI-powered insights,' 'real-time monitoring') unless explicitly mentioned in the transcript. If the transcript is minimal (e.g., "HELLO"), reflect that lack of content in all scores and feedback.
+  - For each criterion, explicitly check the transcript text before proceeding. If no relevant details are present, do not proceed with an invented analysis.
 
-1. **Market Size**
-2. **Solution & Value Proposition**
-3. **Competitive Positioning**
-
-Follow these guidelines for feedback:
-- **Recap:** Summarize what the pitch conveyed about each aspect in a concise sentence.
-- **Suggestions:** Provide specific, actionable recommendations for improvement, including at least one concrete example or step, prefixed with "Suggestions:".
-- Assign a numeric score (1-10) for each aspect based on your evaluation.
-
-Your output must be a valid JSON object with the following keys:
-- "marketSize"
-- "solutionValueProposition"
-- "competitivePosition"
-
-For each key, the value should be an object with:
-- "score": A numeric score (1-10)
-- "feedback": A single string 
-
-**Example Format:**
-{
-  "marketSize": { "score": 6, "feedback": "A TAM of $50B was mentioned, but no breakdown into SAM or SOM was provided. Suggestions: Break down market size into TAM, SAM, and SOM with credible sources." },
-  "solutionValueProposition": { "score": 7, "feedback": "The solution uses AI for supply chain optimization. Suggestions: Emphasize a unique advantage, e.g., 'Highlight a patented algorithm.'" },
-  "competitivePosition": { "score": 4, "feedback": "Competitors were not mentioned. Suggestions: Identify key competitors, e.g., 'Unlike Competitor X, we offer real-time analytics.'" }
-}
-
-Analyze the following pitch transcript and produce your JSON output:
-${userInput}
+  **Example (for structure only)**:
+  {
+    "marketSize": { 
+      "score": 6, 
+      "feedback": "The pitch mentions a $5M TAM but doesn't break it down into SAM or SOM. Suggest: 'Provide data on the addressable market by breaking down SAM and SOM. For example, the global AI market is expected to grow by 12% annually, reaching $15B by 2028.'" 
+    },
+    "solutionValueProposition": { 
+      "score": 7, 
+      "feedback": "The pitch talks about AI for supply chain optimization but doesn't mention any unique features. Suggest: 'Highlight a proprietary feature such as a patented algorithm or exclusive data insights.'" 
+    },
+    "competitivePosition": { 
+      "score": 4, 
+      "feedback": "No competitors were mentioned in the pitch. Suggest: 'Identify key competitors, e.g., 'Unlike Competitor X, our solution uses real-time AI analytics, reducing operational costs by 15%.'" 
+    }
+  }
+  
+  Analyze this pitch transcript and provide your JSON output. Use only the following text as the pitch transcript, without adding or imagining content:
+  ${userInput}
 `;
 
-// Prompt for Metric 3: Traction/Awards, Revenue/Business Model
 export const pitchEvaluationPromptMetric3 = (userInput: string) => `
-You are an experienced venture capitalist and startup mentor. I will provide you with a transcript of a startup pitch. Your task is to analyze the pitch and provide detailed, constructive, and actionable feedback for improvement. Focus ONLY on the following two aspects:
+  You are an experienced venture capitalist. I will give you a transcript of a startup pitch. Please evaluate it based on these two aspects:
+  
+  1. **Traction/Awards**
+  2. **Revenue/Business Model**
+  
+  **Guidelines**:
+  - **Recap**: Quote key details related to each aspect from the pitch. Use only the provided transcript; do not invent or assume additional details.
+  - **Suggestions**: Provide one actionable piece of advice based solely on your evaluation of the transcript.
+  - **Score**: Assign a score (1-10) for each area, justifying the score with your quotes and feedback.
+  
+  **Important**: 
+  - If any of the areas (Traction/Awards or Revenue/Business Model) are missing or insufficient in the pitch, return a score of 1 and explain the lack of information.
+  - Do not generate fictional companies, details, or examples beyond what is explicitly stated in the transcript. If the transcript lacks content, reflect that in the feedback and scores.
 
-1. **Traction/Awards**
-2. **Revenue/Business Model**
-
-Follow these guidelines for feedback:
-- **Recap:** Summarize what the pitch conveyed about each aspect in a concise sentence.
-- **Suggestions:** Provide specific, actionable recommendations for improvement, including at least one concrete example or step, prefixed with "Suggestions:".
-- Assign a numeric score (1-10) for each aspect based on your evaluation.
-
-Your output must be a valid JSON object with the following keys:
-- "tractionAwards"
-- "revenueModel"
-
-For each key, the value should be an object with:
-- "score": A numeric score (1-10)
-- "feedback": A single string 
-
-**Example Format:**
-{
-  "tractionAwards": { "score": 7, "feedback": "Early pilot with a logistics firm was noted. Suggestions: Quantify traction with metrics, e.g., 'Report 50 pilot users.'" },
-  "revenueModel": { "score": 6, "feedback": "A subscription model was described. Suggestions: Detail pricing tiers, e.g., '$10/month basic.'" }
-}
-
-Analyze the following pitch transcript and produce your JSON output:
-${userInput}
+  **Example (for structure only)**:
+  {
+    "tractionAwards": { 
+      "score": 7, 
+      "feedback": "The pitch mentions a pilot with a logistics firm, but no concrete metrics were provided. Suggest: 'Quantify traction—e.g., 'We onboarded 50 pilot users and reduced operational costs by 15%.'" 
+    },
+    "revenueModel": { 
+      "score": 6, 
+      "feedback": "The pitch mentions a subscription model but lacks pricing details. Suggest: 'Clarify pricing tiers, e.g., '$10/month for SMBs and $50/month for enterprises.'" 
+    }
+  }
+  
+  Analyze this pitch transcript and provide your JSON output. Use only the following text as the pitch transcript, without adding or imagining content:
+  ${userInput}
 `;
 
 export const knowledgePrompt =(knowledge:any,name:string,tone:string)=>`

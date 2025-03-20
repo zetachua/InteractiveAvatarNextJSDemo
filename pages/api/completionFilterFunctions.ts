@@ -42,6 +42,7 @@ export const responseFilter = (responseContent: string) => {
 
 export const feedbackFilter = (responseContent: string) => {
   try {
+    console.log(responseContent,"original responseContent sentiment")
     let feedbackJson = responseContent
       .replace(/<think>[\s\S]*?<\/think>/g, '')  // Remove <think> tags
       .replace(/```json|```/g, '')               // Remove ```json markers
@@ -130,7 +131,7 @@ export const rubricFilter = (responseContent: string) => {
 };
 
 export const rubricInvestorFilter = (responseContent: string) => {
-  console.log(responseContent, "Prompt 1 Investor Response Content");
+  console.log(responseContent, "original response content");
   
   try {
     let rubricJson = responseContent
@@ -140,7 +141,7 @@ export const rubricInvestorFilter = (responseContent: string) => {
     
     let rubricJsonMatch = rubricJson.match(/\{[\s\S]*\}/);
     rubricJson = rubricJsonMatch ? rubricJsonMatch[0].trim() : '{}';
-    console.log("Prompt 1 Response Json:", rubricJson);
+    console.log("response json", rubricJson);
 
     let rubricDataJson: RubricInvestorData;
 
