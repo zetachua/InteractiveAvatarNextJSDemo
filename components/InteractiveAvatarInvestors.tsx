@@ -477,21 +477,27 @@ async function endSession() {
   setStream(undefined);
 
   try{
+    const responseSentiment = await fetch(`/api/pitchSentimentResponse`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userInput, chatHistory,selectedModel}),
+    });
+    const dataSentiment = await responseSentiment.json();
+    if (dataSentiment?.sentimentSummary !== undefined) setFeedbackText(dataSentiment.sentimentSummary);
+    if (dataSentiment?.sentimentSpecifics !== undefined) setSentimentSpecificFeedback(dataSentiment.sentimentSpecifics);
+    if (dataSentiment?.sentimentMetrics!==undefined){
+        const updateSentimentJson=mergeJsons(sentimentJson,dataSentiment.sentimentMetrics)
+        setSentimentJson(updateSentimentJson);
+        setSentimentMetrics(dataSentiment.sentimentMetrics);
+    }
+    if (dataSentiment.sentimentScore!==undefined) setSentimentScore(dataSentiment.sentimentScore);
+
     const response = await fetch(`/api/pitchEvaluationResponse`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userInput, chatHistory,selectedModel}),
     });
     const data = await response.json();
-    if (data?.sentimentSummary !== undefined) setFeedbackText(data.sentimentSummary);
-    if (data?.sentimentSpecifics !== undefined) setSentimentSpecificFeedback(data.sentimentSpecifics);
-    if (data?.sentimentMetrics!==undefined){
-        const updateSentimentJson=mergeJsons(sentimentJson,data.sentimentMetrics)
-        setSentimentJson(updateSentimentJson);
-        setSentimentMetrics(data.sentimentMetrics);
-    }
-    if (data.sentimentScore!==undefined) setSentimentScore(data.sentimentScore);
-
     if (data?.rubricSummary !== undefined) setRubricSummary(data.rubricSummary);
     if (data?.rubricMetrics !== undefined) setRubricJson(data.rubricMetrics);
     if (data?.rubricScore !== undefined) setRubricAllRatings(data.rubricScore);
