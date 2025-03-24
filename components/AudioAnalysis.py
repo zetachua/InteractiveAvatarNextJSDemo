@@ -91,9 +91,6 @@ def audio_analysis():
             "arousal": arousal,
             "dominance": dominance,
             "valence": valence,
-            "arousal_description": "Measures the intensity of emotion.",
-            "dominance_description": "Measures the perceived level of control associated with emotion.",
-            "valence_description": "Measures pleasantness or unpleasantness of emotion."
         })
     
     except Exception as e:
