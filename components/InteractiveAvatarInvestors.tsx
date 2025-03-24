@@ -119,7 +119,6 @@ export default function InteractiveAvatarInvestors() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [pauses, setPauses] = useState<any[]>([]);
-  const [analysis, setAnalysis] = useState<any>(null);
 
   useEffect(() => {
     if (callCount == 2 || timeLeft <= 0) {
@@ -432,9 +431,15 @@ console.log(chatHistory,"chatHistory")
     formData.append('audio', audioBlob, 'audio.webm');
     console.log('Sending audio blob, type:', audioBlob.type);
   
+    // Use the correct endpoint URL depending on the environment (local or production)
+    const apiUrl =
+      process.env.NODE_ENV === 'development'
+        ? 'http://127.0.0.1:5000/transcribe' // local server
+        : 'https://interactive-avatar-next-js-demo-olive.vercel.app/transcribe'; // production server (Vercel)
+  
     try {
-      const response = await fetch('http://127.0.0.1:8000/transcribe' , {
-        method: "POST",
+      const response = await fetch(apiUrl, {
+        method: 'POST',
         body: formData,
       });
   
@@ -449,39 +454,11 @@ console.log(chatHistory,"chatHistory")
       handleSpeak(data.text);
       transcriptRef.current = data.text;
       setDebug('Transcription successful!');
-
-      await analyzeAudio(audioBlob);
-      
     } catch (error) {
       console.error('Error during transcription:', error);
       setDebug('Error during transcription');
     }
   };  
-
-  const analyzeAudio = async (audioBlob: Blob) => {
-    const formData = new FormData();
-    formData.append('audio', audioBlob, 'audio.webm');
-    console.log('Sending audio blob, type:', audioBlob.type);
-    
-    try {
-      const response = await fetch(`http://127.0.0.1:8000/audio_analysis`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Failed to analyze audio: ${response.status} - ${text}`);
-      }
-
-      const data = await response.json();
-      console.log("Analysis:", data);
-      setAnalysis(data);
-    } catch (error) {
-      console.error("Error during analysis:", error);
-      setDebug("Error during audio analysis");
-    }
-  };
 
   function mergeJsons<T extends Record<string, number | string>>(obj1: T, obj2: T): T {
     const mergedObj: T = { ...obj1 };
@@ -510,18 +487,37 @@ async function endSession() {
   setStream(undefined);
 
   try{
-    fetchSentiment();
+    const responseSentiment = await fetch(`/api/pitchSentimentResponse`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userInput, chatHistory,selectedModel}),
+    });
+    const dataSentiment = await responseSentiment.json();
+    if (dataSentiment?.sentimentSummary !== undefined) setFeedbackText(dataSentiment.sentimentSummary);
+    if (dataSentiment?.sentimentSpecifics !== undefined) setSentimentSpecificFeedback(dataSentiment.sentimentSpecifics);
+    if (dataSentiment?.sentimentMetrics!==undefined){
+        const updateSentimentJson=mergeJsons(sentimentJson,dataSentiment.sentimentMetrics)
+        setSentimentJson(updateSentimentJson);
+        setSentimentMetrics(dataSentiment.sentimentMetrics);
+    }
+    if (dataSentiment.sentimentScore!==undefined) setSentimentScore(dataSentiment.sentimentScore);
 
-    fetchAllMetrics();
+    const response = await fetch(`/api/pitchEvaluationResponse`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userInput, chatHistory,selectedModel}),
+    });
+    const data = await response.json();
+    if (data?.rubricSummary !== undefined) setRubricSummary(data.rubricSummary);
+    if (data?.rubricMetrics !== undefined) setRubricJson(data.rubricMetrics);
+    if (data?.rubricScore !== undefined) setRubricAllRatings(data.rubricScore);
+    if (data?.rubricSpecificFeedback !== undefined) setRubricSpecificFeedback(data.rubricSpecificFeedback);
 
+    if (data.rubricSummary2 !== undefined) setRubricSummary2(data.rubricSummary2);
+    if (data.rubricMetrics2 !== undefined) setRubricJson2(data.rubricMetrics2);
+    if (data.rubricScore2 !== undefined) setRubricAllRatings2(data.rubricScore2);
+    if (data.rubricSpecificFeedback2 !== undefined) setRubricSpecificFeedback2(data.rubricSpecificFeedback2);
     displayRubrics();
-
-    // const audioPrediction = await predictArousalDominanceValence();
-    // setAudioAnalytics({
-    //   arousal: audioPrediction['arousal'],
-    //   dominance: audioPrediction['dominance'],
-    //   valence: audioPrediction['valence']
-    // })
 
   } catch (error) {
     console.error('Error fetching evaluation:', error);
@@ -538,84 +534,7 @@ async function endSession() {
     setDisplayRubricAnalytics(true);
     console.log(displayRubricAnalytics,"im ended")
   }
-  const fetchSentiment = async () =>{
-    const responseSentiment = await fetch(`/api/pitchSentimentResponse`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userInput, chatHistory,selectedModel}),
-    });
-    const dataSentiment = await responseSentiment.json();
-    if (dataSentiment?.sentimentSummary !== undefined) setFeedbackText(dataSentiment.sentimentSummary);
-    if (dataSentiment?.sentimentSpecifics !== undefined) setSentimentSpecificFeedback(dataSentiment.sentimentSpecifics);
-    if (dataSentiment?.sentimentMetrics!==undefined){
-        const updateSentimentJson=mergeJsons(sentimentJson,dataSentiment.sentimentMetrics)
-        setSentimentJson(updateSentimentJson);
-        setSentimentMetrics(dataSentiment.sentimentMetrics);
-    }
-    if (dataSentiment.sentimentScore!==undefined) setSentimentScore(dataSentiment.sentimentScore);
-  }
 
-  const fetchAllMetrics = async () => {
-
-    const [responseMetric1, responseMetric2, responseMetric3] = await Promise.all([
-      fetch(`/api/pitchEvaluationResponseMetric1`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userInput, chatHistory }),
-      }),
-      fetch(`/api/pitchEvaluationResponseMetric2`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userInput, chatHistory }),
-      }),
-      fetch(`/api/pitchEvaluationResponseMetric3`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userInput, chatHistory }),
-      }),
-    ]);
-  
-    // Parse all responses
-    const dataMetric1 = await responseMetric1.json();
-    const dataMetric2 = await responseMetric2.json();
-    const dataMetric3 = await responseMetric3.json();
-  
-    // Aggregate the data
-    const aggregatedSummary = [
-      dataMetric1.rubricSummary2,
-      dataMetric2.rubricSummary2,
-      dataMetric3.rubricSummary2
-    ].filter(Boolean).join(' '); // Combine summaries, filtering out undefined values
-  
-    const aggregatedMetrics = {
-      ...dataMetric1.rubricMetrics2,
-      ...dataMetric2.rubricMetrics2,
-      ...dataMetric3.rubricMetrics2
-    };
-  
-    const scores = [
-      dataMetric1.rubricScore2,
-      dataMetric2.rubricScore2,
-      dataMetric3.rubricScore2
-    ].filter(score => score !== 0); // Filter out zeros
-    
-    const aggregatedScores = scores.length > 0 
-      ? scores.reduce((sum, score) => sum + score, 0) / scores.length 
-      : 0; 
-        
-    const aggregatedFeedback = {
-      ...(dataMetric1.rubricSpecificFeedback2 || {}),
-      ...(dataMetric2.rubricSpecificFeedback2 || {}),
-      ...(dataMetric3.rubricSpecificFeedback2 || {})
-    };
-  
-    // Update states once with aggregated data
-    if (aggregatedSummary) setRubricSummary2(aggregatedSummary);
-    if (aggregatedMetrics) setRubricJson2(aggregatedMetrics);
-    if (aggregatedScores) setRubricAllRatings2(aggregatedScores);
-    if (aggregatedFeedback) setRubricSpecificFeedback2(aggregatedFeedback);
-    console.log(dataMetric1.rubricScore2 , dataMetric2.rubricScore2 , dataMetric3.rubricScore2,"the scores")
-  };
 
   const handleChangeChatMode = useMemoizedFn(async (v) => {
     if (v === chatMode) {
@@ -680,63 +599,6 @@ async function endSession() {
                   End session
                 </Button>
               </div>
-              <div style={{position:'relative',width:'100%',height:'100%'}}>
-                {<TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>}
-
-                <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
-                  <div style={{display:'flex',width:'100%',justifyContent:'center',alignItems:'center'}}>
-                    <div style={{fontSize:'14px',color:'black',backgroundColor:'rgba(255,255,255,0.8)',boxShadow:'2px 2px 0px 0px rgba(0,0,0,1)',textAlign:'center',padding:'1rem',width:'470px',maxHeight:'60px',overflowY:'scroll',scrollbarWidth:'none',borderRadius:'20px',minHeight:'59px',position:'absolute',transform:'translate(-50%,-50%)',top:'-2.4rem',left:'50%'}}> 
-                      <span>{isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px', }}/> :  ""}{userInput}</span>
-                    </div>
-                </div>
-                </div>
-                <div className="flex flex-col items-center" style={{flexDirection:'row',justifyContent:'center',marginBottom:'2rem',display:'flex',}}>
-                  {/* Input field to capture user input */}
-                  <Button
-                    onClick={toggleSpeechToText}
-                    style={{ background:'rgba(255,255,255,0.1)',margin: '0.5rem' ,borderRadius:'100px'}}
-                  >
-                  {isRecording ? <div className={`wave`} />: <>Talk <Microphone size={14} /></>}
-                </Button>
-                {/* <div>
-                    <h3>Pauses:</h3>
-                    {pauses.length > 0 ? (
-                      <ul>
-                        {pauses.map((pause, index) => (
-                          <li key={index}>
-                            Pause from {pause.pauseStart}s to {pause.pauseEnd}s, duration: {pause.pauseDuration}s
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p>No pauses detected</p>
-                    )}
-                  </div> */}
-                  
-                  <Button
-                    onClick={handleInterrupt}
-                    style={{ margin: '0.5rem',opacity:displayRubricAnalytics?'50%':'100%',background:'rgba(255,255,255,0.1)'}}
-                  >
-                    <Square weight="fill"/>
-                  </Button> 
-                  <Input
-                    placeholder="Type your message..."
-                    value={userInput}
-                    onChange={(e) => setUserInput(e.target.value)}
-                    className="w-50 text-sm p-2"
-                    style={{ backgroundColor:'rgba(255,255,255,0.1)'}}
-
-                    />
-                  <Button
-                  onClick={()=>handleSpeak(userInput)}
-                  isDisabled={!userInput.trim() || isLoadingRepeat}
-                  style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
-                    >
-                  {isLoadingRepeat ? <Spinner /> :  "Send"}
-                  </Button>
-                </div>
-              </div>
-
             </div>
           ) : !isLoadingSession ? (
             <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center"style={{backgroundColor:'rgba(255,255,255,0.2)',borderRadius:'50px',padding:'2rem',maxHeight:'40%'}}>
@@ -813,7 +675,103 @@ async function endSession() {
           <CountdownTimer isTimeUp={isTimeUp} timeLeft={timeLeft}></CountdownTimer>
         }
 
+        {stream && <>
+        <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>
 
+        <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
+          <div style={{display:!displayRubricAnalytics && !isLoadingSession?'flex':'none',width:'100%',justifyContent:'center',alignItems:'center'}}>
+            <div style={{backgroundColor:'rgba(255,255,255,0.1)',textAlign:'center',padding:'1rem',maxWidth:'60%',minWidth:'30%',maxHeight:'100px',overflowY:'scroll',scrollbarWidth:'none',borderRadius:'10px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',bottom:'9%',left:'50%'}}> 
+              {isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput} 
+            </div>
+         {/* { !hideSuggestions && suggestionOptions?.map((option, index) => (
+            <Button
+              key={index}
+              onClick={() => 
+                {
+                  setUserInput(option); // Set the clicked suggestion as user input
+                  handleSpeak(option);
+                  setHideSuggestions(true);              
+                }
+              }
+              isDisabled={isLoadingRepeat}
+              style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
+            >
+              {option}
+            </Button>
+          ))} */}
+          {/* {
+          suggestionOptions.map((option, index) => (
+            <Button
+              key={index}
+              onClick={() => {
+                // Append to the userInput when an option is selected
+                  setUserInput(prev => prev ? `${prev}, ${option}` : option);  // Concatenate the selected option
+
+                  // Handle selected options in the selectedOptions state
+                  setSelectedOptions(prev =>
+                    prev.includes(option) ? prev.filter(item => item !== option) : [...prev, option]
+                  );
+                }}
+              isDisabled={isLoadingRepeat}
+              style={{
+                margin: '0.5rem',
+                backgroundColor: selectedOptions.includes(option) ? 'blue' : 'white', // Highlight selected
+                color: selectedOptions.includes(option) ? 'white' : 'black',
+              }}
+            >
+              {option}
+            </Button>
+          ))
+        } */}
+        </div>
+        </div>
+        <div className="flex flex-col items-center" style={{flexDirection:'row',justifyContent:'center',marginBottom:'2rem',display:!displayRubricAnalytics &&!isLoadingSession?'flex':'none',}}>
+          {/* Input field to capture user input */}
+          <Button
+            onClick={toggleSpeechToText}
+            style={{ background:'rgba(255,255,255,0.1)',margin: '0.5rem' ,borderRadius:'100px'}}
+          >
+          {isRecording ? <div className={`wave`} />: <>Talk <Microphone size={14} /></>}
+        </Button>
+        {/* <div>
+            <h3>Pauses:</h3>
+            {pauses.length > 0 ? (
+              <ul>
+                {pauses.map((pause, index) => (
+                  <li key={index}>
+                    Pause from {pause.pauseStart}s to {pause.pauseEnd}s, duration: {pause.pauseDuration}s
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No pauses detected</p>
+            )}
+          </div> */}
+          
+          <Button
+            onClick={handleInterrupt}
+            style={{ margin: '0.5rem',opacity:displayRubricAnalytics?'50%':'100%',background:'rgba(255,255,255,0.1)'}}
+          >
+            <Square weight="fill"/>
+          </Button> 
+          <Input
+            placeholder="Type your message..."
+            value={userInput}
+            onChange={(e) => setUserInput(e.target.value)}
+            className="w-50 text-sm p-2"
+            style={{ backgroundColor:'rgba(255,255,255,0.1)'}}
+
+            />
+           <Button
+           onClick={()=>handleSpeak(userInput)}
+           isDisabled={!userInput.trim() || isLoadingRepeat}
+           style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
+            >
+           {isLoadingRepeat ? <Spinner /> :  "Send"}
+          </Button>
+        </div>
+        </>
+        }
 
         {/* {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentScore} />} */}
         {sentimentJson && rubricJson2 && <div style={{display:'flex',gap:'1rem',position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>
