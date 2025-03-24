@@ -477,36 +477,10 @@ async function endSession() {
   setStream(undefined);
 
   try{
-    const responseSentiment = await fetch(`/api/pitchSentimentResponse`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userInput, chatHistory,selectedModel}),
-    });
-    const dataSentiment = await responseSentiment.json();
-    if (dataSentiment?.sentimentSummary !== undefined) setFeedbackText(dataSentiment.sentimentSummary);
-    if (dataSentiment?.sentimentSpecifics !== undefined) setSentimentSpecificFeedback(dataSentiment.sentimentSpecifics);
-    if (dataSentiment?.sentimentMetrics!==undefined){
-        const updateSentimentJson=mergeJsons(sentimentJson,dataSentiment.sentimentMetrics)
-        setSentimentJson(updateSentimentJson);
-        setSentimentMetrics(dataSentiment.sentimentMetrics);
-    }
-    if (dataSentiment.sentimentScore!==undefined) setSentimentScore(dataSentiment.sentimentScore);
+    fetchSentiment();
 
-    const response = await fetch(`/api/pitchEvaluationResponse`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userInput, chatHistory,selectedModel}),
-    });
-    const data = await response.json();
-    if (data?.rubricSummary !== undefined) setRubricSummary(data.rubricSummary);
-    if (data?.rubricMetrics !== undefined) setRubricJson(data.rubricMetrics);
-    if (data?.rubricScore !== undefined) setRubricAllRatings(data.rubricScore);
-    if (data?.rubricSpecificFeedback !== undefined) setRubricSpecificFeedback(data.rubricSpecificFeedback);
+    fetchAllMetrics();
 
-    if (data.rubricSummary2 !== undefined) setRubricSummary2(data.rubricSummary2);
-    if (data.rubricMetrics2 !== undefined) setRubricJson2(data.rubricMetrics2);
-    if (data.rubricScore2 !== undefined) setRubricAllRatings2(data.rubricScore2);
-    if (data.rubricSpecificFeedback2 !== undefined) setRubricSpecificFeedback2(data.rubricSpecificFeedback2);
     displayRubrics();
 
   } catch (error) {
@@ -524,7 +498,85 @@ async function endSession() {
     setDisplayRubricAnalytics(true);
     console.log(displayRubricAnalytics,"im ended")
   }
+  const fetchSentiment = async () =>{
+    const responseSentiment = await fetch(`/api/pitchSentimentResponse`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userInput, chatHistory,selectedModel}),
+    });
+    const dataSentiment = await responseSentiment.json();
+    if (dataSentiment?.sentimentSummary !== undefined) setFeedbackText(dataSentiment.sentimentSummary);
+    if (dataSentiment?.sentimentSpecifics !== undefined) setSentimentSpecificFeedback(dataSentiment.sentimentSpecifics);
+    if (dataSentiment?.sentimentMetrics!==undefined){
+        const updateSentimentJson=mergeJsons(sentimentJson,dataSentiment.sentimentMetrics)
+        setSentimentJson(updateSentimentJson);
+        setSentimentMetrics(dataSentiment.sentimentMetrics);
+    }
+    if (dataSentiment.sentimentScore!==undefined) setSentimentScore(dataSentiment.sentimentScore);
+  }
 
+  const fetchAllMetrics = async () => {
+
+    const [responseMetric1, responseMetric2, responseMetric3] = await Promise.all([
+      fetch(`/api/pitchEvaluationResponseMetric1`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userInput, chatHistory }),
+      }),
+      fetch(`/api/pitchEvaluationResponseMetric2`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userInput, chatHistory }),
+      }),
+      fetch(`/api/pitchEvaluationResponseMetric3`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userInput, chatHistory }),
+      }),
+    ]);
+  
+    // Parse all responses
+    const dataMetric1 = await responseMetric1.json();
+    const dataMetric2 = await responseMetric2.json();
+    const dataMetric3 = await responseMetric3.json();
+  
+    // Aggregate the data
+    const aggregatedSummary = [
+      dataMetric1.rubricSummary2,
+      dataMetric2.rubricSummary2,
+      dataMetric3.rubricSummary2
+    ].filter(Boolean).join(' '); // Combine summaries, filtering out undefined values
+  
+    const aggregatedMetrics = {
+      ...dataMetric1.rubricMetrics2,
+      ...dataMetric2.rubricMetrics2,
+      ...dataMetric3.rubricMetrics2
+    };
+  
+    const scores = [
+      dataMetric1.rubricScore2,
+      dataMetric2.rubricScore2,
+      dataMetric3.rubricScore2
+    ].filter(score => score !== 0); // Filter out zeros
+    
+    const aggregatedScores = scores.length > 0 
+      ? scores.reduce((sum, score) => sum + score, 0) / scores.length 
+      : 0; 
+        
+    const aggregatedFeedback = {
+      ...(dataMetric1.rubricSpecificFeedback2 || {}),
+      ...(dataMetric2.rubricSpecificFeedback2 || {}),
+      ...(dataMetric3.rubricSpecificFeedback2 || {})
+    };
+  
+    // Update states once with aggregated data
+    if (aggregatedSummary) setRubricSummary2(aggregatedSummary);
+    if (aggregatedMetrics) setRubricJson2(aggregatedMetrics);
+    if (aggregatedScores) setRubricAllRatings2(aggregatedScores);
+    if (aggregatedFeedback) setRubricSpecificFeedback2(aggregatedFeedback);
+    console.log(dataMetric1.rubricScore2 , dataMetric2.rubricScore2 , dataMetric3.rubricScore2,"the scores")
+  };
+  
 
   const handleChangeChatMode = useMemoizedFn(async (v) => {
     if (v === chatMode) {

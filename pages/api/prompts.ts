@@ -540,28 +540,29 @@ export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, t
   3. **Market Opportunity**
   
   **Guidelines**:
-  - **Recap**: Identify and quote key parts of the pitch related to each aspect. Summarize them concisely. Use only the provided transcript; do not invent or assume additional details.
-  - **Suggestions**: Based on your evaluation, provide one actionable recommendation for each area.
-  - **Score**: Provide a score (1-10) for each area with justifications drawn solely from the pitch transcript.
-  
-  **Important**: 
-  - If any of the areas (Elevator Pitch, Team, or Market Opportunity) are missing, insufficient, or unclear in the provided transcript, return a score of 1 with an explanation that the information is missing or inadequate.
-  - Do not generate fictional companies, details, or examples beyond what is explicitly stated in the transcript. If the transcript lacks content, reflect that in the feedback and scores.
+  - **Recap**: Quote key details related to each aspect from the pitch transcript as the primary source.
+  - **Real-Time Browsing**: Use real-time web searches and X post data to verify traction (e.g., client mentions, award prestige) and validate revenue scalability (e.g., industry pricing norms). Cite sources briefly (e.g., "Per 2025 Crunchbase data").
+  - **Market Comparison**: For each metric, compare the pitch's claims to current 2025 concrete/construction industry standards (e.g., average revenue models, team leadership stats, market validation benchmarks) using real-time data. Provide specific figures or examples where possible.
+  - **Suggestions**: Provide one actionable suggestion per area, supported by the transcript, enriched with web/X data, and referencing real-world industry examples (e.g., existing unique sensors or validated market sizes).
+  - **Score**: Assign a score (1-10) for each area, justifying it with transcript details, external data insights, and market comparisons.
+
+  **Important**:
+  - Use the transcript as the foundation. If an area is missing or insufficient, assign a score of 1 and use web data to suggest improvements (e.g., "No revenue details; web shows industry average of $X per unit").
+  - Do not invent fictional details or examples. External data must be factual, current, and sourced.
+  - Include statistical backing (e.g., adoption rates, pricing benchmarks) from reliable 2025 sources where possible.
 
   **Example (for structure only)**:
   {
+    "summary": "The pitch presents a $5M revenue model and a solid market opportunity but requires further clarity on how the business stands out with a stronger hook, highlights of the leadership team's past successes, and a breakdown of the SAM",
     "elevatorPitch": { 
       "score": 6, 
-      "feedback": "The pitch mentions the problem of inefficient supply chains but lacks a compelling hook. Suggest: 'We optimize supply chains with AI-driven insights to reduce costs by 15% in the first year.'" 
-    },
+      "feedback": "The pitch mentions a $5M revenue model but lacks a hook. Per 2025 industry data, concrete tech averages $2M/project (Source: Statista). Suggest: 'Leverage AI to cut costs by 15%, as seen in X Corp’s 2025 model.'"    },
     "team": { 
       "score": 5, 
-      "feedback": "The team mentions relevant backgrounds but doesn't provide past successes. Suggest: 'The team has helped logistics companies reduce costs by 15% in the past year.'" 
-    },
+      "feedback": "Technical expertise mentioned, but no leadership wins. Top 2025 construction teams average 2 exits per leader (Source: Crunchbase). Suggest: 'Highlight past successes like Y Team’s $10M exit in 2024.'"    },
     "marketOpportunity": { 
       "score": 7, 
-      "feedback": "The pitch mentions a $10M market but does not break it down into SAM or SOM. Suggest: 'The AI market for logistics is projected to grow 15% annually, reaching $30B by 2030.'" 
-    }
+      "feedback": "Claims a $10M market, but no SAM. 2025 concrete market validation shows $50M deals (Source: Deloitte). Suggest: 'Target $30B logistics AI sector, as Z Co. did in 2025.'"    }
   }
   
   Analyze this pitch transcript and provide your JSON output. Use only the following text as the pitch transcript, without adding or imagining content:
@@ -578,31 +579,32 @@ export const pitchEvaluationPromptMetric2 = (userInput: string) => `
   1. **Market Size**
   2. **Solution & Value Proposition**
   3. **Competitive Positioning**
-  
+
+ 
   **Guidelines**:
-  - **Recap**: Quote and summarize key information about each area from the pitch. Use only the explicit text in the provided transcript: ${userInput}. Do not invent, assume, or add details beyond what is stated.
-  - **Suggestions**: Provide one clear and actionable suggestion based solely on the pitch’s explicit content.
-  - **Score**: Assign a numeric score (1-10) for each area, with justifications drawn only from the quoted text and your analysis of it.
-  
-  **Strict Constraints**:
-  - If any of the areas (Market Size, Solution & Value Proposition, or Competitive Positioning) are missing, insufficient, or unclear in the provided transcript, assign a score of 1 and state in the feedback: "The transcript lacks information about [criterion], so it cannot be evaluated. Suggest: [specific suggestion]."
-  - Do not generate fictional companies, features, or details (e.g., 'AI-powered insights,' 'real-time monitoring') unless explicitly mentioned in the transcript. If the transcript is minimal (e.g., "HELLO"), reflect that lack of content in all scores and feedback.
-  - For each criterion, explicitly check the transcript text before proceeding. If no relevant details are present, do not proceed with an invented analysis.
+  - **Recap**: Quote key details related to each aspect from the pitch transcript as the primary source.
+  - **Real-Time Browsing**: Use real-time web searches and X post data to verify traction (e.g., client mentions, award prestige) and validate revenue scalability (e.g., industry pricing norms). Cite sources briefly (e.g., "Per 2025 Crunchbase data").
+  - **Market Comparison**: For each metric, compare the pitch’s claims to current 2025 concrete/construction industry standards (e.g., market size benchmarks, unique solution examples, competitor revenue/pricing). Provide specific figures or examples from 2025 data.
+  - **Suggestions**: Provide one actionable suggestion per area, supported by the transcript, enriched with web/X data, and referencing real-world industry examples (e.g., actual 2025 market sizes or sensor technologies).
+  - **Score**: Assign a score (1-10) for each area, justifying it with transcript details, external data insights, and market comparisons.
+
+  **Important**:
+  - Use the transcript as the foundation. If an area is missing or insufficient, assign a score of 1 and use web data to suggest improvements (e.g., "No revenue details; web shows industry average of $X per unit").
+  - Do not invent fictional details or examples. External data must be factual, current, and sourced.
+  - Include statistical backing (e.g., adoption rates, pricing benchmarks) from reliable 2025 sources where possible.
 
   **Example (for structure only)**:
   {
+    "summary":"The pitch demonstrates potential with strengths in the outlined $5M TAM and mention of AI monitoring, but needs improvement in providing a breakdown of the SAM/SOM, distinguishing its solution from competitors by offering clear technical advantages, and naming competitors to position itself in the market",
     "marketSize": { 
       "score": 6, 
-      "feedback": "The pitch mentions a $5M TAM but doesn't break it down into SAM or SOM. Suggest: 'Provide data on the addressable market by breaking down SAM and SOM. For example, the global AI market is expected to grow by 12% annually, reaching $15B by 2028.'" 
-    },
+      "feedback": "Claims $5M TAM, but no SAM/SOM. 2025 concrete market averages $130B globally (Source: Statista). Suggest: 'Break down SAM to $X, like Y Co.’s 2025 Asia focus.'"    },
     "solutionValueProposition": { 
       "score": 7, 
-      "feedback": "The pitch talks about AI for supply chain optimization but doesn't mention any unique features. Suggest: 'Highlight a proprietary feature such as a patented algorithm or exclusive data insights.'" 
-    },
+      "feedback": "Mentions AI monitoring, but no edge. 2025 leaders use patented sensors (e.g., Giatec’s $500/unit model, Crunchbase). Suggest: 'Adopt Z’s 2025 anomaly detection tech.'"    },
     "competitivePosition": { 
       "score": 4, 
-      "feedback": "No competitors were mentioned in the pitch. Suggest: 'Identify key competitors, e.g., 'Unlike Competitor X, our solution uses real-time AI analytics, reducing operational costs by 15%.'" 
-    }
+      "feedback": "No competitors named. 2025 market shows Giatec at $10M revenue (Source: Crunchbase). Suggest: ‘Differentiate vs. Giatec with 20% cost cuts.’"    }
   }
    Use only the following text as the pitch transcript, without adding or imagining content.
 
@@ -616,25 +618,28 @@ export const pitchEvaluationPromptMetric3 = (userInput: string) => `
  Please evaluate it based on these two aspects:
   1. **Traction/Awards**
   2. **Revenue/Business Model**
-  
+
   **Guidelines**:
-  - **Recap**: Quote key details related to each aspect from the pitch. Use only the provided transcript; do not invent or assume additional details.
-  - **Suggestions**: Provide one actionable piece of advice based solely on your evaluation of the transcript.
-  - **Score**: Assign a score (1-10) for each area, justifying the score with your quotes and feedback.
-  
-  **Important**: 
-  - If any of the areas (Traction/Awards or Revenue/Business Model) are missing or insufficient in the pitch, return a score of 1 and explain the lack of information.
-  - Do not generate fictional companies, details, or examples beyond what is explicitly stated in the transcript. If the transcript lacks content, reflect that in the feedback and scores.
- **Example (for structure only)**:
+  - **Recap**: Quote key details related to each aspect from the pitch transcript as the primary source.
+  - **Real-Time Browsing**: Use real-time web searches and X post data to verify traction (e.g., client mentions, award prestige) and validate revenue scalability (e.g., industry pricing norms). Cite sources briefly (e.g., "Per 2025 Crunchbase data").
+  - **Market Comparison**: For each metric, compare the pitch’s claims to current 2025 concrete/construction industry standards (e.g., typical traction metrics, revenue model averages). Provide specific figures or examples from 2025 data.
+  - **Suggestions**: Provide one actionable suggestion per area, supported by the transcript, enriched with web/X data, and referencing real-world industry examples (e.g., 2025 award benchmarks or pricing tiers).
+  - **Score**: Assign a score (1-10) for each area, justifying it with transcript details, external data insights, and market comparisons.
+
+  **Important**:
+  - Use the transcript as the foundation. If an area is missing or insufficient, assign a score of 1 and use web data to suggest improvements (e.g., "No revenue details; web shows industry average of $X per unit").
+  - Do not invent fictional details or examples. External data must be factual, current, and sourced.
+  - Include statistical backing (e.g., adoption rates, pricing benchmarks) from reliable 2025 sources where possible.
+
+  **Example (for structure only)**:
   {
+    "summary": "The pitch shows potential with strengths in traction from a pilot with major players and a clearly defined revenue model tied to project scale, but needs improvement in providing concrete metrics for traction, such as trial outcomes or user adoption, and offering more details on scalability and pricing tiers for different project sizes.",
     "tractionAwards": { 
       "score": 7, 
-      "feedback": "The pitch mentions a pilot with a logistics firm, but no concrete metrics were provided. Suggest: 'Quantify traction—e.g., 'We onboarded 50 pilot users and reduced operational costs by 15%.'" 
-    },
+      "feedback": "Mentions a pilot, but no metrics. 2025 industry avg: 50 clients/pilot (Source: Deloitte). Suggest: ‘Show X% cost reduction, like Y Co.’s 2025 pilot.’"    },
     "revenueModel": { 
       "score": 6, 
-      "feedback": "The pitch mentions a subscription model but lacks pricing details. Suggest: 'Clarify pricing tiers, e.g., '$10/month for SMBs and $50/month for enterprises.'" 
-    }
+      "feedback": "Subscription model vague. 2025 concrete tech avg: $500/unit (Source: Statista). Suggest: ‘Set tiers at $X-$Y, like Z Co.’s 2025 scale.’"    }
   }
   Use only the following text as the pitch transcript, without adding or imagining content.
 

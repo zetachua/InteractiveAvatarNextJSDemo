@@ -180,6 +180,54 @@ export interface Rubric3InvestorData {
   overallScore: number;
   summary: string;
 }
+
+
+export interface Metric1InvestorData {
+  elevatorPitch: {
+    score:number;
+    feedback:string;
+  };
+  team:{
+    score:number;
+    feedback:string;
+  };
+  marketOpportunity: {
+    score:number;
+    feedback:string;
+  };
+  summary: string;
+}
+
+
+export interface Metric2InvestorData {
+  marketSize: {
+    score:number;
+    feedback:string;
+  };
+  solutionValueProposition: {
+    score:number;
+    feedback:string;
+  };
+  competitivePosition: {
+    score:number;
+    feedback:string;
+  };
+  summary: string;
+}
+
+
+export interface Metric3InvestorData {
+  tractionAwards: {
+    score:number;
+    feedback:string;
+  };
+  revenueModel: {
+    score:number;
+    feedback:string;
+  };
+  summary: string;
+}
+
 export interface StartupGroups {
   startup_idea: string;
   target_audience: string;

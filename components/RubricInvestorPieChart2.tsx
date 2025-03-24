@@ -27,6 +27,11 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
   // Use JSON data as fallback/default values
   const rubricMetrics: Rubric2InvestorMetricData = data ?? {} as Rubric2InvestorMetricData;
   const rubricSummary: string = summary ?? ''; 
+  const formattedSummary = rubricSummary
+    .split(/[.!?]\s+/) // Split on sentence-ending punctuation
+    .filter(sentence => sentence.trim().length > 0) // Remove empty entries
+    .map(sentence => `- ${sentence.trim()}`) // Add bullet point to each sentence
+    .join('\n'); // Join with actual newlines
   const rubricSpecificFeedback: Rubric2InvestorSpecificData = specificFeedback ?? {} as Rubric2InvestorSpecificData; 
   const rubricOverallScore: number = overallScore ?? 0; 
   
@@ -149,7 +154,7 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
           }}
         >
           <b>Rubric2 Overall</b>
-          <div style={{ fontSize: '16px', padding: '0.5rem' }}>{rubricSummary}</div>
+          <div style={{ fontSize: '16px', padding: '0.5rem',textAlign:'left' ,whiteSpace:'pre-line'}}>{formattedSummary}</div>
         </div>
         <div
           style={{
@@ -159,7 +164,7 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
             borderRadius: '10px',
             zIndex: '1000',
             position: 'absolute',
-            top: '15%',
+            top: '25%',
             left: '50%',
             transform: 'translate(-50%,-50%)',
             color: '#000',
