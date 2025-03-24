@@ -17,7 +17,6 @@ interface SentimentInvestorPieChartProps {
   totalRounds: number;
   feedbackSummary:string;
   specificFeedback:FeedbackSpecificMetrics;
-  analysis: { arousal: number; dominance: number; valence: number };  // Define the structure
 }
 
 const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
@@ -25,7 +24,6 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
   data,
   totalRounds,
   overallScore,
-  analysis,
   resetAllStates,
   feedbackSummary,
   specificFeedback,
@@ -155,15 +153,6 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
             <b>Arousal:</b> {arousal} | <b>Dominance:</b> {dominance} | <b>Valence:</b> {valence}
           </div>
         </div>
-
-        {analysis&&
-        <div style={{ fontSize: '16px' }}>
-          <p><strong>Arousal:</strong> {analysis?.arousal}</p>
-          <p><strong>Dominance:</strong> {analysis?.dominance}</p>
-          <p><strong>Valence:</strong> {analysis?.valence}</p>
-        </div>
-        }
-        
         <div
           style={{
             fontWeight: 600,
