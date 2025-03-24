@@ -516,8 +516,15 @@ async function endSession() {
 
     displayRubrics();
 
+    // const audioPrediction = await predictArousalDominanceValence();
+    // setAudioAnalytics({
+    //   arousal: audioPrediction['arousal'],
+    //   dominance: audioPrediction['dominance'],
+    //   valence: audioPrediction['valence']
+    // })
+
   } catch (error) {
-    console.error('Error fetching pitch sentiment and rubric response:', error);
+    console.error('Error fetching evaluation:', error);
   } finally {
     // Set loading to false once the fetch is completed (either success or failure)
     setLoadingRubric(false);
