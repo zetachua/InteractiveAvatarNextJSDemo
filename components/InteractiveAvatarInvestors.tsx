@@ -395,7 +395,6 @@ console.log(chatHistory,"chatHistory")
         }
   
         await transcribeAudio(audioBlob, currentCallCount);
-        await analyzeAudio(audioBlob);
         stream.getTracks().forEach((track) => track.stop());
         localChunks = []; // Reset local chunks
       };
@@ -423,14 +422,8 @@ console.log(chatHistory,"chatHistory")
     formData.append('audio', audioBlob, 'audio.webm');
     console.log('Sending audio blob, type:', audioBlob.type);
   
-    // Use the correct endpoint URL depending on the environment (local or production)
-    const apiUrl =
-      process.env.NODE_ENV === 'development'
-        ? 'http://127.0.0.1:5000/transcribe' // local server
-        : 'https://interactive-avatar-next-js-demo-olive.vercel.app/transcribe'; // production server (Vercel)
-  
     try {
-      const response = await fetch(`${apiUrl}/transcribe`, {
+      const response = await fetch('http://127.0.0.1:8000/transcribe' , {
         method: "POST",
         body: formData,
       });
@@ -446,6 +439,8 @@ console.log(chatHistory,"chatHistory")
       handleSpeak(data.text);
       transcriptRef.current = data.text;
       setDebug('Transcription successful!');
+
+      await analyzeAudio(audioBlob);
       
     } catch (error) {
       console.error('Error during transcription:', error);
@@ -455,16 +450,11 @@ console.log(chatHistory,"chatHistory")
 
   const analyzeAudio = async (audioBlob: Blob) => {
     const formData = new FormData();
-    formData.append("file", audioBlob, "audio.webm");
-
-    // Use the correct endpoint URL depending on the environment (local or production)
-    const apiUrl =
-      process.env.NODE_ENV === 'development'
-        ? 'http://127.0.0.1:5000/transcribe' // local server
-        : 'https://interactive-avatar-next-js-demo-olive.vercel.app/transcribe'; // production server (Vercel)
-  
+    formData.append('audio', audioBlob, 'audio.webm');
+    console.log('Sending audio blob, type:', audioBlob.type);
+    
     try {
-      const response = await fetch(`${apiUrl}/audio_analysis`, {
+      const response = await fetch(`http://127.0.0.1:8000/audio_analysis`, {
         method: "POST",
         body: formData,
       });
@@ -609,7 +599,6 @@ async function endSession() {
     if (aggregatedFeedback) setRubricSpecificFeedback2(aggregatedFeedback);
     console.log(dataMetric1.rubricScore2 , dataMetric2.rubricScore2 , dataMetric3.rubricScore2,"the scores")
   };
-  
 
   const handleChangeChatMode = useMemoizedFn(async (v) => {
     if (v === chatMode) {
@@ -674,6 +663,63 @@ async function endSession() {
                   End session
                 </Button>
               </div>
+              <div style={{position:'relative'}}>
+                {displayText&&<TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>}
+
+                <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
+                  <div style={{display:'flex',width:'100%',justifyContent:'center',alignItems:'center'}}>
+                    <div style={{fontSize:'14px',backgroundColor:'rgba(255,255,255,0.3)',boxShadow:'2px 2px 0px 0px rgba(0,0,0,0.3)',textAlign:'center',padding:'1rem',width:'470px',maxHeight:'100px',overflowY:'scroll',scrollbarWidth:'none',borderRadius:'20px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',top:'-3.8rem',left:'50%'}}> 
+                      <span>{isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput}</span>
+                    </div>
+                </div>
+                </div>
+                <div className="flex flex-col items-center" style={{flexDirection:'row',justifyContent:'center',marginBottom:'2rem',display:'flex',}}>
+                  {/* Input field to capture user input */}
+                  <Button
+                    onClick={toggleSpeechToText}
+                    style={{ background:'rgba(255,255,255,0.1)',margin: '0.5rem' ,borderRadius:'100px'}}
+                  >
+                  {isRecording ? <div className={`wave`} />: <>Talk <Microphone size={14} /></>}
+                </Button>
+                {/* <div>
+                    <h3>Pauses:</h3>
+                    {pauses.length > 0 ? (
+                      <ul>
+                        {pauses.map((pause, index) => (
+                          <li key={index}>
+                            Pause from {pause.pauseStart}s to {pause.pauseEnd}s, duration: {pause.pauseDuration}s
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>No pauses detected</p>
+                    )}
+                  </div> */}
+                  
+                  <Button
+                    onClick={handleInterrupt}
+                    style={{ margin: '0.5rem',opacity:displayRubricAnalytics?'50%':'100%',background:'rgba(255,255,255,0.1)'}}
+                  >
+                    <Square weight="fill"/>
+                  </Button> 
+                  <Input
+                    placeholder="Type your message..."
+                    value={userInput}
+                    onChange={(e) => setUserInput(e.target.value)}
+                    className="w-50 text-sm p-2"
+                    style={{ backgroundColor:'rgba(255,255,255,0.1)'}}
+
+                    />
+                  <Button
+                  onClick={()=>handleSpeak(userInput)}
+                  isDisabled={!userInput.trim() || isLoadingRepeat}
+                  style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
+                    >
+                  {isLoadingRepeat ? <Spinner /> :  "Send"}
+                  </Button>
+                </div>
+              </div>
+
             </div>
           ) : !isLoadingSession ? (
             <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center"style={{backgroundColor:'rgba(255,255,255,0.2)',borderRadius:'50px',padding:'2rem',maxHeight:'40%'}}>
@@ -750,103 +796,7 @@ async function endSession() {
           <CountdownTimer isTimeUp={isTimeUp} timeLeft={timeLeft}></CountdownTimer>
         }
 
-        {stream && <>
-        <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>
 
-        <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
-          <div style={{display:!displayRubricAnalytics && !isLoadingSession?'flex':'none',width:'100%',justifyContent:'center',alignItems:'center'}}>
-            <div style={{backgroundColor:'rgba(255,255,255,0.1)',textAlign:'center',padding:'1rem',maxWidth:'60%',minWidth:'30%',maxHeight:'100px',overflowY:'scroll',scrollbarWidth:'none',borderRadius:'10px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',bottom:'9%',left:'50%'}}> 
-              {isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput} 
-            </div>
-         {/* { !hideSuggestions && suggestionOptions?.map((option, index) => (
-            <Button
-              key={index}
-              onClick={() => 
-                {
-                  setUserInput(option); // Set the clicked suggestion as user input
-                  handleSpeak(option);
-                  setHideSuggestions(true);              
-                }
-              }
-              isDisabled={isLoadingRepeat}
-              style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
-            >
-              {option}
-            </Button>
-          ))} */}
-          {/* {
-          suggestionOptions.map((option, index) => (
-            <Button
-              key={index}
-              onClick={() => {
-                // Append to the userInput when an option is selected
-                  setUserInput(prev => prev ? `${prev}, ${option}` : option);  // Concatenate the selected option
-
-                  // Handle selected options in the selectedOptions state
-                  setSelectedOptions(prev =>
-                    prev.includes(option) ? prev.filter(item => item !== option) : [...prev, option]
-                  );
-                }}
-              isDisabled={isLoadingRepeat}
-              style={{
-                margin: '0.5rem',
-                backgroundColor: selectedOptions.includes(option) ? 'blue' : 'white', // Highlight selected
-                color: selectedOptions.includes(option) ? 'white' : 'black',
-              }}
-            >
-              {option}
-            </Button>
-          ))
-        } */}
-        </div>
-        </div>
-        <div className="flex flex-col items-center" style={{flexDirection:'row',justifyContent:'center',marginBottom:'2rem',display:!displayRubricAnalytics &&!isLoadingSession?'flex':'none',}}>
-          {/* Input field to capture user input */}
-          <Button
-            onClick={toggleSpeechToText}
-            style={{ background:'rgba(255,255,255,0.1)',margin: '0.5rem' ,borderRadius:'100px'}}
-          >
-          {isRecording ? <div className={`wave`} />: <>Talk <Microphone size={14} /></>}
-        </Button>
-        {/* <div>
-            <h3>Pauses:</h3>
-            {pauses.length > 0 ? (
-              <ul>
-                {pauses.map((pause, index) => (
-                  <li key={index}>
-                    Pause from {pause.pauseStart}s to {pause.pauseEnd}s, duration: {pause.pauseDuration}s
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>No pauses detected</p>
-            )}
-          </div> */}
-          
-          <Button
-            onClick={handleInterrupt}
-            style={{ margin: '0.5rem',opacity:displayRubricAnalytics?'50%':'100%',background:'rgba(255,255,255,0.1)'}}
-          >
-            <Square weight="fill"/>
-          </Button> 
-          <Input
-            placeholder="Type your message..."
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            className="w-50 text-sm p-2"
-            style={{ backgroundColor:'rgba(255,255,255,0.1)'}}
-
-            />
-           <Button
-           onClick={()=>handleSpeak(userInput)}
-           isDisabled={!userInput.trim() || isLoadingRepeat}
-           style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
-            >
-           {isLoadingRepeat ? <Spinner /> :  "Send"}
-          </Button>
-        </div>
-        </>
-        }
 
         {/* {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentScore} />} */}
         {sentimentJson && rubricJson2 && <div style={{display:'flex',gap:'1rem',position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>

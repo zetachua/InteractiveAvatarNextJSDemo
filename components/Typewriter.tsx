@@ -85,28 +85,33 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({ text, feedbackText,ques
       ref={containerRef}
       className="text-white text-lg font-mono"
       style={{
-        width: '30%',
-        maxHeight: '180px',
+        width: '470px',
+        maxHeight: '80px',
+        left:'50%',
+        bottom:'12rem',
+        transform:'translate(-50%,-50%)',
         position: 'absolute',
-        bottom: '10px',
         padding: "2rem",
         fontSize: "14px",
         textAlign: "left",
-        overflowY: "auto",
-        scrollbarWidth:'none'
+        overflowY: "scroll",
+        scrollbarWidth:'none',
+        backgroundColor:'rgba(255,255,255,0.1)',
+        boxShadow:'2px 2px 0px 0px rgba(0,0,0,0.3)',
+        borderRadius:'20px'
       }}
     >
       <div style={{ marginBottom: "1rem" }}>
         <span>{displayedText}</span>
       </div>
 
-      <Divider style={{ margin: "1rem 0" }} />
+      {/* <Divider style={{ margin: "1rem 0" }} />
 
       {questionCount!==undefined && questionCount>2 &&
       <div>
         <strong>Feedback:</strong> <span>{displayedFeedback}</span>
       </div>
-      }
+      } */}
     </div>
   );
 };

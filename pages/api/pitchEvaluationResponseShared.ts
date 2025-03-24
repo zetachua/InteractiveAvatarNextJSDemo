@@ -31,32 +31,32 @@ const sonar = {
 
 export const getSonarChatCompletionForMetric = async (userInput: string, chatHistory: any, prompt: string) => {
     const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
-    // return sonar.chat.completions.create({
-    //   messages: [
-    //     {
-    //       role: 'system',
-    //       content: prompt,
-    //     },
-    //     ...validChatHistory,
-    //     {
-    //       role: 'user',
-    //       content: userInput,
-    //     },
-    //   ],
-    //   model: 'sonar', 
-    // });
-    return groq.chat.completions.create({
-        messages: [
-          {
-            role: 'system',
-            content: prompt,
-          },
-          ...validChatHistory,
-          {
-            role: 'user',
-            content: userInput,
-          },
-        ],
-        model:'Deepseek-R1-Distill-Llama-70b', 
-      });
+    return sonar.chat.completions.create({
+      messages: [
+        {
+          role: 'system',
+          content: prompt,
+        },
+        ...validChatHistory,
+        {
+          role: 'user',
+          content: userInput,
+        },
+      ],
+      model: 'sonar', 
+    });
+    // return groq.chat.completions.create({
+    //     messages: [
+    //       {
+    //         role: 'system',
+    //         content: prompt,
+    //       },
+    //       ...validChatHistory,
+    //       {
+    //         role: 'user',
+    //         content: userInput,
+    //       },
+    //     ],
+    //     model:'Deepseek-R1-Distill-Llama-70b', 
+    //   });
   };
