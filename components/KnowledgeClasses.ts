@@ -238,3 +238,9 @@ export interface ChatHistory {
   role: 'user' | 'assistant'; // Define allowed roles
   content: string;
 }
+
+export interface AudioAnalysisMetrics {
+  arousal: number;
+  dominance: number;
+  valence: number;
+}

@@ -29,7 +29,7 @@ interface Pause {
 // import {AVATARS, STT_LANGUAGE_LIST} from "@/app/lib/constants";
 import TypewriterText from "./Typewriter";
 import FeedbackPieChart from "./FeedbackPieChart";
-import { ChatHistory, FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
+import { ChatHistory, FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData, AudioAnalysisMetrics } from "./KnowledgeClasses";
 import { Square,Microphone} from "@phosphor-icons/react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 import {models, tempUserInput} from '../pages/api/configConstants'
@@ -97,6 +97,11 @@ export default function InteractiveAvatarInvestors() {
     depth: "",
     neutrality: "",
     engagement: "",
+  });
+  const [audioAnalytics, setAudioAnalytics] = useState<AudioAnalysisMetrics>({
+    arousal: 0,
+    dominance: 0,
+    valence: 0
   });
   const [sentimentScore, setSentimentScore] = useState<number>(0); 
   const [rubricJson, setRubricJson] = useState<RubricInvestorData | null>(null);
@@ -352,11 +357,16 @@ console.log(chatHistory,"chatHistory")
         neutrality: "",
         engagement: "",
       }
-    ),
+    );
     setRubricSpecificFeedback( {
       marketValidation: '',
       pitchDeck: '',
       oralPresentation: ''
+    });
+    setAudioAnalytics({
+      arousal: 0,
+      dominance: 0,
+      valence: 0
     });
   }
 
@@ -801,8 +811,8 @@ async function endSession() {
         {/* {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentScore} />} */}
         {sentimentJson && rubricJson2 && <div style={{display:'flex',gap:'1rem',position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>
         {/* <RubricInvestorPiechart data={rubricJson} overallScore={rubricAllRatings} summary={rubricSummary} specificFeedback={rubricSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart> */}
-        <RubricInvestorPiechart2  data={rubricJson2} overallScore={rubricAllRatings2} summary={rubricSummary2} specificFeedback={rubricSpecificFeedback2} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart2>
-         <SentimentInvestorPiechart analysis={analysis} data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0}></SentimentInvestorPiechart>
+        <RubricInvestorPiechart2 data={rubricJson2} overallScore={rubricAllRatings2} summary={rubricSummary2} specificFeedback={rubricSpecificFeedback2} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart2>
+         <SentimentInvestorPiechart audioAnalytics={audioAnalytics} data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0}></SentimentInvestorPiechart>
         </div>}
         {loadingRubric&&<Spinner 
           style={{

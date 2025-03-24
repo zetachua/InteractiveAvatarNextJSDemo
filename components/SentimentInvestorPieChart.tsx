@@ -2,10 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, Text } from 'recharts';
 import { Button } from '@nextui-org/button';
 import Section from './Section';
-import { FeedbackSpecificMetrics, FeedbackMetricData } from './KnowledgeClasses'; // Assuming you have these types
+import {
+  FeedbackSpecificMetrics,
+  FeedbackMetricData,
+  AudioAnalysisMetrics
+} from './KnowledgeClasses'; // Assuming you have these types
 
 // Props for the component
 interface SentimentInvestorPieChartProps {
+  audioAnalytics: AudioAnalysisMetrics;
   data: FeedbackMetricData; // Change from 'data' to 'feedbackData'
   overallScore:number;
   resetAllStates: () => void;
@@ -16,6 +21,7 @@ interface SentimentInvestorPieChartProps {
 }
 
 const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
+  audioAnalytics,
   data,
   totalRounds,
   overallScore,
@@ -24,6 +30,13 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
   feedbackSummary,
   specificFeedback,
 }) => {
+  const {
+    arousal,
+    dominance,
+    valence
+  } = audioAnalytics;
+  const [isAudioMetricDescriptionHidden, setIsAudioMetricDescriptionHidden] = useState(true);
+
   // Destructure values from the feedbackData prop
   const {
     clarity,
@@ -100,11 +113,47 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
             textAlign: 'center',
             width: '90%',
             fontSize: '24px',
-            marginBottom: '-2rem'
+            marginBottom: '-2rem',
+            justifyContent: 'center',
           }}
         >
           <b>Sentiment Overall</b>
           <div style={{ fontSize: '16px', padding: '0.5rem' }}>{feedbackSummary}</div>
+          <div
+            style={{
+              position: 'relative',
+              margin: 'auto',
+              marginTop: '.8rem',
+              padding: '1rem',
+              background: 'rgba(255, 255, 255, 0.1)',
+              borderRadius: '10px',
+              textAlign: 'center',
+              width: '80%',
+              fontSize: '16px',
+              color: '#fff',
+            }}
+            onMouseEnter={() => setIsAudioMetricDescriptionHidden(prev => !prev)}
+            onMouseLeave={() => setIsAudioMetricDescriptionHidden(prev => !prev)}
+          >
+            {!isAudioMetricDescriptionHidden && <div
+              style={{
+                position: 'absolute',
+                bottom: '100%',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                backgroundColor: 'rgba(200, 200, 200)',
+                color: '#fff',
+                padding: '10px',
+                borderRadius: '5px',
+                fontSize: '14px',
+              }}
+            >
+              <p><b>Arousal:</b> Represents the intensity of emotion.</p>
+              <p><b>Dominance:</b> Measures the perceived level of control associated with an emotion.</p>
+              <p><b>Valence:</b> Measures the pleasantness or unpleasantness of the emotion.</p>
+            </div>}
+            <b>Arousal:</b> {arousal} | <b>Dominance:</b> {dominance} | <b>Valence:</b> {valence}
+          </div>
         </div>
 
         {analysis&&
