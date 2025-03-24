@@ -114,6 +114,7 @@ export default function InteractiveAvatarInvestors() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [pauses, setPauses] = useState<any[]>([]);
+  const [analysis, setAnalysis] = useState<any>(null);
 
   useEffect(() => {
     if (callCount == 2 || timeLeft <= 0) {
@@ -394,6 +395,7 @@ console.log(chatHistory,"chatHistory")
         }
   
         await transcribeAudio(audioBlob, currentCallCount);
+        await analyzeAudio(audioBlob);
         stream.getTracks().forEach((track) => track.stop());
         localChunks = []; // Reset local chunks
       };
@@ -428,8 +430,8 @@ console.log(chatHistory,"chatHistory")
         : 'https://interactive-avatar-next-js-demo-olive.vercel.app/transcribe'; // production server (Vercel)
   
     try {
-      const response = await fetch(apiUrl, {
-        method: 'POST',
+      const response = await fetch(`${apiUrl}/transcribe`, {
+        method: "POST",
         body: formData,
       });
   
@@ -444,11 +446,42 @@ console.log(chatHistory,"chatHistory")
       handleSpeak(data.text);
       transcriptRef.current = data.text;
       setDebug('Transcription successful!');
+      
     } catch (error) {
       console.error('Error during transcription:', error);
       setDebug('Error during transcription');
     }
   };  
+
+  const analyzeAudio = async (audioBlob: Blob) => {
+    const formData = new FormData();
+    formData.append("file", audioBlob, "audio.webm");
+
+    // Use the correct endpoint URL depending on the environment (local or production)
+    const apiUrl =
+      process.env.NODE_ENV === 'development'
+        ? 'http://127.0.0.1:5000/transcribe' // local server
+        : 'https://interactive-avatar-next-js-demo-olive.vercel.app/transcribe'; // production server (Vercel)
+  
+    try {
+      const response = await fetch(`${apiUrl}/audio_analysis`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Failed to analyze audio: ${response.status} - ${text}`);
+      }
+
+      const data = await response.json();
+      console.log("Analysis:", data);
+      setAnalysis(data);
+    } catch (error) {
+      console.error("Error during analysis:", error);
+      setDebug("Error during audio analysis");
+    }
+  };
 
   function mergeJsons<T extends Record<string, number | string>>(obj1: T, obj2: T): T {
     const mergedObj: T = { ...obj1 };
@@ -818,8 +851,8 @@ async function endSession() {
         {/* {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentScore} />} */}
         {sentimentJson && rubricJson2 && <div style={{display:'flex',gap:'1rem',position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>
         {/* <RubricInvestorPiechart data={rubricJson} overallScore={rubricAllRatings} summary={rubricSummary} specificFeedback={rubricSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart> */}
-        <RubricInvestorPiechart2 data={rubricJson2} overallScore={rubricAllRatings2} summary={rubricSummary2} specificFeedback={rubricSpecificFeedback2} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart2>
-         <SentimentInvestorPiechart data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0}></SentimentInvestorPiechart>
+        <RubricInvestorPiechart2  data={rubricJson2} overallScore={rubricAllRatings2} summary={rubricSummary2} specificFeedback={rubricSpecificFeedback2} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart2>
+         <SentimentInvestorPiechart analysis={analysis} data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0}></SentimentInvestorPiechart>
         </div>}
         {loadingRubric&&<Spinner 
           style={{

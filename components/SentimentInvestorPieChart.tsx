@@ -12,12 +12,14 @@ interface SentimentInvestorPieChartProps {
   totalRounds: number;
   feedbackSummary:string;
   specificFeedback:FeedbackSpecificMetrics;
+  analysis:any;
 }
 
 const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
   data,
   totalRounds,
   overallScore,
+  analysis,
   resetAllStates,
   feedbackSummary,
   specificFeedback,
@@ -104,6 +106,7 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
           <b>Sentiment Overall</b>
           <div style={{ fontSize: '16px', padding: '0.5rem' }}>{feedbackSummary}</div>
         </div>
+        <div style={{fontSize:'16px'}}>{analysis}</div>
         <div
           style={{
             fontWeight: 600,
