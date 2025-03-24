@@ -106,13 +106,15 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
           <b>Sentiment Overall</b>
           <div style={{ fontSize: '16px', padding: '0.5rem' }}>{feedbackSummary}</div>
         </div>
-        
-        <div style={{ fontSize: '16px' }}>
-          <p><strong>Arousal:</strong> {analysis.arousal}</p>
-          <p><strong>Dominance:</strong> {analysis.dominance}</p>
-          <p><strong>Valence:</strong> {analysis.valence}</p>
-        </div>
 
+        {analysis&&
+        <div style={{ fontSize: '16px' }}>
+          <p><strong>Arousal:</strong> {analysis?.arousal}</p>
+          <p><strong>Dominance:</strong> {analysis?.dominance}</p>
+          <p><strong>Valence:</strong> {analysis?.valence}</p>
+        </div>
+        }
+        
         <div
           style={{
             fontWeight: 600,

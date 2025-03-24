@@ -663,13 +663,13 @@ async function endSession() {
                   End session
                 </Button>
               </div>
-              <div style={{position:'relative'}}>
-                {displayText&&<TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>}
+              <div style={{position:'relative',width:'100%',height:'100%'}}>
+                {<TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>}
 
                 <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
                   <div style={{display:'flex',width:'100%',justifyContent:'center',alignItems:'center'}}>
-                    <div style={{fontSize:'14px',backgroundColor:'rgba(255,255,255,0.3)',boxShadow:'2px 2px 0px 0px rgba(0,0,0,0.3)',textAlign:'center',padding:'1rem',width:'470px',maxHeight:'100px',overflowY:'scroll',scrollbarWidth:'none',borderRadius:'20px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',top:'-3.8rem',left:'50%'}}> 
-                      <span>{isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput}</span>
+                    <div style={{fontSize:'14px',color:'black',backgroundColor:'rgba(255,255,255,0.8)',boxShadow:'2px 2px 0px 0px rgba(0,0,0,1)',textAlign:'center',padding:'1rem',width:'470px',maxHeight:'60px',overflowY:'scroll',scrollbarWidth:'none',borderRadius:'20px',minHeight:'59px',position:'absolute',transform:'translate(-50%,-50%)',top:'-2.4rem',left:'50%'}}> 
+                      <span>{isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px', }}/> :  ""}{userInput}</span>
                     </div>
                 </div>
                 </div>
