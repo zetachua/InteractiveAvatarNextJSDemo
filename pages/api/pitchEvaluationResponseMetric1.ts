@@ -9,26 +9,45 @@ const pitchEvaluationResponseMetric1 = async (req: NextApiRequest, res: NextApiR
       const { userInput, chatHistory } = req.body;
       let metric1Result;
       
-      [metric1Result] = await Promise.all([
-        fetchMetric1(userInput, chatHistory),
-      ]);
-
-      let rubricScore2, rubricSummary2, rubricMetrics2, rubricSpecificFeedback2;
-      if (metric1Result?.rubricScore !== undefined) {
-        rubricScore2 = metric1Result.rubricScore;
-        rubricSummary2 = metric1Result.rubricSummary;
-        rubricMetrics2 = metric1Result.rubricMetrics;
-        rubricSpecificFeedback2 = metric1Result.rubricSpecificFeedback;
-      } else {
-        console.log("Invalid rubric data, keeping previous values.");
+      if(userInput!==undefined || userInput==""){
+        [metric1Result] = await Promise.all([
+          fetchMetric1(userInput, chatHistory),
+        ]);
+  
+        let rubricScore2, rubricSummary2, rubricMetrics2, rubricSpecificFeedback2;
+        if (metric1Result?.rubricScore !== undefined) {
+          rubricScore2 = metric1Result.rubricScore;
+          rubricSummary2 = metric1Result.rubricSummary;
+          rubricMetrics2 = metric1Result.rubricMetrics;
+          rubricSpecificFeedback2 = metric1Result.rubricSpecificFeedback;
+        } else {
+          console.log("Invalid rubric data, keeping previous values.");
+        }
+  
+        res.status(200).json({
+          rubricScore2,
+          rubricSummary2,
+          rubricMetrics2,
+          rubricSpecificFeedback2,
+        });
+      } else{
+        res.status(200).json({
+          rubricScore2: 0,
+          rubricSummary2: "No pitch was given, lacks clarity and engagement, making it difficult to capture investor interest.",
+          rubricMetrics2: {
+            elevatorPitch: 0,
+            team: 0,
+            marketOpportunity: 0,
+          },
+          rubricSpecificFeedback2: {
+            elevatorPitch: "No pitch was given, elevation pitch unidentified",
+            team: "No pitch was given no team identified",
+            marketOpportunity:" No market opportunity was mentioned."
+          },
+        }
+      )
       }
-
-      res.status(200).json({
-        rubricScore2,
-        rubricSummary2,
-        rubricMetrics2,
-        rubricSpecificFeedback2,
-      });
+    
 
     } catch (error) {
       console.error('Error fetching chat completion:', error);

@@ -8,8 +8,9 @@ const pitchEvaluationResponseMetric2 = async (req: NextApiRequest, res: NextApiR
     try {
       const { userInput, chatHistory } = req.body;
       let rubricResult2;
-      
-      [rubricResult2] = await Promise.all([
+
+      if(userInput!==undefined || userInput==""){
+        [rubricResult2] = await Promise.all([
         fetchMetric2(userInput, chatHistory),
       ]);
 
@@ -29,6 +30,24 @@ const pitchEvaluationResponseMetric2 = async (req: NextApiRequest, res: NextApiR
         rubricMetrics2,
         rubricSpecificFeedback2,
       });
+    }
+      else{
+        res.status(200).json({
+          rubricScore2: 0,
+          rubricSummary2: "No pitch was given, lacks clarity and engagement, making it difficult to capture investor interest.",
+          rubricMetrics2: {
+            marketSize: 0,
+            solutionValueProposition: 0,
+            competitivePosition: 0,
+          },
+          rubricSpecificFeedback2: {
+            marketSize: "No market size estimatations, with no clear distinction between TAM, SAM, and SOM",
+            solutionValueProposition: "No solution nor explaination on how solution significantly improves upon existing alternatives",
+            competitivePosition:" No direct competitors mentioned."
+          },
+        }
+      )
+      }
 
     } catch (error) {
       console.error('Error fetching chat completion:', error);

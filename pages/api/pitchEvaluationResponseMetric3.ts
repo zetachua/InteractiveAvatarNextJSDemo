@@ -8,7 +8,8 @@ const pitchEvaluationResponseMetric3 = async (req: NextApiRequest, res: NextApiR
     try {
       const { userInput, chatHistory } = req.body;
       let rubricResult2;
-      
+      if(userInput!==undefined || userInput==""){
+
       [rubricResult2] = await Promise.all([
         fetchMetric3(userInput, chatHistory),
       ]);
@@ -30,6 +31,22 @@ const pitchEvaluationResponseMetric3 = async (req: NextApiRequest, res: NextApiR
         rubricMetrics2,
         rubricSpecificFeedback2,
       });
+    }
+      else{
+        res.status(200).json({
+          rubricScore2: 0,
+          rubricSummary2: "No pitch was given, lacks clarity and engagement, making it difficult to capture investor interest.",
+          rubricMetrics2: {
+            tractionAward: 0,
+            revenueModel: 0,
+          },
+          rubricSpecificFeedback2: {
+            tractionAward: "No pitch was given, tractionAward unidentified",
+            revenueModel: "No pitch was given no revenue model identified",
+          },
+        }
+      )
+      }
 
     } catch (error) {
       console.error('Error fetching chat completion:', error);
