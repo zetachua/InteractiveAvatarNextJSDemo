@@ -13,10 +13,12 @@ interface RubricInvestorPieChartProps2 {
   specificFeedback?: Rubric2InvestorSpecificData; // Make optional
   data?: Rubric2InvestorMetricData; // Optional data
   overallScore?: number; // Optional overall score
+  citations?:string;
 }
 
 const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
   data,
+  citations,
   chatHistory,
   overallScore,
   totalRounds,
@@ -57,6 +59,7 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
   ${rubricSpecificFeedback?.revenueModel}
   `;
 
+  console.log(rubricSpecificFeedback,"all the metric feedback")
   const feedbackEntries = Object.entries(rubricSpecificFeedback || {});
 
   const downloadTextFile = () => {
@@ -98,6 +101,9 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
     rubricOverallScore !== undefined
       ? Math.ceil((rubricOverallScore + Number.EPSILON) * 10) / 10
       : 0;
+
+  const citationList = citations?.split(',');
+
 
   return (
     <div
@@ -154,7 +160,20 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
           }}
         >
           <b>Rubric2 Overall</b>
-          <div style={{ fontSize: '16px', padding: '0.5rem',textAlign:'left' ,whiteSpace:'pre-line'}}>{formattedSummary}</div>
+          <div style={{ fontSize: '16px', padding: '0.5rem',textAlign:'left' ,whiteSpace:'pre-line'}}>
+            {formattedSummary} 
+            </div>
+          <div style={{ display:'flex',maxHeight:'200px',marginTop:'1rem',overflow:'scroll',flexDirection:'column',gap:'1rem',fontSize: '12px', width: '500px', padding: '0.5rem', textAlign: 'left', whiteSpace: 'pre-line' }}>
+            <b>Citations:</b>
+            {citationList?.map((citation, index) => (
+              <div key={index}>
+                {index+1}.
+                <u><a href={citation} target="_blank" rel="noopener noreferrer">
+                  {citation}
+                </a></u>
+              </div>
+            ))}
+          </div>
         </div>
         <div
           style={{

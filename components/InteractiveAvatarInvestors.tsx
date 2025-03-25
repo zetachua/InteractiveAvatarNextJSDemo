@@ -13,8 +13,7 @@ import {
   Select,
   SelectItem,
   Spinner,
-  Tab,
-  Tabs,
+  Checkbox,
 } from "@nextui-org/react";
 import { useEffect, useRef, useState } from "react";
 import { useMemoizedFn, usePrevious } from "ahooks";
@@ -28,10 +27,12 @@ interface Pause {
 
 // import {AVATARS, STT_LANGUAGE_LIST} from "@/app/lib/constants";
 import TypewriterText from "./Typewriter";
-import { ChatHistory, FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData, AudioAnalysisMetrics } from "./KnowledgeClasses";
+import FeedbackPieChart from "./FeedbackPieChart";
+import { AudioAnalysisMetrics, ChatHistory, FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
 import { Square,Microphone} from "@phosphor-icons/react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 import {models, tempUserInput} from '../pages/api/configConstants'
+import RubricInvestorPiechart from "./RubricInvestorPieChart";
 import RubricInvestorPiechart2 from "./RubricInvestorPieChart2";
 import CountdownTimer from "./Countdown";
 import SentimentInvestorPiechart from "./SentimentInvestorPieChart";
@@ -39,6 +40,8 @@ import SentimentInvestorPiechart from "./SentimentInvestorPieChart";
 export default function InteractiveAvatarInvestors() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [loadingRubric, setLoadingRubric] = useState(false);
+  const [loadingRubric1, setLoadingRubric1] = useState(false);
+  const [loadingRubric2, setLoadingRubric2] = useState(false);
   const [isLoadingRepeat, setIsLoadingRepeat] = useState(false);
   const [stream, setStream] = useState<MediaStream>();
   const [debug, setDebug] = useState<string>();
@@ -65,6 +68,8 @@ export default function InteractiveAvatarInvestors() {
     oralPresentation: ''
   });
   const [rubricSummary2,setRubricSummary2]=useState('');
+  const [rubricCitations2,setRubricCitations2]=useState('');
+  
   const [rubricSpecificFeedback2,setRubricSpecificFeedback2]=useState<Rubric2InvestorSpecificData>(
     {
       elevatorPitch:'',
@@ -354,7 +359,7 @@ console.log(chatHistory,"chatHistory")
         neutrality: "",
         engagement: "",
       }
-    );
+    ),
     setRubricSpecificFeedback( {
       marketValidation: '',
       pitchDeck: '',
@@ -429,15 +434,9 @@ console.log(chatHistory,"chatHistory")
     formData.append('audio', audioBlob, 'audio.webm');
     console.log('Sending audio blob, type:', audioBlob.type);
   
-    // Use the correct endpoint URL depending on the environment (local or production)
-    const apiUrl =
-      process.env.NODE_ENV === 'development'
-        ? 'http://127.0.0.1:5000/transcribe' // local server
-        : 'https://interactive-avatar-next-js-demo-olive.vercel.app/transcribe'; // production server (Vercel)
-  
     try {
-      const response = await fetch(apiUrl, {
-        method: 'POST',
+      const response = await fetch('http://127.0.0.1:8000/transcribe' , {
+        method: "POST",
         body: formData,
       });
   
@@ -452,11 +451,39 @@ console.log(chatHistory,"chatHistory")
       handleSpeak(data.text);
       transcriptRef.current = data.text;
       setDebug('Transcription successful!');
+
+      await analyzeAudio(audioBlob);
+      
     } catch (error) {
       console.error('Error during transcription:', error);
       setDebug('Error during transcription');
     }
   };  
+
+  const analyzeAudio = async (audioBlob: Blob) => {
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'audio.webm');
+    console.log('Sending audio blob, type:', audioBlob.type);
+    
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/audio_analysis`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(`Failed to analyze audio: ${response.status} - ${text}`);
+      }
+
+      const data = await response.json();
+      console.log("Analysis:", data);
+      setAudioAnalytics(data);
+    } catch (error) {
+      console.error("Error during analysis:", error);
+      setDebug("Error during audio analysis");
+    }
+  };
 
   function mergeJsons<T extends Record<string, number | string>>(obj1: T, obj2: T): T {
     const mergedObj: T = { ...obj1 };
@@ -476,49 +503,24 @@ console.log(chatHistory,"chatHistory")
     return mergedObj;
   }
   
-  
 async function endSession() {
   // Set loading state to true before starting the fetch
   setLoadingRubric(true);
+  setLoadingRubric1(true);
+  setLoadingRubric2(true);
   
   await avatar.current?.stopAvatar();
   setStream(undefined);
 
   try{
-    const responseSentiment = await fetch(`/api/pitchSentimentResponse`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userInput, chatHistory,selectedModel}),
-    });
-    const dataSentiment = await responseSentiment.json();
-    if (dataSentiment?.sentimentSummary !== undefined) setFeedbackText(dataSentiment.sentimentSummary);
-    if (dataSentiment?.sentimentSpecifics !== undefined) setSentimentSpecificFeedback(dataSentiment.sentimentSpecifics);
-    if (dataSentiment?.sentimentMetrics!==undefined){
-        const updateSentimentJson=mergeJsons(sentimentJson,dataSentiment.sentimentMetrics)
-        setSentimentJson(updateSentimentJson);
-        setSentimentMetrics(dataSentiment.sentimentMetrics);
-    }
-    if (dataSentiment.sentimentScore!==undefined) setSentimentScore(dataSentiment.sentimentScore);
+    fetchSentiment();
 
-    const response = await fetch(`/api/pitchEvaluationResponse`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userInput, chatHistory,selectedModel}),
-    });
-    const data = await response.json();
-    if (data?.rubricSummary !== undefined) setRubricSummary(data.rubricSummary);
-    if (data?.rubricMetrics !== undefined) setRubricJson(data.rubricMetrics);
-    if (data?.rubricScore !== undefined) setRubricAllRatings(data.rubricScore);
-    if (data?.rubricSpecificFeedback !== undefined) setRubricSpecificFeedback(data.rubricSpecificFeedback);
+    fetchAllMetrics();
 
-    if (data.rubricSummary2 !== undefined) setRubricSummary2(data.rubricSummary2);
-    if (data.rubricMetrics2 !== undefined) setRubricJson2(data.rubricMetrics2);
-    if (data.rubricScore2 !== undefined) setRubricAllRatings2(data.rubricScore2);
-    if (data.rubricSpecificFeedback2 !== undefined) setRubricSpecificFeedback2(data.rubricSpecificFeedback2);
     displayRubrics();
 
   } catch (error) {
-    console.error('Error fetching evaluation:', error);
+    console.error('Error fetching pitch sentiment and rubric response:', error);
   } finally {
     // Set loading to false once the fetch is completed (either success or failure)
     setLoadingRubric(false);
@@ -533,6 +535,91 @@ async function endSession() {
     console.log(displayRubricAnalytics,"im ended")
   }
 
+  const fetchSentiment = async () =>{
+    const responseSentiment = await fetch(`/api/pitchSentimentResponse`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userInput, chatHistory,selectedModel}),
+    });
+    const dataSentiment = await responseSentiment.json();
+    if (dataSentiment?.sentimentSummary !== undefined) setFeedbackText(dataSentiment.sentimentSummary);
+    if (dataSentiment?.sentimentSpecifics !== undefined) setSentimentSpecificFeedback(dataSentiment.sentimentSpecifics);
+    if (dataSentiment?.sentimentMetrics!==undefined){
+        const updateSentimentJson=mergeJsons(sentimentJson,dataSentiment.sentimentMetrics)
+        setSentimentJson(updateSentimentJson);
+        setSentimentMetrics(dataSentiment.sentimentMetrics);
+    }
+    if (dataSentiment.sentimentScore!==undefined) setSentimentScore(dataSentiment.sentimentScore);
+  }
+
+  const fetchAllMetrics = async () => {
+
+    setLoadingRubric(true); // Start loading
+    setLoadingRubric1(true);
+    setLoadingRubric2(true);
+    try{
+    const [responseMetric1, responseMetric2] = await Promise.all([
+      fetch(`/api/pitchEvaluationResponseMetric1`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userInput, chatHistory }),
+      }),
+      fetch(`/api/pitchEvaluationResponseMetric2`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userInput, chatHistory }),
+      }),
+    ]);
+  
+    // Parse all responses
+    const dataMetric1 = await responseMetric1.json();
+    const dataMetric2 = await responseMetric2.json();
+  
+    if (dataMetric1) setLoadingRubric1(false);
+    if (dataMetric2) setLoadingRubric2(false);
+
+    // Aggregate the data
+    const aggregatedSummary = [
+      dataMetric1.rubricSummary2,
+      dataMetric2.rubricSummary2,
+    ].filter(Boolean).join(' '); // Combine summaries, filtering out undefined values
+  
+    const aggregatedMetrics = {
+      ...dataMetric1.rubricMetrics2,
+      ...dataMetric2.rubricMetrics2,
+    };
+    
+    const aggregatedCitations =[
+      dataMetric1.citations,
+      dataMetric2.citations,
+    ].filter(Boolean).join(' '); // Combine summaries, filtering out undefined values
+  
+    const scores = [
+      dataMetric1.rubricScore2,
+      dataMetric2.rubricScore2,
+    ].filter(score => score !== 0); // Filter out zeros
+    
+    const aggregatedScores = scores.length > 0 
+      ? scores.reduce((sum, score) => sum + score, 0) / scores.length 
+      : 0; 
+        
+    const aggregatedFeedback = {
+      ...(dataMetric1.rubricSpecificFeedback2 || {}),
+      ...(dataMetric2.rubricSpecificFeedback2 || {}),
+    };
+  
+    // Update states once with aggregated data
+    if (aggregatedSummary) setRubricSummary2(aggregatedSummary);
+    if (aggregatedMetrics) setRubricJson2(aggregatedMetrics);
+    if (aggregatedScores) setRubricAllRatings2(aggregatedScores);
+    if (aggregatedFeedback) setRubricSpecificFeedback2(aggregatedFeedback);
+    if (aggregatedCitations) setRubricCitations2(aggregatedCitations);
+
+    console.log(dataMetric1.rubricScore2 , dataMetric2.rubricScore2 ,"the scores")
+    }finally {
+      setLoadingRubric(false); // Once the data is fetched, stop loading
+    }
+  };
 
   const handleChangeChatMode = useMemoizedFn(async (v) => {
     if (v === chatMode) {
@@ -597,6 +684,63 @@ async function endSession() {
                   End session
                 </Button>
               </div>
+              <div style={{position:'relative',width:'100%',height:'100%'}}>
+                {<TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>}
+
+                <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
+                  <div style={{display:'flex',width:'100%',justifyContent:'center',alignItems:'center'}}>
+                    <div style={{fontSize:'14px',backgroundColor:'rgba(0,0,0,0.5)',boxShadow:'2px 2px 0px 0px rgba(0,0,0,1))',textAlign:'center',padding:'1rem',width:'470px',maxHeight:'100px',overflowY:'scroll',scrollbarWidth:'none',borderRadius:'20px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',top:'-3.8rem',left:'50%'}}> 
+                      <span>{isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput}</span>
+                    </div>
+                </div>
+                </div>
+                <div className="flex flex-col items-center" style={{flexDirection:'row',justifyContent:'center',marginBottom:'2rem',display:'flex',}}>
+                  {/* Input field to capture user input */}
+                  <Button
+                    onClick={toggleSpeechToText}
+                    style={{ background:'rgba(255,255,255,0.1)',margin: '0.5rem' ,borderRadius:'100px'}}
+                  >
+                  {isRecording ? <div className={`wave`} />: <>Talk <Microphone size={14} /></>}
+                </Button>
+                {/* <div>
+                    <h3>Pauses:</h3>
+                    {pauses.length > 0 ? (
+                      <ul>
+                        {pauses.map((pause, index) => (
+                          <li key={index}>
+                            Pause from {pause.pauseStart}s to {pause.pauseEnd}s, duration: {pause.pauseDuration}s
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>No pauses detected</p>
+                    )}
+                  </div> */}
+                  
+                  <Button
+                    onClick={handleInterrupt}
+                    style={{ margin: '0.5rem',opacity:displayRubricAnalytics?'50%':'100%',background:'rgba(255,255,255,0.1)'}}
+                  >
+                    <Square weight="fill"/>
+                  </Button> 
+                  <Input
+                    placeholder="Type your message..."
+                    value={userInput}
+                    onChange={(e) => setUserInput(e.target.value)}
+                    className="w-50 text-sm p-2"
+                    style={{ backgroundColor:'rgba(255,255,255,0.1)'}}
+
+                    />
+                  <Button
+                  onClick={()=>handleSpeak(userInput)}
+                  isDisabled={!userInput.trim() || isLoadingRepeat}
+                  style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
+                    >
+                  {isLoadingRepeat ? <Spinner /> :  "Send"}
+                  </Button>
+                </div>
+              </div>
+
             </div>
           ) : !isLoadingSession ? (
             <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center"style={{backgroundColor:'rgba(255,255,255,0.2)',borderRadius:'50px',padding:'2rem',maxHeight:'40%'}}>
@@ -673,111 +817,20 @@ async function endSession() {
           <CountdownTimer isTimeUp={isTimeUp} timeLeft={timeLeft}></CountdownTimer>
         }
 
-        {(stream || true )&& 
-        <div>
-          <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>
 
-          <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
-            <div style={{display:!displayRubricAnalytics && !isLoadingSession?'flex':'none',width:'100%',justifyContent:'center',alignItems:'center'}}>
-              <div style={{backgroundColor:'rgba(255,255,255,0.1)',textAlign:'center',padding:'1rem',maxWidth:'60%',minWidth:'30%',maxHeight:'100px',overflowY:'scroll',scrollbarWidth:'none',borderRadius:'10px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',bottom:'9%',left:'50%'}}> 
-                {isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput} 
-              </div>
-          {/* { !hideSuggestions && suggestionOptions?.map((option, index) => (
-              <Button
-                key={index}
-                onClick={() => 
-                  {
-                    setUserInput(option); // Set the clicked suggestion as user input
-                    handleSpeak(option);
-                    setHideSuggestions(true);              
-                  }
-                }
-                isDisabled={isLoadingRepeat}
-                style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
-              >
-                {option}
-              </Button>
-            ))} */}
-            {/* {
-            suggestionOptions.map((option, index) => (
-              <Button
-                key={index}
-                onClick={() => {
-                  // Append to the userInput when an option is selected
-                    setUserInput(prev => prev ? `${prev}, ${option}` : option);  // Concatenate the selected option
-
-                    // Handle selected options in the selectedOptions state
-                    setSelectedOptions(prev =>
-                      prev.includes(option) ? prev.filter(item => item !== option) : [...prev, option]
-                    );
-                  }}
-                isDisabled={isLoadingRepeat}
-                style={{
-                  margin: '0.5rem',
-                  backgroundColor: selectedOptions.includes(option) ? 'blue' : 'white', // Highlight selected
-                  color: selectedOptions.includes(option) ? 'white' : 'black',
-                }}
-              >
-                {option}
-              </Button>
-            ))
-          } */}
-          </div>
-          </div>
-          <div className="flex flex-col items-center" style={{flexDirection:'row',justifyContent:'center',marginBottom:'2rem',display:!displayRubricAnalytics &&!isLoadingSession?'flex':'none',}}>
-            {/* Input field to capture user input */}
-            <Button
-              onClick={toggleSpeechToText}
-              style={{ background:'rgba(255,255,255,0.1)',margin: '0.5rem' ,borderRadius:'100px'}}
-            >
-            {isRecording ? <div className={`wave`} />: <>Talk <Microphone size={14} /></>}
-          </Button>
-          {/* <div>
-              <h3>Pauses:</h3>
-              {pauses.length > 0 ? (
-                <ul>
-                  {pauses.map((pause, index) => (
-                    <li key={index}>
-                      Pause from {pause.pauseStart}s to {pause.pauseEnd}s, duration: {pause.pauseDuration}s
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p>No pauses detected</p>
-              )}
-            </div> */}
-            
-            <Button
-              onClick={handleInterrupt}
-              style={{ margin: '0.5rem',opacity:displayRubricAnalytics?'50%':'100%',background:'rgba(255,255,255,0.1)'}}
-            >
-              <Square weight="fill"/>
-            </Button> 
-            <Input
-              placeholder="Type your message..."
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-              className="w-50 text-sm p-2"
-              style={{ backgroundColor:'rgba(255,255,255,0.1)'}}
-
-              />
-            <Button
-            onClick={()=>handleSpeak(userInput)}
-            isDisabled={!userInput.trim() || isLoadingRepeat}
-            style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
-              >
-            {isLoadingRepeat ? <Spinner /> :  "Send"}
-            </Button>
-          </div>
-        </div>
-         }
 
         {/* {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentScore} />} */}
-        {sentimentJson && rubricJson2 && <div style={{display:'flex',gap:'1rem',position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>
-        {/* <RubricInvestorPiechart data={rubricJson} overallScore={rubricAllRatings} summary={rubricSummary} specificFeedback={rubricSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart> */}
-        <RubricInvestorPiechart2 data={rubricJson2} overallScore={rubricAllRatings2} summary={rubricSummary2} specificFeedback={rubricSpecificFeedback2} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart2>
-         <SentimentInvestorPiechart audioAnalytics={audioAnalytics} data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0}></SentimentInvestorPiechart>
-        </div>}
+        {sentimentJson && rubricJson2 && 
+          <div style={{display:'flex',gap:'1rem',position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>
+            <RubricInvestorPiechart2  citations={rubricCitations2} data={rubricJson2} overallScore={rubricAllRatings2} summary={rubricSummary2} specificFeedback={rubricSpecificFeedback2} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart2>
+            <SentimentInvestorPiechart audioAnalytics={audioAnalytics} data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0}></SentimentInvestorPiechart>
+            {(loadingRubric1 || loadingRubric2 || loadingRubric)&& 
+            <div style={{position:'absolute',width:'400px',display:'flex',gap:'1rem',flexDirection:'column',backgroundColor:'rgba(255,255,255,0.3)',borderRadius:'20px',padding:'1rem',whiteSpace:'pre-line',top:'50%',left:'10%'}}>
+              <div style={{display:'flex',gap:'1rem'}}>{(loadingRubric||loadingRubric1)?<Spinner />:"! "}<span>{loadingRubric1? '[Loading Analysis]':'[Successfully Loaded]'} Elevation Pitch, Team, Market Opportunity</span></div>
+              <div style={{display:'flex',gap:'1rem'}}>{(loadingRubric||loadingRubric2)?<Spinner />:"! "}<span>{loadingRubric2? '[Loading Analysis]':'[Successfully Loaded]'} Market Size, Solution Value Proposition, Competitive Position</span></div>
+            </div>}
+         </div>
+        }
         {loadingRubric&&<Spinner 
           style={{
             color:'white',

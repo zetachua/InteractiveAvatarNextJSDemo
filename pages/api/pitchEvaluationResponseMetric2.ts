@@ -7,12 +7,13 @@ const pitchEvaluationResponseMetric2 = async (req: NextApiRequest, res: NextApiR
   if (req.method === 'POST') {
     try {
       const { userInput, chatHistory } = req.body;
-      let rubricResult2;
+      let rubricResult,rubricResult2,citations;
 
-      if(userInput!==undefined || userInput==""){
-        [rubricResult2] = await Promise.all([
+      [rubricResult] = await Promise.all([
         fetchMetric2(userInput, chatHistory),
       ]);
+      rubricResult2 = rubricResult?.rubricData;
+      citations = rubricResult?.citations;
 
       let rubricScore2, rubricSummary2, rubricMetrics2, rubricSpecificFeedback2;
       if (rubricResult2?.rubricScore !== undefined) {
@@ -29,25 +30,8 @@ const pitchEvaluationResponseMetric2 = async (req: NextApiRequest, res: NextApiR
         rubricSummary2,
         rubricMetrics2,
         rubricSpecificFeedback2,
+        citations,
       });
-    }
-      else{
-        res.status(200).json({
-          rubricScore2: 0,
-          rubricSummary2: "No pitch was given, lacks clarity and engagement, making it difficult to capture investor interest.",
-          rubricMetrics2: {
-            marketSize: 0,
-            solutionValueProposition: 0,
-            competitivePosition: 0,
-          },
-          rubricSpecificFeedback2: {
-            marketSize: "No market size estimatations, with no clear distinction between TAM, SAM, and SOM",
-            solutionValueProposition: "No solution nor explaination on how solution significantly improves upon existing alternatives",
-            competitivePosition:" No direct competitors mentioned."
-          },
-        }
-      )
-      }
 
     } catch (error) {
       console.error('Error fetching chat completion:', error);
@@ -94,7 +78,13 @@ const fetchMetric2 = async (userInput: string, chatHistory: any[]) => {
       console.log("Invalid rubric JSON format, returning null");
       return null;
     }
-    return filteredResponse;
+    const citations = metric2Result?.citations || [];
+    const result = {
+      rubricData: filteredResponse,
+      citations: citations,
+    };
+    return result;
+  
   } catch (error) {
     console.error("Error in fetchRubric:", error);
     return null;
@@ -108,11 +98,9 @@ const cleanSonarOutputMetric2 = (metric2:any): string => {
   try {
     const cleanResponse = (content: string): string => {
       let cleaned = content
-        .replace(/```json|```/g, '')
-        .replace(/<think>[\s\S]*?<\/think>/g, '')
-        .replace(/\n/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+      .replace(/```json|```/g, '')           // Remove code block markers
+      .replace(/<think>[\s\S]*?<\/think>/g, '')  // Remove <think>...</think> tags
+      .trim();
 
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
@@ -138,12 +126,44 @@ const cleanSonarOutputMetric2 = (metric2:any): string => {
       score: 0,
       feedback: "Not provided. Unable to evaluate due to missing data."
     };
-
     
     const validatedMetric2 = {
-      marketSize: metric2Data.marketSize ? { ...metric2Data.marketSize, feedback: transformFeedback(metric2Data.marketSize.feedback) } : defaultMetric,
-      solutionValueProposition: metric2Data.solutionValueProposition ? { ...metric2Data.solutionValueProposition, feedback: transformFeedback(metric2Data.solutionValueProposition.feedback) } : defaultMetric,
-      competitivePosition: metric2Data.competitivePosition ? { ...metric2Data.competitivePosition, feedback: transformFeedback(metric2Data.competitivePosition.feedback) } : defaultMetric,
+      marketSize: metric2Data.marketSize ? { 
+        ...metric2Data.marketSize, 
+        feedback: transformFeedback(
+          (metric2Data.marketSize.recap || '') + '. ' + 
+          (metric2Data.marketSize.feedback || '') + '. ' + 
+          (metric2Data.marketSize.comparison || '') + '. ' + 
+          (metric2Data.marketSize.suggestion || '')
+        ) 
+      } : defaultMetric,
+      solutionValueProposition: metric2Data.solutionValueProposition ? { 
+        ...metric2Data.solutionValueProposition, 
+        feedback: transformFeedback(
+          (metric2Data.solutionValueProposition.recap || '') + '. ' + 
+          (metric2Data.solutionValueProposition.feedback || '') + '. ' + 
+          (metric2Data.solutionValueProposition.comparison || '') + '. ' + 
+          (metric2Data.solutionValueProposition.suggestion || '')
+        ) 
+      } : defaultMetric,
+      competitivePosition: metric2Data.competitivePosition ? { 
+        ...metric2Data.competitivePosition, 
+        feedback: transformFeedback(
+          (metric2Data.competitivePosition.recap || '') + '. ' + 
+          (metric2Data.competitivePosition.feedback || '') + '. ' + 
+          (metric2Data.competitivePosition.comparison || '') + '. ' + 
+          (metric2Data.competitivePosition.suggestion || '')
+        ) 
+      } : defaultMetric,
+      revenueModel: metric2Data.revenueModel ? { 
+        ...metric2Data.revenueModel, 
+        feedback: transformFeedback(
+          (metric2Data.revenueModel.recap || '') + '. ' + 
+          (metric2Data.revenueModel.feedback || '') + '. ' + 
+          (metric2Data.revenueModel.comparison || '') + '. ' + 
+          (metric2Data.revenueModel.suggestion || '')
+        ) 
+      } : defaultMetric,
     };
   
 
@@ -151,8 +171,9 @@ const cleanSonarOutputMetric2 = (metric2:any): string => {
       validatedMetric2.marketSize.score,
       validatedMetric2.solutionValueProposition.score,
       validatedMetric2.competitivePosition.score,
+      validatedMetric2.revenueModel.score,
     ];
-    const overallScore = Math.round(scores.reduce((sum: number, score: number) => sum + score, 0) / 3);
+    const overallScore = Math.round(scores.reduce((sum: number, score: number) => sum + score, 0) / 4);
 
     const summary= metric2Data.summary;
 
@@ -173,12 +194,14 @@ const cleanSonarOutputMetric2 = (metric2:any): string => {
       marketSize: validatedMetric2.marketSize,
       solutionValueProposition: validatedMetric2.solutionValueProposition,
       competitivePosition: validatedMetric2.competitivePosition,
+      revenueModel: validatedMetric2.revenueModel,
       overallScore,
       summary,
       rubricSpecificFeedback: {
         marketSize: validatedMetric2.marketSize.feedback,
         solutionValueProposition: validatedMetric2.solutionValueProposition.feedback,
         competitivePosition: validatedMetric2.competitivePosition.feedback,
+        revenueModel: validatedMetric2.revenueModel.feedback,
       },
     };
 
@@ -186,15 +209,17 @@ const cleanSonarOutputMetric2 = (metric2:any): string => {
   } catch (error) {
     console.error("Error merging Sonar outputs:", error);
     const defaultData = {
-      marketSize: { score: 0, feedback: "Not provided. Unable to evaluate due to Sonar parsing error." },
-      solutionValueProposition: { score: 0, feedback: "Not provided. Unable to evaluate due to Sonar parsing error." },
-      competitivePosition: { score: 0, feedback: "Not provided. Unable to evaluate due to Sonar parsing error." },
+      marketSize: { score: 0, feedback: "Unable to evaluate due to Sonar parsing error." },
+      solutionValueProposition: { score: 0, feedback: "Unable to evaluate due to Sonar parsing error." },
+      competitivePosition: { score: 0, feedback: " Unable to evaluate due to Sonar parsing error." },
+      revenueModel: { score: 0, feedback: " Unable to evaluate due to Sonar parsing error." },
       overallScore: 0,
       summary: "[Market Size, Solution Value Proposition, Compeititive Position] Failed to evaluate pitch due to parsing errors in Sonar responses.",
       rubricSpecificFeedback: {
-        marketSize: "Not provided. Unable to evaluate due to Sonar parsing error.",
-        solutionValueProposition: "Not provided. Unable to evaluate due to Sonar parsing error.",
-        competitivePosition: "Not provided. Unable to evaluate due to Sonar parsing error.",
+        marketSize: "Unable to evaluate due to Sonar parsing error.",
+        solutionValueProposition: "Unable to evaluate due to Sonar parsing error.",
+        competitivePosition: "Unable to evaluate due to Sonar parsing error.",
+        revenueModel: "Unable to evaluate due to Sonar parsing error.",
       },
     };
     return JSON.stringify(defaultData);

@@ -7,12 +7,15 @@ const pitchEvaluationResponseMetric1 = async (req: NextApiRequest, res: NextApiR
   if (req.method === 'POST') {
     try {
       const { userInput, chatHistory } = req.body;
-      let metric1Result;
+      let metric1Result,citations,metric1Results;
       
-      if(userInput!==undefined || userInput==""){
-        [metric1Result] = await Promise.all([
+        [metric1Results] = await Promise.all([
           fetchMetric1(userInput, chatHistory),
         ]);
+
+        metric1Result = metric1Results?.rubricData;
+        citations = metric1Results?.citations;
+  
   
         let rubricScore2, rubricSummary2, rubricMetrics2, rubricSpecificFeedback2;
         if (metric1Result?.rubricScore !== undefined) {
@@ -29,25 +32,8 @@ const pitchEvaluationResponseMetric1 = async (req: NextApiRequest, res: NextApiR
           rubricSummary2,
           rubricMetrics2,
           rubricSpecificFeedback2,
+          citations
         });
-      } else{
-        res.status(200).json({
-          rubricScore2: 0,
-          rubricSummary2: "No pitch was given, lacks clarity and engagement, making it difficult to capture investor interest.",
-          rubricMetrics2: {
-            elevatorPitch: 0,
-            team: 0,
-            marketOpportunity: 0,
-          },
-          rubricSpecificFeedback2: {
-            elevatorPitch: "No pitch was given, elevation pitch unidentified",
-            team: "No pitch was given no team identified",
-            marketOpportunity:" No market opportunity was mentioned."
-          },
-        }
-      )
-      }
-    
 
     } catch (error) {
       console.error('Error fetching chat completion:', error);
@@ -92,7 +78,14 @@ const fetchMetric1 = async (userInput: string, chatHistory: any[]) => {
       console.log("Invalid rubric JSON format, returning null");
       return null;
     }
-    return filteredResponse;
+
+    const citations = metric1Result?.citations || [];
+    const result = {
+      rubricData: filteredResponse,
+      citations: citations,
+    };
+    return result;
+
   } catch (error) {
     console.error("Error in fetchRubric:", error);
     return null;
@@ -104,11 +97,9 @@ const cleanSonarOutputMetric1 = (metric1:any): string => {
   try {
     const cleanResponse = (content: string): string => {
       let cleaned = content
-        .replace(/```json|```/g, '')
-        .replace(/<think>[\s\S]*?<\/think>/g, '')
-        .replace(/\n/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
+      .replace(/```json|```/g, '')           // Remove code block markers
+      .replace(/<think>[\s\S]*?<\/think>/g, '')  // Remove <think>...</think> tags
+      .trim();
 
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
@@ -136,17 +127,51 @@ const cleanSonarOutputMetric1 = (metric1:any): string => {
     };
 
     const validatedMetric1 = {
-      elevatorPitch: metric1Data.elevatorPitch ? { ...metric1Data.elevatorPitch, feedback: transformFeedback(metric1Data.elevatorPitch.feedback) } : defaultMetric,
-      team: metric1Data.team ? { ...metric1Data.team, feedback: transformFeedback(metric1Data.team.feedback) } : defaultMetric,
-      marketOpportunity: metric1Data.marketOpportunity ? { ...metric1Data.marketOpportunity, feedback: transformFeedback(metric1Data.marketOpportunity.feedback) } : defaultMetric,
+      elevatorPitch: metric1Data.elevatorPitch ? { 
+        ...metric1Data.elevatorPitch, 
+        feedback: transformFeedback(
+          (metric1Data.elevatorPitch.recap || '') + 
+          (metric1Data.elevatorPitch.feedback || '') + 
+          (metric1Data.elevatorPitch.comparison || '') + 
+          (metric1Data.elevatorPitch.suggestion || '')
+        ) 
+      } : defaultMetric,
+      team: metric1Data.team ? { 
+        ...metric1Data.team, 
+        feedback: transformFeedback(
+          (metric1Data.team.recap || '') + 
+          (metric1Data.team.feedback || '') + 
+          (metric1Data.team.comparison || '') + 
+          (metric1Data.team.suggestion || '')
+        ) 
+      } : defaultMetric,
+      marketOpportunity: metric1Data.marketOpportunity ? { 
+        ...metric1Data.marketOpportunity, 
+        feedback: transformFeedback(
+          (metric1Data.marketOpportunity.recap || '') + 
+          (metric1Data.marketOpportunity.feedback || '') + 
+          (metric1Data.marketOpportunity.comparison || '') + 
+          (metric1Data.marketOpportunity.suggestion || '')
+        ) 
+      } : defaultMetric,
+      tractionAwards: metric1Data.tractionAwards ? { 
+        ...metric1Data.tractionAwards, 
+        feedback: transformFeedback(
+          (metric1Data.tractionAwards.recap || '') + 
+          (metric1Data.tractionAwards.feedback || '') + 
+          (metric1Data.tractionAwards.comparison || '') + 
+          (metric1Data.tractionAwards.suggestion || '')
+        ) 
+      } : defaultMetric,
     };
 
     const scores = [
       validatedMetric1.elevatorPitch.score,
       validatedMetric1.team.score,
       validatedMetric1.marketOpportunity.score,
+      validatedMetric1.tractionAwards.score,
     ];
-    const overallScore = Math.round(scores.reduce((sum: number, score: number) => sum + score, 0) / 3);
+    const overallScore = Math.round(scores.reduce((sum: number, score: number) => sum + score, 0) / 4);
     const summary= metric1Data.summary;
     // const strengths = [];
     // const weaknesses = [];
@@ -164,12 +189,14 @@ const cleanSonarOutputMetric1 = (metric1:any): string => {
       elevatorPitch: validatedMetric1.elevatorPitch,
       team: validatedMetric1.team,
       marketOpportunity: validatedMetric1.marketOpportunity,
+      tractionAwards:validatedMetric1.tractionAwards,
       overallScore,
       summary,
       rubricSpecificFeedback: {
         elevatorPitch: validatedMetric1.elevatorPitch.feedback,
         team: validatedMetric1.team.feedback,
         marketOpportunity: validatedMetric1.marketOpportunity.feedback,
+        tractionAwards: validatedMetric1.tractionAwards.feedback,
       },
     };
 
@@ -181,12 +208,14 @@ const cleanSonarOutputMetric1 = (metric1:any): string => {
       elevatorPitch: { score: 0, feedback: "Not provided. Unable to evaluate due to Sonar parsing error." },
       team: { score: 0, feedback: "Not provided. Unable to evaluate due to Sonar parsing error." },
       marketOpportunity: { score: 0, feedback: "Not provided. Unable to evaluate due to Sonar parsing error." },
+      tractionAwards: { score: 0, feedback: "Not provided. Unable to evaluate due to Sonar parsing error." },
       overallScore: 0,
       summary: "[Eleveator Pitch, Team, Market Opportunity] Failed to evaluate pitch due to parsing errors in Sonar responses.",
       rubricSpecificFeedback: {
         elevatorPitch: "Not provided. Unable to evaluate due to Sonar parsing error.",
         team: "Not provided. Unable to evaluate due to Sonar parsing error.",
         marketOpportunity: "Not provided. Unable to evaluate due to Sonar parsing error.",
+        tractionAwards: "Not provided. Unable to evaluate due to Sonar parsing error."
       },
     };
     return JSON.stringify(defaultData);

@@ -538,6 +538,7 @@ export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, t
   1. **Elevator Pitch**
   2. **Team**
   3. **Market Opportunity**
+  4. **Traction/Awards**
   
   **Guidelines**:
   - **Recap**: Quote key details related to each aspect from the pitch transcript as the primary source.
@@ -562,7 +563,10 @@ export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, t
       "feedback": "Technical expertise mentioned, but no leadership wins. Top 2025 construction teams average 2 exits per leader (Source: Crunchbase). Suggest: 'Highlight past successes like Y Team’s $10M exit in 2024.'"    },
     "marketOpportunity": { 
       "score": 7, 
-      "feedback": "Claims a $10M market, but no SAM. 2025 concrete market validation shows $50M deals (Source: Deloitte). Suggest: 'Target $30B logistics AI sector, as Z Co. did in 2025.'"    }
+      "feedback": "Claims a $10M market, but no SAM. 2025 concrete market validation shows $50M deals (Source: Deloitte). Suggest: 'Target $30B logistics AI sector, as Z Co. did in 2025.'"    },
+    "tractionAwards": { 
+      "score": 7, 
+      "feedback": "Mentions a pilot, but no metrics. 2025 industry avg: 50 clients/pilot (Source: Deloitte). Suggest: ‘Show X% cost reduction, like Y Co.’s 2025 pilot.’"    }
   }
   
   Analyze this pitch transcript and provide your JSON output. Use only the following text as the pitch transcript, without adding or imagining content:
@@ -571,7 +575,7 @@ export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, t
 
 export const pitchEvaluationPromptMetric2 = (userInput: string) => `
   
- You are an experienced venture capitalist. I will give you a transcript of a startup pitch.
+  You are an experienced venture capitalist. I will give you a transcript of a startup pitch.
   Analyze this pitch transcript and provide your JSON output.
   ${userInput}
 
@@ -579,7 +583,7 @@ export const pitchEvaluationPromptMetric2 = (userInput: string) => `
   1. **Market Size**
   2. **Solution & Value Proposition**
   3. **Competitive Positioning**
-
+  4. **Revenue/Business Model**
  
   **Guidelines**:
   - **Recap**: Quote key details related to each aspect from the pitch transcript as the primary source.
@@ -604,26 +608,29 @@ export const pitchEvaluationPromptMetric2 = (userInput: string) => `
       "feedback": "Mentions AI monitoring, but no edge. 2025 leaders use patented sensors (e.g., Giatec’s $500/unit model, Crunchbase). Suggest: 'Adopt Z’s 2025 anomaly detection tech.'"    },
     "competitivePosition": { 
       "score": 4, 
-      "feedback": "No competitors named. 2025 market shows Giatec at $10M revenue (Source: Crunchbase). Suggest: ‘Differentiate vs. Giatec with 20% cost cuts.’"    }
+      "feedback": "No competitors named. 2025 market shows Giatec at $10M revenue (Source: Crunchbase). Suggest: ‘Differentiate vs. Giatec with 20% cost cuts.’"    },
+    "revenueModel": { 
+      "score": 6, 
+      "feedback": "Subscription model vague. 2025 concrete tech avg: $500/unit (Source: Statista). Suggest: ‘Set tiers at $X-$Y, like Z Co.’s 2025 scale.’"    }
   }
    Use only the following text as the pitch transcript, without adding or imagining content.
 
 `;
 
 export const pitchEvaluationPromptMetric3 = (userInput: string) => `
-   You are an experienced venture capitalist. I will give you a transcript of a startup pitch.
-    Analyze this pitch transcript and provide your JSON output. 
+  You are an experienced venture capitalist. I will give you a transcript of a startup pitch.
+  Analyze this pitch transcript and provide your JSON output. 
   ${userInput}
 
  Please evaluate it based on these two aspects:
   1. **Traction/Awards**
   2. **Revenue/Business Model**
-
+  
   **Guidelines**:
   - **Recap**: Quote key details related to each aspect from the pitch transcript as the primary source.
   - **Real-Time Browsing**: Use real-time web searches and X post data to verify traction (e.g., client mentions, award prestige) and validate revenue scalability (e.g., industry pricing norms). Cite sources briefly (e.g., "Per 2025 Crunchbase data").
-  - **Market Comparison**: For each metric, compare the pitch’s claims to current 2025 concrete/construction industry standards (e.g., typical traction metrics, revenue model averages). Provide specific figures or examples from 2025 data.
-  - **Suggestions**: Provide one actionable suggestion per area, supported by the transcript, enriched with web/X data, and referencing real-world industry examples (e.g., 2025 award benchmarks or pricing tiers).
+  - **Market Comparison**: For each metric, compare the pitch’s claims to current 2025 concrete/construction industry standards (e.g., market size benchmarks, unique solution examples, competitor revenue/pricing). Provide specific figures or examples from 2025 data.
+  - **Suggestions**: Provide one actionable suggestion per area, supported by the transcript, enriched with web/X data, and referencing real-world industry examples (e.g., actual 2025 market sizes or sensor technologies).
   - **Score**: Assign a score (1-10) for each area, justifying it with transcript details, external data insights, and market comparisons.
 
   **Important**:

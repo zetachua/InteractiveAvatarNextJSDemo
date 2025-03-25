@@ -59,6 +59,15 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
     name: key.charAt(0).toUpperCase() + key.slice(1),
     value: value as number,
   }));
+  
+  const roundToTwoSignificantFigures = (num:any) => {
+    if (num === 0) return 0;
+    const factor = Math.pow(10, 2 - Math.floor(Math.log10(Math.abs(num))));
+    return Math.round(num * factor) / factor;
+  };
+  const roundedArousal = roundToTwoSignificantFigures(arousal);
+  const roundedDominance = roundToTwoSignificantFigures(dominance);
+  const roundedValence = roundToTwoSignificantFigures(valence);
 
   // Colors for the pie chart
   const COLORS = [
@@ -150,7 +159,7 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
               <p><b>Dominance:</b> Measures the perceived level of control associated with an emotion.</p>
               <p><b>Valence:</b> Measures the pleasantness or unpleasantness of the emotion.</p>
             </div>}
-            <b>Arousal:</b> {arousal} | <b>Dominance:</b> {dominance} | <b>Valence:</b> {valence}
+            <b>Arousal:</b> {roundedArousal} | <b>Dominance:</b> {roundedDominance} | <b>Valence:</b> {roundedDominance}
           </div>
         </div>
         <div

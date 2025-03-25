@@ -1,4 +1,4 @@
-import { FeedbackData, Metric1InvestorData, Metric2InvestorData, Metric3InvestorData, QnaData, Rubric2InvestorData, Rubric3InvestorData, RubricData, RubricInvestorData } from "@/components/KnowledgeClasses";
+import { FeedbackData, Metric1InvestorData, Metric2InvestorData, QnaData, Rubric2InvestorData, Rubric3InvestorData, RubricData, RubricInvestorData } from "@/components/KnowledgeClasses";
 
 export const suggestionsOptionsFilter = (responseContent: string,rating:number) => {
   let filteredResponseContent = responseContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
@@ -313,23 +313,28 @@ export const metric1ResultInvestorFilter = (responseContent: string) => {
           "score":0,
           "feedback":"The problem was not described, the urgency and customer pain points were not well-supported by data",
         },
-
+        tractionAwards:{
+          "score":0,
+          "feedback":"The problem was not described, the urgency and customer pain points were not well-supported by data",
+        },
       };
     }
 
     if (rubricDataJson.marketOpportunity==undefined) return;
     return {
-      rubricScore: (rubricDataJson.elevatorPitch.score+rubricDataJson.team.score+rubricDataJson.marketOpportunity.score)/3,
+      rubricScore: (rubricDataJson.elevatorPitch.score+rubricDataJson.team.score+rubricDataJson.marketOpportunity.score+rubricDataJson.tractionAwards.score)/4,
       rubricSummary: rubricDataJson.summary,
       rubricMetrics: {
         elevatorPitch: rubricDataJson.elevatorPitch.score,
         team: rubricDataJson.team.score,
         marketOpportunity: rubricDataJson.marketOpportunity.score,
+        tractionAwards: rubricDataJson.tractionAwards.score,
       },
       rubricSpecificFeedback: {
         elevatorPitch: rubricDataJson.elevatorPitch.feedback,
         team: rubricDataJson.team.feedback,
         marketOpportunity: rubricDataJson.marketOpportunity.feedback,
+        tractionAwards: rubricDataJson.tractionAwards.feedback,
       },
     };
 
@@ -341,7 +346,7 @@ export const metric1ResultInvestorFilter = (responseContent: string) => {
 
 
 export const metric2ResultInvestorFilter = (responseContent: string) => {
-  console.log(responseContent, "Metric1 Investor Response Content");
+  console.log(responseContent, "Metric2 Investor Response Content");
   
   try {
     let rubricJson = responseContent
@@ -351,7 +356,7 @@ export const metric2ResultInvestorFilter = (responseContent: string) => {
     
     let rubricJsonMatch = rubricJson.match(/\{[\s\S]*\}/);
     rubricJson = rubricJsonMatch ? rubricJsonMatch[0].trim() : '{}';
-    console.log("Metric1 Response Json:", rubricJson);
+    console.log("Metric2 Response Json:", rubricJson);
 
     let rubricDataJson: Metric2InvestorData;
 
@@ -375,7 +380,10 @@ export const metric2ResultInvestorFilter = (responseContent: string) => {
           "score":0,
           "feedback":" No direct competitors mentioned. Differentiation implied through BCA validation and bundling model.\n\nSuggestions: Name competitors (e.g., Sensohive in IoT monitoring, traditional testing labs). Create a comparison matrix: 'We’re 3x cheaper than lab tests and provide real-time data vs. competitors’ daily reports.' Leverage BCA’s endorsement as a moat – 'Only solution pre-approved for BCA productivity credits"
         },
-
+        revenueModel:{
+          "score":0,
+          "feedback":" No direct competitors mentioned. Differentiation implied through BCA validation and bundling model.\n\nSuggestions: Name competitors (e.g., Sensohive in IoT monitoring, traditional testing labs). Create a comparison matrix: 'We’re 3x cheaper than lab tests and provide real-time data vs. competitors’ daily reports.' Leverage BCA’s endorsement as a moat – 'Only solution pre-approved for BCA productivity credits"
+        },
       };
     }
 
@@ -387,65 +395,12 @@ export const metric2ResultInvestorFilter = (responseContent: string) => {
         marketSize: rubricDataJson.marketSize.score,
         solutionValueProposition: rubricDataJson.solutionValueProposition.score,
         competitivePosition: rubricDataJson.competitivePosition.score,
+        revenueModel: rubricDataJson.competitivePosition.score,
       },
       rubricSpecificFeedback: {
         marketSize: rubricDataJson.marketSize.feedback,
         solutionValueProposition: rubricDataJson.solutionValueProposition.feedback,
         competitivePosition: rubricDataJson.competitivePosition.feedback,
-      },
-    };
-
-  } catch (error) {
-    console.error("Error in rubricFilter function:", error);
-    return null;
-  }
-};
-
-
-export const metric3ResultInvestorFilter = (responseContent: string) => {
-  console.log(responseContent, "Metric3 Investor Response Content");
-  
-  try {
-    let rubricJson = responseContent
-      .replace(/<think>[\s\S]*?<\/think>/g, '')  // Remove <think> tags
-      .replace(/```json|```/g, '')               // Remove ```json markers
-      .trim();
-    
-    let rubricJsonMatch = rubricJson.match(/\{[\s\S]*\}/);
-    rubricJson = rubricJsonMatch ? rubricJsonMatch[0].trim() : '{}';
-    console.log("Metric3 Response Json:", rubricJson);
-
-    let rubricDataJson: Metric3InvestorData;
-
-    // Try to parse the JSON, or use default fallback if parsing fails
-    try {
-      rubricDataJson = JSON.parse(rubricJson);
-    } catch (error) {
-      console.error("Error parsing rubric JSON, using default values:", error);
-      // Default rubric values when no valid rubricJson is found
-      rubricDataJson = {
-        summary: "No pitch was given, lacks clarity and engagement, making it difficult to capture investor interest.",
-        tractionAwards:{
-          "score":0,
-          "feedback":"No traction was presented, with little evidence of early customer validation or revenue."
-        },
-        revenueModel:{
-          "score":0,
-          "feedback": "No revenue model was defined, with unclear monetization strategy and scalability concerns."
-        }
-      };
-    }
-
-    if (rubricDataJson.revenueModel==undefined) return;
-    return {
-      rubricScore: (rubricDataJson.tractionAwards.score+rubricDataJson.revenueModel.score)/2,
-      rubricSummary: rubricDataJson.summary,
-      rubricMetrics: {
-        tractionAwards: rubricDataJson.tractionAwards.score,
-        revenueModel: rubricDataJson.revenueModel.score,
-      },
-      rubricSpecificFeedback: {
-        tractionAwards: rubricDataJson.tractionAwards.feedback,
         revenueModel: rubricDataJson.revenueModel.feedback,
       },
     };
@@ -455,6 +410,61 @@ export const metric3ResultInvestorFilter = (responseContent: string) => {
     return null;
   }
 };
+
+
+// export const metric3ResultInvestorFilter = (responseContent: string) => {
+//   console.log(responseContent, "Metric3 Investor Response Content");
+  
+//   try {
+//     let rubricJson = responseContent
+//       .replace(/<think>[\s\S]*?<\/think>/g, '')  // Remove <think> tags
+//       .replace(/```json|```/g, '')               // Remove ```json markers
+//       .trim();
+    
+//     let rubricJsonMatch = rubricJson.match(/\{[\s\S]*\}/);
+//     rubricJson = rubricJsonMatch ? rubricJsonMatch[0].trim() : '{}';
+//     console.log("Metric3 Response Json:", rubricJson);
+
+//     let rubricDataJson: Metric3InvestorData;
+
+//     // Try to parse the JSON, or use default fallback if parsing fails
+//     try {
+//       rubricDataJson = JSON.parse(rubricJson);
+//     } catch (error) {
+//       console.error("Error parsing rubric JSON, using default values:", error);
+//       // Default rubric values when no valid rubricJson is found
+//       rubricDataJson = {
+//         summary: "No pitch was given, lacks clarity and engagement, making it difficult to capture investor interest.",
+//         tractionAwards:{
+//           "score":0,
+//           "feedback":"No traction was presented, with little evidence of early customer validation or revenue."
+//         },
+//         revenueModel:{
+//           "score":0,
+//           "feedback": "No revenue model was defined, with unclear monetization strategy and scalability concerns."
+//         }
+//       };
+//     }
+
+//     if (rubricDataJson.revenueModel==undefined) return;
+//     return {
+//       rubricScore: (rubricDataJson.tractionAwards.score+rubricDataJson.revenueModel.score)/2,
+//       rubricSummary: rubricDataJson.summary,
+//       rubricMetrics: {
+//         tractionAwards: rubricDataJson.tractionAwards.score,
+//         revenueModel: rubricDataJson.revenueModel.score,
+//       },
+//       rubricSpecificFeedback: {
+//         tractionAwards: rubricDataJson.tractionAwards.feedback,
+//         revenueModel: rubricDataJson.revenueModel.feedback,
+//       },
+//     };
+
+//   } catch (error) {
+//     console.error("Error in rubricFilter function:", error);
+//     return null;
+//   }
+// };
 
 export const qnaFilter = (responseContent: string) => {
   try {
