@@ -42,6 +42,7 @@ export default function InteractiveAvatarInvestors() {
   const [loadingRubric, setLoadingRubric] = useState(false);
   const [loadingRubric1, setLoadingRubric1] = useState(false);
   const [loadingRubric2, setLoadingRubric2] = useState(false);
+  const [loadingRubric3, setLoadingRubric3] = useState(false);
   const [isLoadingRepeat, setIsLoadingRepeat] = useState(false);
   const [stream, setStream] = useState<MediaStream>();
   const [debug, setDebug] = useState<string>();
@@ -435,7 +436,7 @@ console.log(chatHistory,"chatHistory")
     console.log('Sending audio blob, type:', audioBlob.type);
   
     try {
-      const response = await fetch('http://127.0.0.1:8000/transcribe' , {
+      const response = await fetch('http://irlserver.karyolymphkinetograph.uk/transcribe' , {
         method: "POST",
         body: formData,
       });
@@ -466,7 +467,7 @@ console.log(chatHistory,"chatHistory")
     console.log('Sending audio blob, type:', audioBlob.type);
     
     try {
-      const response = await fetch(`http://127.0.0.1:8000/audio_analysis`, {
+      const response = await fetch(`http://irlserver.karyolymphkinetograph.uk/audio_analysis`, {
         method: "POST",
         body: formData,
       });
@@ -508,6 +509,7 @@ async function endSession() {
   setLoadingRubric(true);
   setLoadingRubric1(true);
   setLoadingRubric2(true);
+  setLoadingRubric3(true);
   
   await avatar.current?.stopAvatar();
   setStream(undefined);
@@ -524,6 +526,9 @@ async function endSession() {
   } finally {
     // Set loading to false once the fetch is completed (either success or failure)
     setLoadingRubric(false);
+    setLoadingRubric1(false);
+    setLoadingRubric2(false);
+    setLoadingRubric3(false);
   }
 
 }
@@ -557,8 +562,10 @@ async function endSession() {
     setLoadingRubric(true); // Start loading
     setLoadingRubric1(true);
     setLoadingRubric2(true);
+    setLoadingRubric3(true);
+
     try{
-    const [responseMetric1, responseMetric2] = await Promise.all([
+    const [responseMetric1, responseMetric2,responseMetric3] = await Promise.all([
       fetch(`/api/pitchEvaluationResponseMetric1`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -569,35 +576,47 @@ async function endSession() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userInput, chatHistory }),
       }),
+      fetch(`/api/pitchEvaluationResponseMetric3`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userInput, chatHistory }),
+      }),
     ]);
+
   
     // Parse all responses
     const dataMetric1 = await responseMetric1.json();
     const dataMetric2 = await responseMetric2.json();
+    const dataMetric3 = await responseMetric3.json();
   
     if (dataMetric1) setLoadingRubric1(false);
     if (dataMetric2) setLoadingRubric2(false);
+    if (dataMetric3) setLoadingRubric3(false);
 
     // Aggregate the data
     const aggregatedSummary = [
       dataMetric1.rubricSummary2,
       dataMetric2.rubricSummary2,
-    ].filter(Boolean).join(' '); // Combine summaries, filtering out undefined values
+      dataMetric3.rubricSummary2,
+    ].filter(Boolean).join(' '); 
   
     const aggregatedMetrics = {
       ...dataMetric1.rubricMetrics2,
       ...dataMetric2.rubricMetrics2,
-    };
+      ...dataMetric3.rubricMetrics2,
+    }
     
     const aggregatedCitations =[
       dataMetric1.citations,
       dataMetric2.citations,
-    ].filter(Boolean).join(' '); // Combine summaries, filtering out undefined values
-  
+      dataMetric3.citations,
+    ].filter(Boolean).join(' ');
+
     const scores = [
       dataMetric1.rubricScore2,
       dataMetric2.rubricScore2,
-    ].filter(score => score !== 0); // Filter out zeros
+      dataMetric3.rubricScore2,
+    ].filter(score => score !== 0); 
     
     const aggregatedScores = scores.length > 0 
       ? scores.reduce((sum, score) => sum + score, 0) / scores.length 
@@ -606,6 +625,7 @@ async function endSession() {
     const aggregatedFeedback = {
       ...(dataMetric1.rubricSpecificFeedback2 || {}),
       ...(dataMetric2.rubricSpecificFeedback2 || {}),
+      ...(dataMetric3.rubricSpecificFeedback2 || {}),
     };
   
     // Update states once with aggregated data
@@ -615,7 +635,7 @@ async function endSession() {
     if (aggregatedFeedback) setRubricSpecificFeedback2(aggregatedFeedback);
     if (aggregatedCitations) setRubricCitations2(aggregatedCitations);
 
-    console.log(dataMetric1.rubricScore2 , dataMetric2.rubricScore2 ,"the scores")
+    console.log(dataMetric1.rubricScore2 , aggregatedMetrics ,"the scores")
     }finally {
       setLoadingRubric(false); // Once the data is fetched, stop loading
     }
@@ -689,7 +709,7 @@ async function endSession() {
 
                 <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
                   <div style={{display:'flex',width:'100%',justifyContent:'center',alignItems:'center'}}>
-                    <div style={{fontSize:'14px',backgroundColor:'rgba(0,0,0,0.5)',boxShadow:'2px 2px 0px 0px rgba(0,0,0,1))',textAlign:'center',padding:'1rem',width:'470px',maxHeight:'100px',overflowY:'scroll',scrollbarWidth:'none',borderRadius:'20px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',top:'-3.8rem',left:'50%'}}> 
+                    <div style={{fontSize:'14px',backgroundColor:'rgba(255,255,255,0.3)',color:'black',boxShadow:'2px 2px 0px 0px rgba(0,0,0,1)',textAlign:'center',padding:'1rem',width:'470px',maxHeight:'90px',overflowY:'scroll',scrollbarWidth:'none',borderRadius:'10px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',top:'-2.8rem',left:'50%'}}> 
                       <span>{isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput}</span>
                     </div>
                 </div>
@@ -817,17 +837,16 @@ async function endSession() {
           <CountdownTimer isTimeUp={isTimeUp} timeLeft={timeLeft}></CountdownTimer>
         }
 
-
-
         {/* {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentScore} />} */}
         {sentimentJson && rubricJson2 && 
           <div style={{display:'flex',gap:'1rem',position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>
             <RubricInvestorPiechart2  citations={rubricCitations2} data={rubricJson2} overallScore={rubricAllRatings2} summary={rubricSummary2} specificFeedback={rubricSpecificFeedback2} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart2>
             <SentimentInvestorPiechart audioAnalytics={audioAnalytics} data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0}></SentimentInvestorPiechart>
-            {(loadingRubric1 || loadingRubric2 || loadingRubric)&& 
-            <div style={{position:'absolute',width:'400px',display:'flex',gap:'1rem',flexDirection:'column',backgroundColor:'rgba(255,255,255,0.3)',borderRadius:'20px',padding:'1rem',whiteSpace:'pre-line',top:'50%',left:'10%'}}>
-              <div style={{display:'flex',gap:'1rem'}}>{(loadingRubric||loadingRubric1)?<Spinner />:"! "}<span>{loadingRubric1? '[Loading Analysis]':'[Successfully Loaded]'} Elevation Pitch, Team, Market Opportunity</span></div>
-              <div style={{display:'flex',gap:'1rem'}}>{(loadingRubric||loadingRubric2)?<Spinner />:"! "}<span>{loadingRubric2? '[Loading Analysis]':'[Successfully Loaded]'} Market Size, Solution Value Proposition, Competitive Position</span></div>
+            {(!rubricCitations2 || loadingRubric1 || loadingRubric2 || loadingRubric)&& 
+            <div style={{position:'absolute',width:'400px',zIndex:'2000',color:'black',display:'flex',gap:'1rem',flexDirection:'column',backgroundColor:'rgba(255,255,255)',borderRadius:'20px',padding:'1rem',whiteSpace:'pre-line',top:'50%',left:'50%',transform:'translate(-50%,-50%)',boxShadow:'2px 2px 0px 0px black'}}>
+              <div style={{display:'flex',gap:'1rem'}}>{(!rubricCitations2||loadingRubric||loadingRubric1)?<Spinner />:"! "}<span>{loadingRubric1? '[Loading Analysis]':'[Successfully Loaded]'} Elevation Pitch, Team, Market Opportunity</span></div>
+              <div style={{display:'flex',gap:'1rem'}}>{(!rubricCitations2||loadingRubric||loadingRubric2)?<Spinner />:"! "}<span>{loadingRubric2? '[Loading Analysis]':'[Successfully Loaded]'} Market Size, Solution Value Proposition, Competitive Position</span></div>
+              <div style={{display:'flex',gap:'1rem'}}>{(!rubricCitations2||loadingRubric||loadingRubric3)?<Spinner />:"! "}<span>{loadingRubric3? '[Loading Analysis]':'[Successfully Loaded]'} Traction Awards, Revenue Model</span></div>
             </div>}
          </div>
         }

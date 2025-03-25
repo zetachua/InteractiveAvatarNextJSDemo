@@ -195,10 +195,6 @@ export interface Metric1InvestorData {
     score:number;
     feedback:string;
   };
-  tractionAwards: {
-    score:number;
-    feedback:string;
-  };
   summary: string;
 }
 
@@ -216,25 +212,21 @@ export interface Metric2InvestorData {
     score:number;
     feedback:string;
   };
+  summary: string;
+}
+
+
+export interface Metric3InvestorData {
+  tractionAwards: {
+    score:number;
+    feedback:string;
+  };
   revenueModel: {
     score:number;
     feedback:string;
   };
   summary: string;
 }
-
-
-// export interface Metric3InvestorData {
-//   tractionAwards: {
-//     score:number;
-//     feedback:string;
-//   };
-//   revenueModel: {
-//     score:number;
-//     feedback:string;
-//   };
-//   summary: string;
-// }
 
 export interface StartupGroups {
   startup_idea: string;

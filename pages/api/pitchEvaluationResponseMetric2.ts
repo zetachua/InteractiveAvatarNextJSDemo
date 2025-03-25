@@ -111,9 +111,15 @@ const cleanSonarOutputMetric2 = (metric2:any): string => {
 
     const transformFeedback = (feedback: any): string => {
       if (typeof feedback === 'string') return feedback;
-      const recap = feedback?.recap || "Not provided";
-      const suggestions = feedback?.suggestions || "Unable to evaluate due to missing data.";
-      return `${recap}. ${suggestions}`;
+    
+      // Default values in case fields are missing
+      const recap = feedback?.recap || "";
+      const feedbackText = feedback?.feedback || "";
+      const comparison = feedback?.comparison || "";
+      const suggestion = feedback?.suggestion || "";
+    
+      // Concatenate all relevant fields
+      return `${recap}. ${comparison}. ${feedbackText}. ${suggestion}`;
     };
 
     if (!metric2 ) {
@@ -126,54 +132,51 @@ const cleanSonarOutputMetric2 = (metric2:any): string => {
       score: 0,
       feedback: "Not provided. Unable to evaluate due to missing data."
     };
-    
+
     const validatedMetric2 = {
-      marketSize: metric2Data.marketSize ? { 
-        ...metric2Data.marketSize, 
-        feedback: transformFeedback(
-          (metric2Data.marketSize.recap || '') + '. ' + 
-          (metric2Data.marketSize.feedback || '') + '. ' + 
-          (metric2Data.marketSize.comparison || '') + '. ' + 
-          (metric2Data.marketSize.suggestion || '')
-        ) 
-      } : defaultMetric,
-      solutionValueProposition: metric2Data.solutionValueProposition ? { 
-        ...metric2Data.solutionValueProposition, 
-        feedback: transformFeedback(
-          (metric2Data.solutionValueProposition.recap || '') + '. ' + 
-          (metric2Data.solutionValueProposition.feedback || '') + '. ' + 
-          (metric2Data.solutionValueProposition.comparison || '') + '. ' + 
-          (metric2Data.solutionValueProposition.suggestion || '')
-        ) 
-      } : defaultMetric,
-      competitivePosition: metric2Data.competitivePosition ? { 
-        ...metric2Data.competitivePosition, 
-        feedback: transformFeedback(
-          (metric2Data.competitivePosition.recap || '') + '. ' + 
-          (metric2Data.competitivePosition.feedback || '') + '. ' + 
-          (metric2Data.competitivePosition.comparison || '') + '. ' + 
-          (metric2Data.competitivePosition.suggestion || '')
-        ) 
-      } : defaultMetric,
-      revenueModel: metric2Data.revenueModel ? { 
-        ...metric2Data.revenueModel, 
-        feedback: transformFeedback(
-          (metric2Data.revenueModel.recap || '') + '. ' + 
-          (metric2Data.revenueModel.feedback || '') + '. ' + 
-          (metric2Data.revenueModel.comparison || '') + '. ' + 
-          (metric2Data.revenueModel.suggestion || '')
-        ) 
-      } : defaultMetric,
+      marketSize: metric2Data.marketSize
+        ? {
+            ...metric2Data.marketSize,
+            feedback: transformFeedback({
+              recap: metric2Data.marketSize.recap,
+              feedback: metric2Data.marketSize.feedback,
+              comparison: metric2Data.marketSize.comparison,
+              suggestion: metric2Data.marketSize.suggestion,
+            }),
+          }
+        : defaultMetric,
+    
+      solutionValueProposition: metric2Data.solutionValueProposition
+        ? {
+            ...metric2Data.solutionValueProposition,
+            feedback: transformFeedback({
+              recap: metric2Data.solutionValueProposition.recap,
+              feedback: metric2Data.solutionValueProposition.feedback,
+              comparison: metric2Data.solutionValueProposition.comparison,
+              suggestion: metric2Data.solutionValueProposition.suggestion,
+            }),
+          }
+        : defaultMetric,
+    
+      competitivePosition: metric2Data.competitivePosition
+        ? {
+            ...metric2Data.competitivePosition,
+            feedback: transformFeedback({
+              recap: metric2Data.competitivePosition.recap,
+              feedback: metric2Data.competitivePosition.feedback,
+              comparison: metric2Data.competitivePosition.comparison,
+              suggestion: metric2Data.competitivePosition.suggestion,
+            }),
+          }
+        : defaultMetric
     };
-  
 
     const scores = [
       validatedMetric2.marketSize.score,
       validatedMetric2.solutionValueProposition.score,
       validatedMetric2.competitivePosition.score,
-      validatedMetric2.revenueModel.score,
     ];
-    const overallScore = Math.round(scores.reduce((sum: number, score: number) => sum + score, 0) / 4);
+    const overallScore = Math.round(scores.reduce((sum: number, score: number) => sum + score, 0) / 3);
 
     const summary= metric2Data.summary;
 
@@ -194,14 +197,12 @@ const cleanSonarOutputMetric2 = (metric2:any): string => {
       marketSize: validatedMetric2.marketSize,
       solutionValueProposition: validatedMetric2.solutionValueProposition,
       competitivePosition: validatedMetric2.competitivePosition,
-      revenueModel: validatedMetric2.revenueModel,
       overallScore,
       summary,
       rubricSpecificFeedback: {
         marketSize: validatedMetric2.marketSize.feedback,
         solutionValueProposition: validatedMetric2.solutionValueProposition.feedback,
         competitivePosition: validatedMetric2.competitivePosition.feedback,
-        revenueModel: validatedMetric2.revenueModel.feedback,
       },
     };
 
@@ -212,14 +213,12 @@ const cleanSonarOutputMetric2 = (metric2:any): string => {
       marketSize: { score: 0, feedback: "Unable to evaluate due to Sonar parsing error." },
       solutionValueProposition: { score: 0, feedback: "Unable to evaluate due to Sonar parsing error." },
       competitivePosition: { score: 0, feedback: " Unable to evaluate due to Sonar parsing error." },
-      revenueModel: { score: 0, feedback: " Unable to evaluate due to Sonar parsing error." },
       overallScore: 0,
       summary: "[Market Size, Solution Value Proposition, Compeititive Position] Failed to evaluate pitch due to parsing errors in Sonar responses.",
       rubricSpecificFeedback: {
         marketSize: "Unable to evaluate due to Sonar parsing error.",
         solutionValueProposition: "Unable to evaluate due to Sonar parsing error.",
         competitivePosition: "Unable to evaluate due to Sonar parsing error.",
-        revenueModel: "Unable to evaluate due to Sonar parsing error.",
       },
     };
     return JSON.stringify(defaultData);

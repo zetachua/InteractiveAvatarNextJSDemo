@@ -107,12 +107,17 @@ const cleanSonarOutputMetric1 = (metric1:any): string => {
       }
       return jsonMatch[0];
     };
-
     const transformFeedback = (feedback: any): string => {
       if (typeof feedback === 'string') return feedback;
-      const recap = feedback?.recap || "Not provided";
-      const suggestions = feedback?.suggestions || "Unable to evaluate due to missing data.";
-      return `${recap}. ${suggestions}`;
+    
+      // Default values in case fields are missing
+      const recap = feedback?.recap || "";
+      const feedbackText = feedback?.feedback || "";
+      const comparison = feedback?.comparison || "";
+      const suggestion = feedback?.suggestion || "";
+    
+      // Concatenate all relevant fields
+      return `${recap}. ${comparison}. ${feedbackText}. ${suggestion}`;
     };
 
     if (!metric1 ) {
@@ -127,51 +132,49 @@ const cleanSonarOutputMetric1 = (metric1:any): string => {
     };
 
     const validatedMetric1 = {
-      elevatorPitch: metric1Data.elevatorPitch ? { 
-        ...metric1Data.elevatorPitch, 
-        feedback: transformFeedback(
-          (metric1Data.elevatorPitch.recap || '') + 
-          (metric1Data.elevatorPitch.feedback || '') + 
-          (metric1Data.elevatorPitch.comparison || '') + 
-          (metric1Data.elevatorPitch.suggestion || '')
-        ) 
-      } : defaultMetric,
-      team: metric1Data.team ? { 
-        ...metric1Data.team, 
-        feedback: transformFeedback(
-          (metric1Data.team.recap || '') + 
-          (metric1Data.team.feedback || '') + 
-          (metric1Data.team.comparison || '') + 
-          (metric1Data.team.suggestion || '')
-        ) 
-      } : defaultMetric,
-      marketOpportunity: metric1Data.marketOpportunity ? { 
-        ...metric1Data.marketOpportunity, 
-        feedback: transformFeedback(
-          (metric1Data.marketOpportunity.recap || '') + 
-          (metric1Data.marketOpportunity.feedback || '') + 
-          (metric1Data.marketOpportunity.comparison || '') + 
-          (metric1Data.marketOpportunity.suggestion || '')
-        ) 
-      } : defaultMetric,
-      tractionAwards: metric1Data.tractionAwards ? { 
-        ...metric1Data.tractionAwards, 
-        feedback: transformFeedback(
-          (metric1Data.tractionAwards.recap || '') + 
-          (metric1Data.tractionAwards.feedback || '') + 
-          (metric1Data.tractionAwards.comparison || '') + 
-          (metric1Data.tractionAwards.suggestion || '')
-        ) 
-      } : defaultMetric,
+      elevatorPitch: metric1Data.elevatorPitch
+        ? {
+            ...metric1Data.elevatorPitch,
+            feedback: transformFeedback({
+              recap: metric1Data.elevatorPitch.recap,
+              feedback: metric1Data.elevatorPitch.feedback,
+              comparison: metric1Data.elevatorPitch.comparison,
+              suggestion: metric1Data.elevatorPitch.suggestion,
+            }),
+          }
+        : defaultMetric,
+    
+      team: metric1Data.team
+        ? {
+            ...metric1Data.team,
+            feedback: transformFeedback({
+              recap: metric1Data.team.recap,
+              feedback: metric1Data.team.feedback,
+              comparison: metric1Data.team.comparison,
+              suggestion: metric1Data.team.suggestion,
+            }),
+          }
+        : defaultMetric,
+    
+      marketOpportunity: metric1Data.marketOpportunity
+        ? {
+            ...metric1Data.marketOpportunity,
+            feedback: transformFeedback({
+              recap: metric1Data.marketOpportunity.recap,
+              feedback: metric1Data.marketOpportunity.feedback,
+              comparison: metric1Data.marketOpportunity.comparison,
+              suggestion: metric1Data.marketOpportunity.suggestion,
+            }),
+          }
+        : defaultMetric,
     };
 
     const scores = [
       validatedMetric1.elevatorPitch.score,
       validatedMetric1.team.score,
       validatedMetric1.marketOpportunity.score,
-      validatedMetric1.tractionAwards.score,
     ];
-    const overallScore = Math.round(scores.reduce((sum: number, score: number) => sum + score, 0) / 4);
+    const overallScore = Math.round(scores.reduce((sum: number, score: number) => sum + score, 0) / 3);
     const summary= metric1Data.summary;
     // const strengths = [];
     // const weaknesses = [];
@@ -189,14 +192,12 @@ const cleanSonarOutputMetric1 = (metric1:any): string => {
       elevatorPitch: validatedMetric1.elevatorPitch,
       team: validatedMetric1.team,
       marketOpportunity: validatedMetric1.marketOpportunity,
-      tractionAwards:validatedMetric1.tractionAwards,
       overallScore,
       summary,
       rubricSpecificFeedback: {
         elevatorPitch: validatedMetric1.elevatorPitch.feedback,
         team: validatedMetric1.team.feedback,
         marketOpportunity: validatedMetric1.marketOpportunity.feedback,
-        tractionAwards: validatedMetric1.tractionAwards.feedback,
       },
     };
 
@@ -208,14 +209,12 @@ const cleanSonarOutputMetric1 = (metric1:any): string => {
       elevatorPitch: { score: 0, feedback: "Not provided. Unable to evaluate due to Sonar parsing error." },
       team: { score: 0, feedback: "Not provided. Unable to evaluate due to Sonar parsing error." },
       marketOpportunity: { score: 0, feedback: "Not provided. Unable to evaluate due to Sonar parsing error." },
-      tractionAwards: { score: 0, feedback: "Not provided. Unable to evaluate due to Sonar parsing error." },
       overallScore: 0,
       summary: "[Eleveator Pitch, Team, Market Opportunity] Failed to evaluate pitch due to parsing errors in Sonar responses.",
       rubricSpecificFeedback: {
         elevatorPitch: "Not provided. Unable to evaluate due to Sonar parsing error.",
         team: "Not provided. Unable to evaluate due to Sonar parsing error.",
         marketOpportunity: "Not provided. Unable to evaluate due to Sonar parsing error.",
-        tractionAwards: "Not provided. Unable to evaluate due to Sonar parsing error."
       },
     };
     return JSON.stringify(defaultData);

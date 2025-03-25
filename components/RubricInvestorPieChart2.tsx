@@ -159,12 +159,12 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
             marginBottom: '-2rem'
           }}
         >
-          <b>Rubric2 Overall</b>
+          <b>Perplexity LLM Anaylsis Overall</b>
           <div style={{ fontSize: '16px', padding: '0.5rem',textAlign:'left' ,whiteSpace:'pre-line'}}>
-            {formattedSummary} 
+            {formattedSummary} <br/>
+            <b>Reference Citations:</b>
             </div>
           <div style={{ display:'flex',maxHeight:'200px',marginTop:'1rem',overflow:'scroll',flexDirection:'column',gap:'1rem',fontSize: '12px', width: '500px', padding: '0.5rem', textAlign: 'left', whiteSpace: 'pre-line' }}>
-            <b>Citations:</b>
             {citationList?.map((citation, index) => (
               <div key={index}>
                 {index+1}.
