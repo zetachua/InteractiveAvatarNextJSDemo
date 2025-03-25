@@ -28,12 +28,10 @@ interface Pause {
 
 // import {AVATARS, STT_LANGUAGE_LIST} from "@/app/lib/constants";
 import TypewriterText from "./Typewriter";
-import FeedbackPieChart from "./FeedbackPieChart";
 import { ChatHistory, FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData, AudioAnalysisMetrics } from "./KnowledgeClasses";
 import { Square,Microphone} from "@phosphor-icons/react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 import {models, tempUserInput} from '../pages/api/configConstants'
-import RubricInvestorPiechart from "./RubricInvestorPieChart";
 import RubricInvestorPiechart2 from "./RubricInvestorPieChart2";
 import CountdownTimer from "./Countdown";
 import SentimentInvestorPiechart from "./SentimentInvestorPieChart";
@@ -675,103 +673,104 @@ async function endSession() {
           <CountdownTimer isTimeUp={isTimeUp} timeLeft={timeLeft}></CountdownTimer>
         }
 
-        {stream && <>
-        <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>
+        {stream && 
+        <div>
+          <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>
 
-        <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
-          <div style={{display:!displayRubricAnalytics && !isLoadingSession?'flex':'none',width:'100%',justifyContent:'center',alignItems:'center'}}>
-            <div style={{backgroundColor:'rgba(255,255,255,0.1)',textAlign:'center',padding:'1rem',maxWidth:'60%',minWidth:'30%',maxHeight:'100px',overflowY:'scroll',scrollbarWidth:'none',borderRadius:'10px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',bottom:'9%',left:'50%'}}> 
-              {isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput} 
-            </div>
-         {/* { !hideSuggestions && suggestionOptions?.map((option, index) => (
-            <Button
-              key={index}
-              onClick={() => 
-                {
-                  setUserInput(option); // Set the clicked suggestion as user input
-                  handleSpeak(option);
-                  setHideSuggestions(true);              
+          <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
+            <div style={{display:!displayRubricAnalytics && !isLoadingSession?'flex':'none',width:'100%',justifyContent:'center',alignItems:'center'}}>
+              <div style={{backgroundColor:'rgba(255,255,255,0.1)',textAlign:'center',padding:'1rem',maxWidth:'60%',minWidth:'30%',maxHeight:'100px',overflowY:'scroll',scrollbarWidth:'none',borderRadius:'10px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',bottom:'9%',left:'50%'}}> 
+                {isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput} 
+              </div>
+          {/* { !hideSuggestions && suggestionOptions?.map((option, index) => (
+              <Button
+                key={index}
+                onClick={() => 
+                  {
+                    setUserInput(option); // Set the clicked suggestion as user input
+                    handleSpeak(option);
+                    setHideSuggestions(true);              
+                  }
                 }
-              }
-              isDisabled={isLoadingRepeat}
-              style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
-            >
-              {option}
-            </Button>
-          ))} */}
-          {/* {
-          suggestionOptions.map((option, index) => (
-            <Button
-              key={index}
-              onClick={() => {
-                // Append to the userInput when an option is selected
-                  setUserInput(prev => prev ? `${prev}, ${option}` : option);  // Concatenate the selected option
+                isDisabled={isLoadingRepeat}
+                style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
+              >
+                {option}
+              </Button>
+            ))} */}
+            {/* {
+            suggestionOptions.map((option, index) => (
+              <Button
+                key={index}
+                onClick={() => {
+                  // Append to the userInput when an option is selected
+                    setUserInput(prev => prev ? `${prev}, ${option}` : option);  // Concatenate the selected option
 
-                  // Handle selected options in the selectedOptions state
-                  setSelectedOptions(prev =>
-                    prev.includes(option) ? prev.filter(item => item !== option) : [...prev, option]
-                  );
+                    // Handle selected options in the selectedOptions state
+                    setSelectedOptions(prev =>
+                      prev.includes(option) ? prev.filter(item => item !== option) : [...prev, option]
+                    );
+                  }}
+                isDisabled={isLoadingRepeat}
+                style={{
+                  margin: '0.5rem',
+                  backgroundColor: selectedOptions.includes(option) ? 'blue' : 'white', // Highlight selected
+                  color: selectedOptions.includes(option) ? 'white' : 'black',
                 }}
-              isDisabled={isLoadingRepeat}
-              style={{
-                margin: '0.5rem',
-                backgroundColor: selectedOptions.includes(option) ? 'blue' : 'white', // Highlight selected
-                color: selectedOptions.includes(option) ? 'white' : 'black',
-              }}
+              >
+                {option}
+              </Button>
+            ))
+          } */}
+          </div>
+          </div>
+          <div className="flex flex-col items-center" style={{flexDirection:'row',justifyContent:'center',marginBottom:'2rem',display:!displayRubricAnalytics &&!isLoadingSession?'flex':'none',}}>
+            {/* Input field to capture user input */}
+            <Button
+              onClick={toggleSpeechToText}
+              style={{ background:'rgba(255,255,255,0.1)',margin: '0.5rem' ,borderRadius:'100px'}}
             >
-              {option}
-            </Button>
-          ))
-        } */}
-        </div>
-        </div>
-        <div className="flex flex-col items-center" style={{flexDirection:'row',justifyContent:'center',marginBottom:'2rem',display:!displayRubricAnalytics &&!isLoadingSession?'flex':'none',}}>
-          {/* Input field to capture user input */}
-          <Button
-            onClick={toggleSpeechToText}
-            style={{ background:'rgba(255,255,255,0.1)',margin: '0.5rem' ,borderRadius:'100px'}}
-          >
-          {isRecording ? <div className={`wave`} />: <>Talk <Microphone size={14} /></>}
-        </Button>
-        {/* <div>
-            <h3>Pauses:</h3>
-            {pauses.length > 0 ? (
-              <ul>
-                {pauses.map((pause, index) => (
-                  <li key={index}>
-                    Pause from {pause.pauseStart}s to {pause.pauseEnd}s, duration: {pause.pauseDuration}s
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>No pauses detected</p>
-            )}
-          </div> */}
-          
-          <Button
-            onClick={handleInterrupt}
-            style={{ margin: '0.5rem',opacity:displayRubricAnalytics?'50%':'100%',background:'rgba(255,255,255,0.1)'}}
-          >
-            <Square weight="fill"/>
-          </Button> 
-          <Input
-            placeholder="Type your message..."
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-            className="w-50 text-sm p-2"
-            style={{ backgroundColor:'rgba(255,255,255,0.1)'}}
-
-            />
-           <Button
-           onClick={()=>handleSpeak(userInput)}
-           isDisabled={!userInput.trim() || isLoadingRepeat}
-           style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
-            >
-           {isLoadingRepeat ? <Spinner /> :  "Send"}
+            {isRecording ? <div className={`wave`} />: <>Talk <Microphone size={14} /></>}
           </Button>
+          {/* <div>
+              <h3>Pauses:</h3>
+              {pauses.length > 0 ? (
+                <ul>
+                  {pauses.map((pause, index) => (
+                    <li key={index}>
+                      Pause from {pause.pauseStart}s to {pause.pauseEnd}s, duration: {pause.pauseDuration}s
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No pauses detected</p>
+              )}
+            </div> */}
+            
+            <Button
+              onClick={handleInterrupt}
+              style={{ margin: '0.5rem',opacity:displayRubricAnalytics?'50%':'100%',background:'rgba(255,255,255,0.1)'}}
+            >
+              <Square weight="fill"/>
+            </Button> 
+            <Input
+              placeholder="Type your message..."
+              value={userInput}
+              onChange={(e) => setUserInput(e.target.value)}
+              className="w-50 text-sm p-2"
+              style={{ backgroundColor:'rgba(255,255,255,0.1)'}}
+
+              />
+            <Button
+            onClick={()=>handleSpeak(userInput)}
+            isDisabled={!userInput.trim() || isLoadingRepeat}
+            style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
+              >
+            {isLoadingRepeat ? <Spinner /> :  "Send"}
+            </Button>
+          </div>
         </div>
-        </>
-        }
+         }
 
         {/* {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentScore} />} */}
         {sentimentJson && rubricJson2 && <div style={{display:'flex',gap:'1rem',position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>
