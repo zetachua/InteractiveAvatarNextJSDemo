@@ -673,7 +673,7 @@ async function endSession() {
           <CountdownTimer isTimeUp={isTimeUp} timeLeft={timeLeft}></CountdownTimer>
         }
 
-        {stream && 
+        {(stream || true )&& 
         <div>
           <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>
 
