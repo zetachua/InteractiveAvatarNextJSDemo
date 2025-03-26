@@ -135,14 +135,14 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
               background: 'rgba(255, 255, 255, 0.1)',
               borderRadius: '10px',
               textAlign: 'center',
-              width: '80%',
+              width: '85%',
               fontSize: '16px',
               color: '#fff',
             }}
             onMouseEnter={() => setIsAudioMetricDescriptionHidden(prev => !prev)}
             onMouseLeave={() => setIsAudioMetricDescriptionHidden(prev => !prev)}
           >
-            {!isAudioMetricDescriptionHidden && <div
+            {/* {!isAudioMetricDescriptionHidden && <div
               style={{
                 position: 'absolute',
                 bottom: '100%',
@@ -158,8 +158,15 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
               <p><b>Arousal:</b> Represents the intensity of emotion.</p>
               <p><b>Dominance:</b> Measures the perceived level of control associated with an emotion.</p>
               <p><b>Valence:</b> Measures the pleasantness or unpleasantness of the emotion.</p>
-            </div>}
-            <b>Arousal:</b> {roundedArousal} | <b>Dominance:</b> {roundedDominance} | <b>Valence:</b> {roundedDominance}
+            </div>} */}
+            <div style={{fontSize:'16px'}}><b>Pitch Overall: {(roundedArousal+roundedDominance+roundedValence)/3<0.7?'Mid':(roundedArousal+roundedDominance+roundedValence)<0.8?'Good':'Excellent'}</b> </div>
+            <b>Arousal:</b> {roundedArousal} | <b>Dominance:</b> {roundedDominance} | <b>Valence:</b> {roundedValence}
+             <p></p>
+             <div style={{textAlign:'left',padding:'0.5rem'}}>
+              <p><b>Arousal:</b> Intensity of emotion.</p>
+              <p><b>Dominance:</b> Perceived level of control associated with an emotion.</p>
+              <p><b>Valence:</b> Pleasantness or unpleasantness of the emotion.</p>
+            </div>
           </div>
         </div>
         <div

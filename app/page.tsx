@@ -45,6 +45,8 @@ export default function App() {
         </Button>
       </div>
 
+      <div style={{position:'absolute',right:'1%',top:'0',zIndex:'1000'}}> BETA MODE </div>
+
       {/* Conditional Component Rendering */}
       <div className="w-full h-full">
         {activeView === "customer" ? (
