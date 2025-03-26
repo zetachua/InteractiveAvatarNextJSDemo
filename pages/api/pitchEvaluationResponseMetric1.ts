@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { pitchEvaluationPromptMetric1} from './prompts';
 import {metric1ResultInvestorFilter } from './completionFilterFunctions';
-import { getSonarChatCompletionForMetric } from './pitchEvaluationResponseShared';
+import { cleanResponse, getSonarChatCompletionForMetric, transformFeedback } from './pitchEvaluationResponseShared';
 
 const pitchEvaluationResponseMetric1 = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
@@ -54,7 +54,7 @@ const fetchMetric1 = async (userInput: string, chatHistory: any[]) => {
         getSonarMetric1(userInput, chatHistory),
       ]);
 
-      console.log("Metric 1 Result:", JSON.stringify(metric1Result, null, 2));
+      console.log("Metric 1 Sonar LLM Completion:", JSON.stringify(metric1Result, null, 2));
 
       rubricRatingCompletion = {
         choices: [
@@ -67,6 +67,7 @@ const fetchMetric1 = async (userInput: string, chatHistory: any[]) => {
       };
 
     let responseContent = rubricRatingCompletion?.choices[0].message.content;
+    console.log('testFn4: successful cleanSonarOutputMetric1- JsonParse combined data ')
 
     if (!responseContent) {
       throw new Error("Empty rubric response");
@@ -95,36 +96,14 @@ const fetchMetric1 = async (userInput: string, chatHistory: any[]) => {
 const cleanSonarOutputMetric1 = (metric1:any): string => {
 
   try {
-    const cleanResponse = (content: string): string => {
-      let cleaned = content
-      .replace(/```json|```/g, '')           // Remove code block markers
-      .replace(/<think>[\s\S]*?<\/think>/g, '')  // Remove <think>...</think> tags
-      .trim();
-
-      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error("No valid JSON found in response");
-      }
-      return jsonMatch[0];
-    };
-    const transformFeedback = (feedback: any): string => {
-      if (typeof feedback === 'string') return feedback;
     
-      // Default values in case fields are missing
-      const recap = feedback?.recap || "";
-      const feedbackText = feedback?.feedback || "";
-      const comparison = feedback?.comparison || "";
-      const suggestion = feedback?.suggestion || "";
-    
-      // Concatenate all relevant fields
-      return `${recap}. ${comparison}. ${feedbackText}. ${suggestion}`;
-    };
-
     if (!metric1 ) {
       throw new Error("One or more metrics have invalid JSON.");
     }
+    console.log("testFn metric1 begin")
 
     const metric1Data = JSON.parse(cleanResponse(metric1.choices[0].message.content));
+    console.log(metric1Data,"testFn3 metric1: JSON.parse cleanResponse successful")
 
     const defaultMetric = {
       score: 0,
@@ -176,6 +155,7 @@ const cleanSonarOutputMetric1 = (metric1:any): string => {
     ];
     const overallScore = Math.round(scores.reduce((sum: number, score: number) => sum + score, 0) / 3);
     const summary= metric1Data.summary;
+    
     // const strengths = [];
     // const weaknesses = [];
     // const allMetrics = {
@@ -187,7 +167,8 @@ const cleanSonarOutputMetric1 = (metric1:any): string => {
     //   if (value.score >= 7) strengths.push(key);
     //   if (value.score < 5) weaknesses.push(key);
     // }
-    // const summary = `The pitch shows potential with strengths in ${strengths.length ? strengths.join(', ') : 'none'}${weaknesses.length ? `, but needs improvement in ${weaknesses.join(', ')}` : ''}.`;
+    // const strengthWeakness = `The pitch shows potential with strengths in ${strengths.length ? strengths.join(', ') : 'none'}${weaknesses.length ? `, but needs improvement in ${weaknesses.join(', ')}` : ''}.`;
+    
     const combinedData = {
       elevatorPitch: validatedMetric1.elevatorPitch,
       team: validatedMetric1.team,

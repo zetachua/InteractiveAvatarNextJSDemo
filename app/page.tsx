@@ -1,13 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@nextui-org/react";
+import { Button, Switch } from "@nextui-org/react"; // Added Switch from NextUI
 import InteractiveAvatar from "@/components/InteractiveAvatar";
 import InteractiveAvatarKnowledge from "@/components/InteractiveAvatarKnowledge";
 import InteractiveAvatarInvestors from "@/components/InteractiveAvatarInvestors";
+import InteractiveInvestors from "@/components/InteractiveInvestors";
 
 export default function App() {
   const [activeView, setActiveView] = useState("investors");
+  const [withAvatar, setWithAvatar] = useState(false); // State for toggle
 
   return (
     <div className="w-screen h-screen relative">
@@ -45,17 +47,29 @@ export default function App() {
         </Button>
       </div>
 
-      <div style={{position:'absolute',right:'1%',top:'0',zIndex:'1000'}}> BETA MODE </div>
+      {/* Toggle Switch for withAvatar - Only shown in investors view */}
+      {activeView === "investors" && (
+        <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+          <span className="text-gray-700">Show Avatar</span>
+          <Switch
+            isSelected={withAvatar}
+            onValueChange={setWithAvatar}
+            color="primary"
+          />
+        </div>
+      )}
 
       {/* Conditional Component Rendering */}
       <div className="w-full h-full">
         {activeView === "customer" ? (
           <InteractiveAvatar />
-        ) : activeView==="persona"? (
+        ) : activeView === "persona" ? (
           <InteractiveAvatarKnowledge />
-        ):
-          <InteractiveAvatarInvestors/>
-        }
+        ) : withAvatar ? (
+          <InteractiveAvatarInvestors />
+        ) : (
+          <InteractiveInvestors />
+        )}
       </div>
     </div>
   );

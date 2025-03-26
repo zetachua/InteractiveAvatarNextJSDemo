@@ -1,8 +1,3 @@
-import type { StartAvatarResponse } from "@heygen/streaming-avatar";
-import StreamingAvatar, {
-  AvatarQuality,
-  StreamingEvents, TaskMode, TaskType, VoiceEmotion,
-} from "@heygen/streaming-avatar";
 import {
   Button,
   Card,
@@ -23,42 +18,27 @@ interface Pause {
   end: number;
 }
 
-// import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
-
-// import {AVATARS, STT_LANGUAGE_LIST} from "@/app/lib/constants";
-import TypewriterText from "./Typewriter";
-import FeedbackPieChart from "./FeedbackPieChart";
-import { AudioAnalysisMetrics, ChatHistory, FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
+import { AudioAnalysisMetrics, ChatHistory,FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
 import { Square,Microphone} from "@phosphor-icons/react";
-import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
 import {models, tempUserInput} from '../pages/api/configConstants'
-import RubricInvestorPiechart from "./RubricInvestorPieChart";
 import RubricInvestorPiechart2 from "./RubricInvestorPieChart2";
 import CountdownTimer from "./Countdown";
 import SentimentInvestorPiechart from "./SentimentInvestorPieChart";
+import ChatHistoryDisplay from "./ChatHistoryDisplay";
 
-export default function InteractiveAvatarInvestors() {
+export default function InteractiveInvestors() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
   const [loadingRubric, setLoadingRubric] = useState(false);
   const [loadingRubric1, setLoadingRubric1] = useState(false);
   const [loadingRubric2, setLoadingRubric2] = useState(false);
   const [loadingRubric3, setLoadingRubric3] = useState(false);
   const [isLoadingRepeat, setIsLoadingRepeat] = useState(false);
-  const [stream, setStream] = useState<MediaStream>();
+  const [stream, setStream] = useState(false);
   const [debug, setDebug] = useState<string>();
-  const [knowledgeId, setKnowledgeId] = useState<string>("");
-  const [avatarId, setAvatarId] = useState<string>("June_HR_public");
-  const [language, setLanguage] = useState<string>('en');
   const [displayText, setDisplayText]= useState('');
 
-  const [data, setData] = useState<StartAvatarResponse>();
   const [userInput, setUserInput] = useState<string>("");
-  const [text, setText] = useState<string>("");
-  const [apiKey, setApiKey] = useState<string>("");
   const mediaStream = useRef<HTMLVideoElement>(null);
-  const avatar = useRef<StreamingAvatar | null>(null);
-  const [chatMode, setChatMode] = useState("text_mode");
-  const [isUserTalking, setIsUserTalking] = useState(false);
   const [chatHistory, setChatHistory] = useState<ChatHistory[]>([]);
   const [feedbackText,setFeedbackText]=useState('');
   const [rubricSummary,setRubricSummary]=useState('');
@@ -141,76 +121,14 @@ export default function InteractiveAvatarInvestors() {
     return () => clearInterval(timer);
   }, [callCount, timeLeft]);
 
-console.log(chatHistory,"chatHistory")
-  async function fetchAccessToken() {
-    try {
-      const response = await fetch("/api/get-access-token", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json", // Specify the content type if you're sending JSON data
-          "x-api-key": apiKey, // Include the API key in the request header
-        },
-      });
-      const token = await response.text();
-
-      console.log("Access Token:", token); // Log the token to verify
-
-      return token;
-    } catch (error) {
-      console.error("Error fetching access token:", error);
-    }
-
-    return "";
-  }
-
   async function startSession() {
     setIsTimeUp(false);
     setIsLoadingSession(true);
     setDisplayRubricAnalytics(false);
-    const newToken = await fetchAccessToken();
-
-    avatar.current = new StreamingAvatar({
-      token: newToken,
-      basePath: "https://api.heygen.com",
-      userAudioWebsocketPath: "ws://localhost:3001/user-audio-input",
-    });
-    avatar.current.on(StreamingEvents.AVATAR_START_TALKING, (e) => {
-      console.log("Avatar started talking", e);
-    });
-    avatar.current.on(StreamingEvents.AVATAR_STOP_TALKING, (e) => {
-      console.log("Avatar stopped talking", e);
-    });
-    avatar.current.on(StreamingEvents.STREAM_DISCONNECTED, () => {
-      console.log("Stream disconnected");
-      endSession();
-    });
-    avatar.current?.on(StreamingEvents.STREAM_READY, (event) => {
-      console.log(">>>>> Stream ready:", event.detail);
-      setStream(event.detail);
-    });
-    avatar.current?.on(StreamingEvents.USER_START, (event) => {
-      console.log(">>>>> User started talking:", event);
-      setIsUserTalking(true);
-    });
-    avatar.current?.on(StreamingEvents.USER_STOP, (event) => {
-      console.log(">>>>> User stopped talking:", event);
-      setIsUserTalking(false);
-    });
+    setStream(true);
     try {
-      const res = await avatar.current.createStartAvatar({
-        quality: AvatarQuality.High,
-        avatarName: avatarId,
-        disableIdleTimeout: true,
-      });
-
-      setData(res);
-      // default to voice mode
-      await avatar.current?.startVoiceChat({
-        useSilencePrompt: false
-      });
-      setChatMode("voice_mode");
       resetAllStates();
-      console.log("i did run")
+
     } catch (error) {
       console.error("Error starting avatar session:", error);
     } finally {
@@ -221,10 +139,6 @@ console.log(chatHistory,"chatHistory")
   async function handleSpeak(userInputValue?:string) {
     setIsLoadingRepeat(true);
     setDisplayRubricAnalytics(false);
-    if (!avatar.current) {
-      setDebug("Avatar API not initialized");
-    return;
-    }
   
     try {
       // Fetch LLM response
@@ -238,13 +152,6 @@ console.log(chatHistory,"chatHistory")
       if (data.questionResponse !== undefined) setDisplayText(data.questionResponse);
       console.log(userInputValue,chatHistory,"im here userInput","chatHistory")
 
-      // Make the avatar speak the response
-      await avatar.current.speak({
-        text: data.questionResponse,
-        taskType: TaskType.REPEAT,
-        taskMode: TaskMode.SYNC,
-      });
-
       if(userInputValue) setUserInput(userInputValue)
 
     } catch (error) {
@@ -254,86 +161,6 @@ console.log(chatHistory,"chatHistory")
       setIsLoadingRepeat(false);
     }
   }
-  async function handleInterrupt() {
-    if (!avatar.current) {
-      setDebug("Avatar API not initialized");
-
-      return;
-    }
-    await avatar.current
-      .interrupt()
-      .catch((e) => {
-        setDebug(e.message);
-      });
-  }
-
-  // const toggleSpeechToText = () => {
-  //   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  //   if (!SpeechRecognition) {
-  //     setDebug('Speech Recognition API not supported in this browser');
-  //     return;
-  //   }
-  //   setCallCount((prevCount) => prevCount + 1); // Increment call count
-
-  //   if (!isRecording) {
-  //     // Start recording
-  //     const recognition = new SpeechRecognition();
-  //     recognitionRef.current = recognition;
-  //     recognition.lang = 'en-US';
-  //     recognition.interimResults = false;
-  //     recognition.maxAlternatives = 1;
-  //     recognition.continuous = true;
-
-  //     transcriptRef.current = ''; // Reset transcript
-
-  //     recognition.onstart = () => {
-  //       console.log('Speech recognition started');
-  //     };
-
-  //     recognition.onresult = (event: SpeechRecognitionEvent) => {
-  //       const newTranscript = Array.from(event.results)
-  //         .map((result) => result[0].transcript)
-  //         .join(' ');
-  //       transcriptRef.current = newTranscript;
-  //       console.log('Transcript updated:', transcriptRef.current);
-  //     };
-
-  //     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-  //       console.error('Speech recognition error:', event.error);
-  //       setDebug(`Speech recognition error: ${event.error}`);
-  //       setIsRecording(false);
-  //       recognitionRef.current = null;
-  //     };
-
-  //     recognition.onend = () => {
-  //       console.log('Speech recognition ended, current transcript:', transcriptRef.current);
-  //       if (isRecording) {
-  //         // Restart if ended unexpectedly
-  //         console.log('Restarting recognition...');
-  //         recognition.start();
-  //       } else {
-  //         // Stopped manually, update userInput and trigger speak
-  //         setUserInput(transcriptRef.current || '');
-  //         if (transcriptRef.current) {
-  //           handleSpeak(transcriptRef.current);
-  //         } else {
-  //           setDebug('No speech detected');
-  //         }
-  //         recognitionRef.current = null;
-  //       }
-  //     };
-
-  //     recognition.start();
-  //     setIsRecording(true);
-  //     setDebug('');
-  //   } else {
-  //     // Stop recording
-  //     if (recognitionRef.current) {
-  //       recognitionRef.current.stop();
-  //       setIsRecording(false);
-  //     }
-  //   }
-  // };
 
   const resetAllStates=()=>{
     setFeedbackText('');
@@ -511,8 +338,7 @@ async function endSession() {
   setLoadingRubric2(true);
   setLoadingRubric3(true);
   
-  await avatar.current?.stopAvatar();
-  setStream(undefined);
+  setStream(false);
 
   try{
     fetchSentiment();
@@ -641,39 +467,6 @@ async function endSession() {
     }
   };
 
-  const handleChangeChatMode = useMemoizedFn(async (v) => {
-    if (v === chatMode) {
-      return;
-    }
-    if (v === "text_mode") {
-      avatar.current?.closeVoiceChat();
-    } else {
-      await avatar.current?.startVoiceChat();
-    }
-    setChatMode(v);
-  });
-
-  const previousText = usePrevious(text);
-  useEffect(() => {
-    if (!previousText && text) {
-      avatar.current?.startListening();
-    } else if (previousText && !text) {
-      avatar?.current?.stopListening();
-    }
-  }, [text, previousText]);
-
-  useEffect(() => {
-    if (stream && mediaStream.current) {
-      mediaStream.current.srcObject = stream;
-      mediaStream.current.onloadedmetadata = () => {
-        mediaStream.current!.play();
-        setDebug("Playing");
-      };
-    }
-  }, [mediaStream, stream]);
-
-
-
   return (
     <div className="flex flex-col "style={{display:'flex',justifyContent:'center',alignItems:'center'}} >
       <Card className="w-screen h-screen overflow-hidden border-none rounded-none" style={{background: 'linear-gradient(to top, #987B8C, #F0C7C2)'}}>
@@ -705,23 +498,10 @@ async function endSession() {
                 </Button>
               </div>
               <div style={{position:'relative',width:'100%',height:'100%'}}>
-                {<TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>}
-
-                <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
-                  <div style={{display:'flex',width:'100%',justifyContent:'center',alignItems:'center'}}>
-                    <div style={{fontSize:'14px',backgroundColor:'rgba(255,255,255,0.3)',color:'black',boxShadow:'2px 2px 0px 0px rgba(0,0,0,1)',textAlign:'center',padding:'1rem',width:'470px',maxHeight:'90px',overflowY:'scroll',scrollbarWidth:'none',borderRadius:'10px',minHeight:'40px',position:'absolute',transform:'translate(-50%,-50%)',top:'-2.8rem',left:'50%'}}> 
-                      <span>{isLoadingRepeat ? <Spinner style={{transform:'scale(0.7)',maxHeight:'6px' }}/> :  ""}{userInput}</span>
-                    </div>
-                </div>
-                </div>
+                <ChatHistoryDisplay chatHistory={chatHistory}></ChatHistoryDisplay>
                 <div className="flex flex-col items-center" style={{flexDirection:'row',justifyContent:'center',marginBottom:'2rem',display:'flex',}}>
                   {/* Input field to capture user input */}
-                  <Button
-                    onClick={toggleSpeechToText}
-                    style={{ background:'rgba(255,255,255,0.1)',margin: '0.5rem' ,borderRadius:'100px'}}
-                  >
-                  {isRecording ? <div className={`wave`} />: <>Talk <Microphone size={14} /></>}
-                </Button>
+                 
                 {/* <div>
                     <h3>Pauses:</h3>
                     {pauses.length > 0 ? (
@@ -737,27 +517,52 @@ async function endSession() {
                     )}
                   </div> */}
                   
-                  <Button
-                    onClick={handleInterrupt}
-                    style={{ margin: '0.5rem',opacity:displayRubricAnalytics?'50%':'100%',background:'rgba(255,255,255,0.1)'}}
-                  >
-                    <Square weight="fill"/>
-                  </Button> 
-                  <Input
+               
+                  <textarea
                     placeholder="Type your message..."
                     value={userInput}
                     onChange={(e) => setUserInput(e.target.value)}
-                    className="w-50 text-sm p-2"
-                    style={{ backgroundColor:'rgba(255,255,255,0.1)'}}
-
-                    />
+                    style={{
+                      display:'flex',
+                      backgroundColor:'rgba(255,255,255,0.2)',
+                      boxShadow: "2px 2px 0px 0px rgba(0, 0, 0, 1)", // Black shadow
+                      textAlign: "left",
+                      padding: "0.5rem",
+                      width: "470px",
+                      fontSize:'14px',
+                      justifyContent:'center',
+                      alignContent:'center',
+                      maxHeight: "90px!important",
+                      minHeight: "20px!important",
+                      overflowY: "scroll",
+                      scrollbarWidth: "none", // Firefox
+                      borderRadius: "20px",
+                      border: "none", // Remove default borders that might interfere
+                      outline: "none", // Remove default focus outline if unwanted
+                    }}
+                  >
+                     <style>
+                      {`
+                        textarea::placeholder {
+                          color: #FF6347; /* Change this to any color you'd like */
+                          opacity: 1; /* Optional: make the placeholder text fully opaque */
+                        }
+                      `}
+                    </style>
+                  </textarea>
                   <Button
                   onClick={()=>handleSpeak(userInput)}
                   isDisabled={!userInput.trim() || isLoadingRepeat}
-                  style={{ margin: '0.5rem',background:'rgba(255,255,255,0.1)'}}
+                  style={{ margin: '0rem 0rem 0rem 1rem',background:'rgba(255,255,255,0.1)'}}
                     >
                   {isLoadingRepeat ? <Spinner /> :  "Send"}
                   </Button>
+                  <Button
+                    onClick={toggleSpeechToText}
+                    style={{ background:'rgba(255,255,255,0.1)',margin: '0.5rem' ,borderRadius:'100px'}}
+                  >
+                  {isRecording ? <div className={`wave`} />: <>Talk <Microphone size={14} /></>}
+                </Button>
                 </div>
               </div>
 
@@ -765,42 +570,6 @@ async function endSession() {
           ) : !isLoadingSession ? (
             <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center"style={{backgroundColor:'rgba(255,255,255,0.2)',borderRadius:'50px',padding:'2rem',maxHeight:'40%'}}>
               <div className="flex flex-col gap-2 w-full" style={{position:'relative'}} >
-                {/* <Select
-                  placeholder="Select Avatar"
-                  size="md"
-                  onChange={(e) => {
-                    setAvatarId(e.target.value);
-                  }}
-                >
-                  {AVATARS.map((avatar) => (
-                    <SelectItem
-                      key={avatar.avatar_id}
-                      textValue={avatar.avatar_id}
-                    >
-                      {avatar.name}
-                    </SelectItem>
-                  ))}
-                </Select> */}
-                {/* <Select
-                  label="Select language"
-                  placeholder="Select language"
-                  className="max-w-xs"
-                  selectedKeys={[language]}
-                  onChange={(e) => {
-                    setLanguage(e.target.value);
-                  }}
-                >
-                  {STT_LANGUAGE_LIST.map((lang) => (
-                    <SelectItem key={lang.key}>
-                      {lang.label}
-                    </SelectItem>
-                  ))}
-                </Select> */}
-                 <Input
-                  placeholder="Paste HeyGen API Key"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  />
                  <Select
                     placeholder="Select AI Model"
                     size="md"

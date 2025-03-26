@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { pitchEvaluationPromptMetric3} from './prompts';
 import {  metric3ResultInvestorFilter } from './completionFilterFunctions';
-import { getSonarChatCompletionForMetric } from './pitchEvaluationResponseShared';
+import { cleanResponse, getSonarChatCompletionForMetric, transformFeedback } from './pitchEvaluationResponseShared';
 
 const pitchEvaluationResponseMetric3 = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
@@ -53,7 +53,7 @@ const fetchMetric3 = async (userInput: string, chatHistory: any[]) => {
         getSonarMetric3(userInput, chatHistory),
       ]);
 
-      console.log("Metric 3 Result:", JSON.stringify(metric3Result, null, 2));
+      console.log("Metric 3 Sonar LLM Completion:", JSON.stringify(metric3Result, null, 2));
 
       rubricRatingCompletion = {
         choices: [
@@ -91,37 +91,13 @@ const fetchMetric3 = async (userInput: string, chatHistory: any[]) => {
 
 const cleanSonarOutputMetric3 = (metric3: any): string => {
   try {
-    const cleanResponse = (content: string): string => {
-      let cleaned = content
-      .replace(/```json|```/g, '')           // Remove code block markers
-      .replace(/<think>[\s\S]*?<\/think>/g, '')  // Remove <think>...</think> tags
-      .trim();
-
-      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error("No valid JSON found in response");
-      }
-      return jsonMatch[0];
-    };
-
-    const transformFeedback = (feedback: any): string => {
-      if (typeof feedback === 'string') return feedback;
-    
-      // Default values in case fields are missing
-      const recap = feedback?.recap || "";
-      const feedbackText = feedback?.feedback || "";
-      const comparison = feedback?.comparison || "";
-      const suggestion = feedback?.suggestion || "";
-    
-      // Concatenate all relevant fields
-      return `${recap}. ${comparison}. ${feedbackText}. ${suggestion}`;
-    };
 
     if (!metric3) {
       throw new Error("One or more metrics have invalid JSON.");
     }
-
+    console.log("testFn metric3 begin")
     const metric3Data = JSON.parse(cleanResponse(metric3.choices[0].message.content));
+    console.log(metric3Data,"testFn3 metric3: JSON.parse cleanResponse successful")
 
     const defaultMetric = {
       score: 0,
