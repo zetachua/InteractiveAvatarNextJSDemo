@@ -163,6 +163,9 @@ export default function InteractiveInvestors() {
   }
 
   const resetAllStates=()=>{
+    setTimeLeft(300);
+    setIsTimeUp(false);
+    setCallCount(0);
     setFeedbackText('');
     setDisplayText('');
     setChatHistory([]);
@@ -608,7 +611,7 @@ async function endSession() {
 
         {/* {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentScore} />} */}
         {sentimentJson && rubricJson2 && 
-          <div style={{display:'flex',gap:'1rem',position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>
+          <div style={{fontSize: '1.3rem', display:'flex',gap:'1rem',position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>
             <RubricInvestorPiechart2  citations={rubricCitations2} data={rubricJson2} overallScore={rubricAllRatings2} summary={rubricSummary2} specificFeedback={rubricSpecificFeedback2} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart2>
             <SentimentInvestorPiechart audioAnalytics={audioAnalytics} data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0}></SentimentInvestorPiechart>
             {(!rubricCitations2 || loadingRubric1 || loadingRubric2 || loadingRubric)&& 

@@ -336,6 +336,9 @@ console.log(chatHistory,"chatHistory")
   // };
 
   const resetAllStates=()=>{
+    setTimeLeft(300);
+    setIsTimeUp(false);
+    setCallCount(0);
     setFeedbackText('');
     setDisplayText('');
     setChatHistory([]);

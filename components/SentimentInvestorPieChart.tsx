@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { PieChart, Pie, Cell, Tooltip, Legend, Text } from 'recharts';
+import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Button } from '@nextui-org/button';
 import Section from './Section';
 import {
@@ -33,7 +33,6 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
     dominance,
     valence
   } = audioAnalytics;
-  const [isAudioMetricDescriptionHidden, setIsAudioMetricDescriptionHidden] = useState(true);
 
   // Destructure values from the feedbackData prop
   const {
@@ -69,19 +68,13 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
   const roundedDominance = roundToTwoSignificantFigures(dominance);
   const roundedValence = roundToTwoSignificantFigures(valence);
 
-  // Colors for the pie chart
-  const COLORS = [
-    '#A8DADC', // Soft light blue
-    '#FBAFC5', // Soft pink
-    '#E1FAEE', // Light mint green
-    '#F5D0C5', // Warm peach
-    '#BFD8B8', // Soft sage green
-    '#FFC1E3', // Pastel pink
-    '#D1B3D3', // Light lavender
-    '#FFE156', // Soft yellow
-    '#C9E4CA', // Pale olive green
-    '#FF9F1C'  // Warm orange
-  ];
+  // Colors for the bar chart
+  const getBarColor = (value: number) => {
+    if (value <= 1) return '#FF6B6B';  // Red for low values
+    if (value <= 2) return '#4ECDC4';  // Teal for medium values
+    if (value <= 3) return '#45B7D1';  // Blue for higher values
+    return '#2AB673';  // Green for highest values
+  };
 
   const roundedOverallScore =
     overallScore !== undefined
@@ -119,13 +112,11 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
             borderRadius: '50px',
             textAlign: 'center',
             width: '90%',
-            fontSize: '24px',
-            marginBottom: '-2rem',
             justifyContent: 'center',
           }}
         >
-          <b>Sentiment Overall</b>
-          <div style={{ fontSize: '16px', padding: '0.5rem' }}>{feedbackSummary}</div>
+          <b style={{ fontSize: '2rem' }}>Sentiment Overall</b>
+          <div style={{ padding: '0.5rem' }}>{feedbackSummary}</div>
           <div
             style={{
               position: 'relative',
@@ -136,11 +127,8 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
               borderRadius: '10px',
               textAlign: 'center',
               width: '85%',
-              fontSize: '16px',
               color: '#fff',
             }}
-            onMouseEnter={() => setIsAudioMetricDescriptionHidden(prev => !prev)}
-            onMouseLeave={() => setIsAudioMetricDescriptionHidden(prev => !prev)}
           >
             {/* {!isAudioMetricDescriptionHidden && <div
               style={{
@@ -159,7 +147,7 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
               <p><b>Dominance:</b> Measures the perceived level of control associated with an emotion.</p>
               <p><b>Valence:</b> Measures the pleasantness or unpleasantness of the emotion.</p>
             </div>} */}
-            <div style={{fontSize:'16px'}}><b>Pitch Overall: {(roundedArousal+roundedDominance+roundedValence)/3<0.7?'Mid':(roundedArousal+roundedDominance+roundedValence)<0.8?'Good':'Excellent'}</b> </div>
+            <div style={{ fontSize: '1.5rem' }}><b>Pitch Overall: {(roundedArousal+roundedDominance+roundedValence)/3<0.7?'Mid':(roundedArousal+roundedDominance+roundedValence)<0.8?'Good':'Excellent'}</b> </div>
             <b>Arousal:</b> {roundedArousal} | <b>Dominance:</b> {roundedDominance} | <b>Valence:</b> {roundedValence}
              <p></p>
              <div style={{textAlign:'left',padding:'0.5rem'}}>
@@ -169,41 +157,45 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
             </div>
           </div>
         </div>
-        <div
-          style={{
-            fontWeight: 600,
-            fontSize: '24px',
-            borderRadius: '10px',
-            padding: '0rem 1.2rem 0rem 1.2rem',
-            zIndex: '1000',
-            position: 'absolute',
-            top: '27%',
-            left: '50%',
-            transform: 'translate(-50%,-50%)',
-            color: '#000',
-            backgroundColor: '#fff',
-          }}
-        >
-          {roundedOverallScore}/5
-        </div>
-        <PieChart width={450} height={600}>
-          <Pie
-            data={chartData}
-            dataKey="value"
-            nameKey="name"
-            cx="50%"
-            cy="50%"
-            outerRadius={150}
-            label
-          >
-            {chartData.map((_, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-            ))}
-          </Pie>
-          <Tooltip />
-          <Legend />
-        </PieChart>
       </div>
+      <div
+        style={{
+          marginTop: '2rem',
+          fontWeight: 600,
+          fontSize: '24px',
+          borderRadius: '10px',
+          padding: '0rem 1.2rem 0rem 1.2rem',
+          color: '#000',
+          backgroundColor: '#fff',
+        }}
+      >
+        {roundedOverallScore}/5
+      </div>
+      <ResponsiveContainer style={{ marginTop: '3rem' }} width='90%' height={400}>
+        <BarChart
+          layout='vertical'
+          data={chartData}
+        >
+          <XAxis
+            type='number'
+            ticks={[1, 2, 3, 4, 5]}
+            scale='linear'
+          />
+          <YAxis type='category' dataKey='name' width={130} />
+          <Bar
+            dataKey='value'
+            label={false}
+          >
+            {chartData.map((entry, index) => (
+              <Cell
+                key={`bar-${index}`}
+                fill={getBarColor(entry.value)}
+              />
+            ))}
+          </Bar>
+          <Tooltip />
+        </BarChart>
+      </ResponsiveContainer>
       <div style={{ padding: '1rem' }}>
         <div
           style={{
