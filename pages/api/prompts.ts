@@ -683,6 +683,8 @@ export const qnaPrompt = (userInput:string, chatHistory:any) => `
   Only return a JSON object with a single key-value pair:
   - response: Your very brief comment on the user's latest input, if there is one, and the question you are about to ask.
 
+  **Critical Instruction**: Regardless of the input's clarity or relevance, *always* return your response as a JSON object with a single key "response" containing your comment (if applicable) and question. If the input is unclear or nonsensical (e.g., "hello"), use the chat history to ask a relevant follow-up or a foundational question like "Can you describe your startup’s core value proposition?" Do not include any text outside the JSON object.
+  
   Example output:
   {
     "response": "That's an interesting point. How do you plan to scale your operations?",

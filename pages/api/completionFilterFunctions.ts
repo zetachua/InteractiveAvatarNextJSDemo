@@ -453,30 +453,38 @@ export const metric3ResultInvestorFilter = (responseContent: string) => {
     return null;
   }
 };
-
 export const qnaFilter = (responseContent: string) => {
   try {
-    let qnaJson = responseContent
-      .replace(/<think>[\s\S]*?<\/think>/g, '')  // Remove <think> tags
-      .replace(/```json|```/g, '')               // Remove ```json markers
-      .trim();
-      
-    let qnaJsonMatch = qnaJson.match(/\{[\s\S]*\}/);
-    qnaJson = qnaJsonMatch ? qnaJsonMatch[0].trim() : '{}';
+    console.log("Raw response:", responseContent);
 
-    // Validate if JSON is properly structured
-    const qnaDataJson: any = JSON.parse(qnaJson);
-    
-    if (!qnaDataJson || typeof qnaDataJson !== "object") {
-      throw new Error("Invalid JSON structure");
+    // Clean the response: remove <think> tags and code markers
+    let cleanedResponse = responseContent
+      .replace(/<think>[\s\S]*?<\/think>/g, '')  // Remove <think> tags
+      .replace(/```json|```/g, '')              // Remove ```json markers
+      .trim();
+
+    // Look for a JSON object specifically containing "response"
+    let qnaJsonMatch = cleanedResponse.match(/\{\s*"response"\s*:\s*"[^"]*"[^}]*\}/);
+    let qnaJson = qnaJsonMatch ? qnaJsonMatch[0] : null;
+
+    if (!qnaJson) {
+      // If no valid JSON is found, log the issue and return a fallback
+      console.log("No valid JSON found in cleaned response:", cleanedResponse);
+      return "Sorry, I couldn’t process that response. Could you clarify your answer?";
     }
-    
-    console.log("Raw qnaJson:", qnaJson, "question", qnaDataJson.response);
-    
-    return qnaDataJson.response ?? "Sorry I wasn't able to catch that. Could you please rephrase or try again?";
+
+    // Parse the JSON
+    const qnaDataJson = JSON.parse(qnaJson);
+
+    if (!qnaDataJson || typeof qnaDataJson !== "object" || !qnaDataJson.response) {
+      throw new Error("Invalid or missing 'response' in JSON");
+    }
+
+    console.log("Raw qnaJson:", qnaJson, "question:", qnaDataJson.response);
+    return qnaDataJson.response;
 
   } catch (error) {
     console.error("Error parsing JSON:", error, "Raw input:", responseContent);
-    return "Error in response format";
+    return "Error in response format. Please try again.";
   }
 };

@@ -48,7 +48,7 @@ export default function App() {
       </div> */}
 
       {/* Toggle Switch for withAvatar - Only shown in investors view */}
-      {activeView === "investors" && (
+      {/* {activeView === "investors" && (
         <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
           <span className="text-gray-700">Show Avatar</span>
           <Switch
@@ -57,7 +57,7 @@ export default function App() {
             color="primary"
           />
         </div>
-      )}
+      )} */}
 
       {/* Conditional Component Rendering */}
       {/* <div className="w-full h-full">
