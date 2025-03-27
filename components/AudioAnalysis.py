@@ -29,8 +29,20 @@ cache_root = audeer.mkdir('cache')
 model_root = audeer.mkdir('model')
 archive_path = audeer.download_url(url, cache_root, verbose=True)
 audeer.extract_archive(archive_path, model_root)
+model = audonnx.load(model_root)
 
 print(f"Files will be saved to: {app.config['UPLOAD_FOLDER']}")  # Log the path
+
+def preprocess_audio(file, sr=16000):
+    signal, sampling_rate = librosa.load(file, sr=sr, mono=True)
+    signal = signal / np.max(np.abs(signal)) # Normalise signal
+    signal, _ = librosa.effects.trim(signal, top_db=20) # Trim silence
+    return signal, sampling_rate
+
+def segment_audio(signal, sampling_rate, chunk_size=30):
+    """Splits the audio into chunks of `chunk_size` seconds."""
+    samples_per_chunk = chunk_size * sampling_rate
+    return [signal[i:i + samples_per_chunk] for i in range(0, len(signal), samples_per_chunk)]
 
 # Route for transcription (using Whisper model)
 @app.route("/transcribe", methods=["POST"])
@@ -70,14 +82,14 @@ def audio_analysis():
     print("Handling audio analysis request")
 
     try:
-        # Load the model for audio analysis
-        model = audonnx.load(model_root)
         sampling_rate = 16000
-        signal, _ = librosa.load(UPLOAD_FOLDER+'/audio.webm', sr=sampling_rate)
+        signal, _ = preprocess_audio(UPLOAD_FOLDER+'/audio.webm', sr=sampling_rate)
 
-        # Analyzing arousal, dominance, and valence
-        signal = signal.astype(np.float32)
-        result = model(signal, sampling_rate)["logits"][0]
+        result = []
+        for chunked_signal in segment_audio(signal, sampling_rate):
+            chunked_signal = chunked_signal.astype(np.float32)
+            result.append(model(chunked_signal, sampling_rate)["logits"][0])
+        result = np.array(result).mean(axis=0)
 
         # Convert np.float32 to native float
         arousal = float(result[0])
