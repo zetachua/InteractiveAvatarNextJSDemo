@@ -6,11 +6,11 @@ import { cleanResponse, getSonarChatCompletionForMetric, transformFeedback } fro
 const pitchEvaluationResponseMetric1 = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
     try {
-      const { userInput, chatHistory } = req.body;
+      const { chatHistory } = req.body;
       let metric1Result,citations,metric1Results;
       
         [metric1Results] = await Promise.all([
-          fetchMetric1(userInput, chatHistory),
+          fetchMetric1(chatHistory),
         ]);
 
         metric1Result = metric1Results?.rubricData;
@@ -42,18 +42,19 @@ const pitchEvaluationResponseMetric1 = async (req: NextApiRequest, res: NextApiR
   }
 };
 
-const getSonarMetric1 = async (userInput: string, chatHistory: any) => {
-  const prompt = pitchEvaluationPromptMetric1(userInput);
-  return await getSonarChatCompletionForMetric(userInput, chatHistory, prompt);
+const getSonarMetric1 = async (chatHistory: any) => {
+  const prompt = pitchEvaluationPromptMetric1(chatHistory);
+  return await getSonarChatCompletionForMetric(chatHistory, prompt);
 };
 
-const fetchMetric1 = async (userInput: string, chatHistory: any[]) => {
+const fetchMetric1 = async (chatHistory: any[]) => {
   try {
     let rubricRatingCompletion;
       const [metric1Result] = await Promise.all([
-        getSonarMetric1(userInput, chatHistory),
+        getSonarMetric1(chatHistory),
       ]);
 
+      console.log(metric1Result,"direct metric1 completion")
       console.log("Metric 1 Sonar LLM Completion:", JSON.stringify(metric1Result, null, 2));
 
       rubricRatingCompletion = {
@@ -81,6 +82,7 @@ const fetchMetric1 = async (userInput: string, chatHistory: any[]) => {
     }
 
     const citations = metric1Result?.citations || [];
+    
     const result = {
       rubricData: filteredResponse,
       citations: citations,
@@ -146,14 +148,27 @@ const cleanSonarOutputMetric1 = (metric1:any): string => {
             }),
           }
         : defaultMetric,
+
+        tractionAwards: metric1Data.tractionAwards
+        ? {
+            ...metric1Data.tractionAwards,
+            feedback: transformFeedback({
+              recap: metric1Data.tractionAwards.recap,
+              feedback: metric1Data.tractionAwards.feedback,
+              comparison: metric1Data.tractionAwards.comparison,
+              suggestions: metric1Data.tractionAwards.suggestion,
+            }),
+          }
+        : defaultMetric,
     };
 
     const scores = [
       validatedMetric1.elevatorPitch.score,
       validatedMetric1.team.score,
       validatedMetric1.marketOpportunity.score,
+      validatedMetric1.tractionAwards.score,
     ];
-    const overallScore = Math.round(scores.reduce((sum: number, score: number) => sum + score, 0) / 3);
+    const overallScore = Math.round(scores.reduce((sum: number, score: number) => sum + score, 0) / 4);
     const summary= metric1Data.summary;
     
     // const strengths = [];
@@ -173,15 +188,18 @@ const cleanSonarOutputMetric1 = (metric1:any): string => {
       elevatorPitch: validatedMetric1.elevatorPitch,
       team: validatedMetric1.team,
       marketOpportunity: validatedMetric1.marketOpportunity,
+      tractionAwards: validatedMetric1.tractionAwards,
       overallScore,
       summary,
       rubricSpecificFeedback: {
         elevatorPitch: validatedMetric1.elevatorPitch.feedback,
         team: validatedMetric1.team.feedback,
         marketOpportunity: validatedMetric1.marketOpportunity.feedback,
+        tractionAwards: validatedMetric1.tractionAwards.feedback,
       },
     };
 
+    console.log(combinedData,"testFn5: before returning json file")
     return JSON.stringify(combinedData);
 
   } catch (error) {
@@ -190,12 +208,14 @@ const cleanSonarOutputMetric1 = (metric1:any): string => {
       elevatorPitch: { score: 0, feedback: "Not provided. Unable to evaluate due to Sonar parsing error." },
       team: { score: 0, feedback: "Not provided. Unable to evaluate due to Sonar parsing error." },
       marketOpportunity: { score: 0, feedback: "Not provided. Unable to evaluate due to Sonar parsing error." },
+      tractionAwards: { score: 0, feedback: "Not provided. Unable to evaluate due to Sonar parsing error." },
       overallScore: 0,
       summary: "[Eleveator Pitch, Team, Market Opportunity] Failed to evaluate pitch due to parsing errors in Sonar responses.",
       rubricSpecificFeedback: {
         elevatorPitch: "Not provided. Unable to evaluate due to Sonar parsing error.",
         team: "Not provided. Unable to evaluate due to Sonar parsing error.",
         marketOpportunity: "Not provided. Unable to evaluate due to Sonar parsing error.",
+        tractionAwards: "Not provided. Unable to evaluate due to Sonar parsing error.",
       },
     };
     return JSON.stringify(defaultData);

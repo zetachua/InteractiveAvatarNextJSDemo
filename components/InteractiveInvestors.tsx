@@ -11,8 +11,7 @@ import {
   Checkbox,
 } from "@nextui-org/react";
 import { useEffect, useRef, useState } from "react";
-import { useMemoizedFn, usePrevious } from "ahooks";
-import './WaveAnimation.css';
+import './TextArea.css';
 interface Pause {
   start: number;
   end: number;
@@ -31,13 +30,14 @@ export default function InteractiveInvestors() {
   const [loadingRubric, setLoadingRubric] = useState(false);
   const [loadingRubric1, setLoadingRubric1] = useState(false);
   const [loadingRubric2, setLoadingRubric2] = useState(false);
-  const [loadingRubric3, setLoadingRubric3] = useState(false);
+  // const [loadingRubric3, setLoadingRubric3] = useState(false);
   const [isLoadingRepeat, setIsLoadingRepeat] = useState(false);
   const [stream, setStream] = useState(false);
   const [debug, setDebug] = useState<string>();
   const [displayText, setDisplayText]= useState('');
 
   const [userInput, setUserInput] = useState<string>("");
+  const [userInputTextArea, setUserInputTextArea] = useState<string>("");
   const mediaStream = useRef<HTMLVideoElement>(null);
   const [chatHistory, setChatHistory] = useState<ChatHistory[]>([]);
   const [feedbackText,setFeedbackText]=useState('');
@@ -122,6 +122,11 @@ export default function InteractiveInvestors() {
   }, [callCount, timeLeft]);
 
   async function startSession() {
+    setLoadingRubric(false);
+    setLoadingRubric1(false);
+    setLoadingRubric2(false);
+    // setLoadingRubric3(false);
+    
     setIsTimeUp(false);
     setIsLoadingSession(true);
     setDisplayRubricAnalytics(false);
@@ -139,7 +144,11 @@ export default function InteractiveInvestors() {
   async function handleSpeak(userInputValue?:string) {
     setIsLoadingRepeat(true);
     setDisplayRubricAnalytics(false);
-  
+    if(userInputValue){
+      setUserInputTextArea(userInputValue);
+      setUserInput(userInputValue);
+    } 
+
     try {
       // Fetch LLM response
       const response = await fetch(`/api/qnaResponse`, {
@@ -152,7 +161,6 @@ export default function InteractiveInvestors() {
       if (data.questionResponse !== undefined) setDisplayText(data.questionResponse);
       console.log(userInputValue,chatHistory,"im here userInput","chatHistory")
 
-      if(userInputValue) setUserInput(userInputValue)
 
     } catch (error) {
       console.error("Error fetching LLM response:", error);
@@ -279,6 +287,7 @@ export default function InteractiveInvestors() {
       const data = await response.json();
       console.log('Transcription:', data.text);
       setUserInput(data.text);
+      setUserInputTextArea(data.text);
       handleSpeak(data.text);
       transcriptRef.current = data.text;
       setDebug('Transcription successful!');
@@ -339,7 +348,7 @@ async function endSession() {
   setLoadingRubric(true);
   setLoadingRubric1(true);
   setLoadingRubric2(true);
-  setLoadingRubric3(true);
+  // setLoadingRubric3(true);
   
   setStream(false);
 
@@ -353,11 +362,7 @@ async function endSession() {
   } catch (error) {
     console.error('Error fetching pitch sentiment and rubric response:', error);
   } finally {
-    // Set loading to false once the fetch is completed (either success or failure)
-    setLoadingRubric(false);
-    setLoadingRubric1(false);
-    setLoadingRubric2(false);
-    setLoadingRubric3(false);
+
   }
 
 }
@@ -391,60 +396,60 @@ async function endSession() {
     setLoadingRubric(true); // Start loading
     setLoadingRubric1(true);
     setLoadingRubric2(true);
-    setLoadingRubric3(true);
+    // setLoadingRubric3(true);
 
     try{
-    const [responseMetric1, responseMetric2,responseMetric3] = await Promise.all([
+    const [responseMetric1, responseMetric2] = await Promise.all([
       fetch(`/api/pitchEvaluationResponseMetric1`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userInput, chatHistory }),
+        body: JSON.stringify({ chatHistory }),
       }),
       fetch(`/api/pitchEvaluationResponseMetric2`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userInput, chatHistory }),
+        body: JSON.stringify({ chatHistory }),
       }),
-      fetch(`/api/pitchEvaluationResponseMetric3`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userInput, chatHistory }),
-      }),
+      // fetch(`/api/pitchEvaluationResponseMetric3`, {
+      //   method: "POST",
+      //   headers: { "Content-Type": "application/json" },
+      //   body: JSON.stringify({ chatHistory }),
+      // }),
     ]);
 
   
     // Parse all responses
     const dataMetric1 = await responseMetric1.json();
     const dataMetric2 = await responseMetric2.json();
-    const dataMetric3 = await responseMetric3.json();
+    // const dataMetric3 = await responseMetric3.json();
   
     if (dataMetric1) setLoadingRubric1(false);
     if (dataMetric2) setLoadingRubric2(false);
-    if (dataMetric3) setLoadingRubric3(false);
+    // if (dataMetric3) setLoadingRubric3(false);
 
     // Aggregate the data
     const aggregatedSummary = [
       dataMetric1.rubricSummary2,
       dataMetric2.rubricSummary2,
-      dataMetric3.rubricSummary2,
+      // dataMetric3.rubricSummary2,
     ].filter(Boolean).join(' '); 
   
     const aggregatedMetrics = {
       ...dataMetric1.rubricMetrics2,
       ...dataMetric2.rubricMetrics2,
-      ...dataMetric3.rubricMetrics2,
+      // ...dataMetric3.rubricMetrics2,
     }
     
     const aggregatedCitations =[
       dataMetric1.citations,
       dataMetric2.citations,
-      dataMetric3.citations,
+      // dataMetric3.citations,
     ].filter(Boolean).join(' ');
 
     const scores = [
       dataMetric1.rubricScore2,
       dataMetric2.rubricScore2,
-      dataMetric3.rubricScore2,
+      // dataMetric3.rubricScore2,
     ].filter(score => score !== 0); 
     
     const aggregatedScores = scores.length > 0 
@@ -454,7 +459,7 @@ async function endSession() {
     const aggregatedFeedback = {
       ...(dataMetric1.rubricSpecificFeedback2 || {}),
       ...(dataMetric2.rubricSpecificFeedback2 || {}),
-      ...(dataMetric3.rubricSpecificFeedback2 || {}),
+      // ...(dataMetric3.rubricSpecificFeedback2 || {}),
     };
   
     // Update states once with aggregated data
@@ -523,14 +528,18 @@ async function endSession() {
                
                   <textarea
                     placeholder="Type your message..."
-                    value={userInput}
-                    onChange={(e) => setUserInput(e.target.value)}
+                    value={userInputTextArea}
+                    onChange={(e) =>{
+                      setUserInput(e.target.value)
+                      setUserInputTextArea(e.target.value)
+                    }}
+                    className="custom-textarea"
                     style={{
                       display:'flex',
                       backgroundColor:'rgba(255,255,255,0.2)',
                       boxShadow: "2px 2px 0px 0px rgba(0, 0, 0, 1)", // Black shadow
                       textAlign: "left",
-                      padding: "0.5rem",
+                      padding: "0.5rem 0.5rem 0.5rem 1rem",
                       width: "470px",
                       fontSize:'14px',
                       justifyContent:'center',
@@ -544,17 +553,12 @@ async function endSession() {
                       outline: "none", // Remove default focus outline if unwanted
                     }}
                   >
-                     <style>
-                      {`
-                        textarea::placeholder {
-                          color: #FF6347; /* Change this to any color you'd like */
-                          opacity: 1; /* Optional: make the placeholder text fully opaque */
-                        }
-                      `}
-                    </style>
                   </textarea>
                   <Button
-                  onClick={()=>handleSpeak(userInput)}
+                  onClick={()=>{
+                    handleSpeak(userInput);
+                    setUserInputTextArea('');
+                  }}
                   isDisabled={!userInput.trim() || isLoadingRepeat}
                   style={{ margin: '0rem 0rem 0rem 1rem',background:'rgba(255,255,255,0.1)'}}
                     >
@@ -610,7 +614,7 @@ async function endSession() {
         }
 
         {/* {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentScore} />} */}
-        {sentimentJson && rubricJson2 && 
+        {(sentimentJson && rubricJson2) ? 
           <div style={{fontSize: '1.3rem', display:'flex',gap:'1rem',position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>
             <RubricInvestorPiechart2  citations={rubricCitations2} data={rubricJson2} overallScore={rubricAllRatings2} summary={rubricSummary2} specificFeedback={rubricSpecificFeedback2} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart2>
             <SentimentInvestorPiechart audioAnalytics={audioAnalytics} data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0}></SentimentInvestorPiechart>
@@ -618,11 +622,12 @@ async function endSession() {
             <div style={{position:'absolute',width:'400px',zIndex:'2000',color:'black',display:'flex',gap:'1rem',flexDirection:'column',backgroundColor:'rgba(255,255,255)',borderRadius:'20px',padding:'1rem',whiteSpace:'pre-line',top:'50%',left:'50%',transform:'translate(-50%,-50%)',boxShadow:'2px 2px 0px 0px black'}}>
               <div style={{display:'flex',gap:'1rem'}}>{(!rubricCitations2||loadingRubric||loadingRubric1)?<Spinner />:"! "}<span>{loadingRubric1? '[Loading Analysis]':'[Successfully Loaded]'} Elevation Pitch, Team, Market Opportunity</span></div>
               <div style={{display:'flex',gap:'1rem'}}>{(!rubricCitations2||loadingRubric||loadingRubric2)?<Spinner />:"! "}<span>{loadingRubric2? '[Loading Analysis]':'[Successfully Loaded]'} Market Size, Solution Value Proposition, Competitive Position</span></div>
-              <div style={{display:'flex',gap:'1rem'}}>{(!rubricCitations2||loadingRubric||loadingRubric3)?<Spinner />:"! "}<span>{loadingRubric3? '[Loading Analysis]':'[Successfully Loaded]'} Traction Awards, Revenue Model</span></div>
+              {/* <div style={{display:'flex',gap:'1rem'}}>{(!rubricCitations2||loadingRubric||loadingRubric3)?<Spinner />:"! "}<span>{loadingRubric3? '[Loading Analysis]':'[Successfully Loaded]'} Traction Awards, Revenue Model</span></div> */}
             </div>}
          </div>
-        }
-        {loadingRubric&&<Spinner 
+         :
+         loadingRubric&&
+         <Spinner 
           style={{
             color:'white',
             background: 'rgba(50,51,52)',
@@ -638,7 +643,8 @@ async function endSession() {
             transform: 'translate(-50%,-50%) scale(0.6)',
             width: '30%',
           }}
-          size="lg" />}
+          size="lg" />
+        }
           
        {/* <CardFooter className="flex flex-col gap-3 relative">
            <Tabs

@@ -313,6 +313,10 @@ export const metric1ResultInvestorFilter = (responseContent: string) => {
           "score":0,
           "feedback":"The problem was not described, the urgency and customer pain points were not well-supported by data",
         },
+        tractionAwards:{
+          "score":0,
+          "feedback": "No traction was presented, with little evidence of early customer validation or revenue."
+        },
       };
     }
 
@@ -324,11 +328,13 @@ export const metric1ResultInvestorFilter = (responseContent: string) => {
         elevatorPitch: rubricDataJson.elevatorPitch.score,
         team: rubricDataJson.team.score,
         marketOpportunity: rubricDataJson.marketOpportunity.score,
+        tractionAwards: rubricDataJson.tractionAwards.score,
       },
       rubricSpecificFeedback: {
         elevatorPitch: rubricDataJson.elevatorPitch.feedback,
         team: rubricDataJson.team.feedback,
         marketOpportunity: rubricDataJson.marketOpportunity.feedback,
+        tractionAwards: rubricDataJson.tractionAwards.feedback,
       },
     };
 
@@ -374,6 +380,10 @@ export const metric2ResultInvestorFilter = (responseContent: string) => {
           "score":0,
           "feedback":" No direct competitors mentioned. Differentiation implied through BCA validation and bundling model.\n\nSuggestions: Name competitors (e.g., Sensohive in IoT monitoring, traditional testing labs). Create a comparison matrix: 'We’re 3x cheaper than lab tests and provide real-time data vs. competitors’ daily reports.' Leverage BCA’s endorsement as a moat – 'Only solution pre-approved for BCA productivity credits"
         },
+        revenueModel:{
+          "score":0,
+          "feedback": "No revenue model was defined, with unclear monetization strategy and scalability concerns."
+        },
       };
     }
 
@@ -385,11 +395,13 @@ export const metric2ResultInvestorFilter = (responseContent: string) => {
         marketSize: rubricDataJson.marketSize.score,
         solutionValueProposition: rubricDataJson.solutionValueProposition.score,
         competitivePosition: rubricDataJson.competitivePosition.score,
+        revenueModel: rubricDataJson.revenueModel.score,
       },
       rubricSpecificFeedback: {
         marketSize: rubricDataJson.marketSize.feedback,
         solutionValueProposition: rubricDataJson.solutionValueProposition.feedback,
         competitivePosition: rubricDataJson.competitivePosition.feedback,
+        revenueModel: rubricDataJson.revenueModel.feedback,
       },
     };
 
@@ -425,7 +437,7 @@ export const metric3ResultInvestorFilter = (responseContent: string) => {
         summary: "No pitch was given, lacks clarity and engagement, making it difficult to capture investor interest.",
         tractionAwards:{
           "score":0,
-          "feedback":"No traction was presented, with little evidence of early customer validation or revenue."
+          "feedback": "No traction was presented, with little evidence of early customer validation or revenue."
         },
         revenueModel:{
           "score":0,
@@ -455,6 +467,7 @@ export const metric3ResultInvestorFilter = (responseContent: string) => {
 };
 export const qnaFilter = (responseContent: string) => {
   try {
+    let qnaDataJson;
     console.log("Raw response:", responseContent);
 
     // Clean the response: remove <think> tags and code markers
@@ -464,24 +477,26 @@ export const qnaFilter = (responseContent: string) => {
       .trim();
 
     // Look for a JSON object specifically containing "response"
-    let qnaJsonMatch = cleanedResponse.match(/\{\s*"response"\s*:\s*"[^"]*"[^}]*\}/);
+    let qnaJsonMatch = cleanedResponse.match(/\{\s*"response"\s*:\s*("[^"]*"|[^",}]*)([^}]*)\}/);
     let qnaJson = qnaJsonMatch ? qnaJsonMatch[0] : null;
+    console.log("starT",cleanedResponse,"cleanedResponse",qnaJsonMatch,"qnaJsonMatch",qnaJson,"qnaJson")
 
-    if (!qnaJson) {
+    if (!qnaJson && !cleanedResponse) {
       // If no valid JSON is found, log the issue and return a fallback
       console.log("No valid JSON found in cleaned response:", cleanedResponse);
       return "Sorry, I couldn’t process that response. Could you clarify your answer?";
     }
 
     // Parse the JSON
-    const qnaDataJson = JSON.parse(qnaJson);
-
-    if (!qnaDataJson || typeof qnaDataJson !== "object" || !qnaDataJson.response) {
-      throw new Error("Invalid or missing 'response' in JSON");
+    if(qnaJson) {
+      qnaDataJson = JSON.parse(qnaJson);
+      return qnaDataJson.response;
     }
-
-    console.log("Raw qnaJson:", qnaJson, "question:", qnaDataJson.response);
-    return qnaDataJson.response;
+    else {
+      console.log("json wasnt properly parsed, going to trust its in a string lol")
+      qnaDataJson=cleanedResponse
+      return qnaDataJson;
+    }
 
   } catch (error) {
     console.error("Error parsing JSON:", error, "Raw input:", responseContent);

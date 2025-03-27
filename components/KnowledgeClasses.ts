@@ -195,6 +195,10 @@ export interface Metric1InvestorData {
     score:number;
     feedback:string;
   };
+  tractionAwards: {
+    score:number;
+    feedback:string;
+  };
   summary: string;
 }
 
@@ -209,6 +213,10 @@ export interface Metric2InvestorData {
     feedback:string;
   };
   competitivePosition: {
+    score:number;
+    feedback:string;
+  };
+  revenueModel: {
     score:number;
     feedback:string;
   };

@@ -708,7 +708,7 @@ async function endSession() {
                 </Button>
               </div>
               <div style={{position:'relative',width:'100%',height:'100%'}}>
-                {<TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>}
+                {<TypewriterText text={displayText} feedbackText={feedbackText}/>}
 
                 <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
                   <div style={{display:'flex',width:'100%',justifyContent:'center',alignItems:'center'}}>

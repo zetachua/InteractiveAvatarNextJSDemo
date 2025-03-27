@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from "react";
+import TypewriterText from "./Typewriter";
+import TypewriterTextNoAvatar from "./TypewriterNoAvatar";
 
 interface Message {
   role: "user" | "assistant";
@@ -24,7 +26,7 @@ const ChatHistoryDisplay: React.FC<ChatHistoryProps> = ({ chatHistory }) => {
       ref={chatContainerRef}
       className="text-white font-mono"
       style={{
-        width: "50%",
+        width: "60%",
         height: "600px", // Increased height for better visibility
         position: "absolute",
         left: "50%",
@@ -34,7 +36,7 @@ const ChatHistoryDisplay: React.FC<ChatHistoryProps> = ({ chatHistory }) => {
         overflowY: "auto",
         scrollbarWidth: "none", // Firefox
         msOverflowStyle: "none", // IE/Edge
-        backgroundColor: "rgba(255, 255, 255, 0.1)",
+        backgroundColor: "rgba(255, 255, 255, 0.3)",
         boxShadow: "2px 2px 0px 0px rgba(0, 0, 0, 0.3)",
         borderRadius: "20px",
       }}
@@ -61,7 +63,11 @@ const ChatHistoryDisplay: React.FC<ChatHistoryProps> = ({ chatHistory }) => {
               fontSize: "14px",
             }}
           >
-            {message.content}
+            {message.role === "assistant" ? (
+              <TypewriterTextNoAvatar text={message.content} />
+            ) : (
+              message.content
+            )}
           </div>
         </div>
       ))}

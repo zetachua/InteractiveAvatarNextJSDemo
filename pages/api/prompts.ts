@@ -1,3 +1,4 @@
+import { ChatHistory } from './../../components/KnowledgeClasses';
 
 
 // export const nusPrompt=(uniqueIndustries:any,selectedCase:any)=>`
@@ -528,11 +529,9 @@ export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, t
   Now, analyze the chat history and return the evaluation.
   `;
   
-  export const pitchEvaluationPromptMetric1 = (userInput: string) => `
+  export const pitchEvaluationPromptMetric1 = (chatHistory: any) => `
 
   You are an experienced venture capitalist. I will give you a transcript of a startup pitch.
-  Analyze this pitch transcript and provide your JSON output.
-  ${userInput}
 
   Please evaluate it on three key aspects:
   1. **Elevator Pitch**
@@ -568,16 +567,14 @@ export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, t
       "score": 7, 
       "feedback": "Mentions a pilot, but no metrics. 2025 industry avg: 50 clients/pilot (Source: Deloitte). Suggest: ‘Show X% cost reduction, like Y Co.’s 2025 pilot.’"    }
   }
-  
-  Analyze this pitch transcript and provide your JSON output. Use only the following text as the pitch transcript, without adding or imagining content:
-  ${userInput}
+  Use only the following text as the pitch transcript, without adding or imagining content.
+  Analyze this pitch transcript conversation chat history (which may or may not contain the main pitch and could be just qna) and provide your JSON output:
+  ${chatHistory}
 `;
 
-export const pitchEvaluationPromptMetric2 = (userInput: string) => `
+export const pitchEvaluationPromptMetric2 = (chatHistory: any) => `
   
   You are an experienced venture capitalist. I will give you a transcript of a startup pitch.
-  Analyze this pitch transcript and provide your JSON output.
-  ${userInput}
 
   Please evaluate it on three key aspects:
   1. **Market Size**
@@ -614,13 +611,12 @@ export const pitchEvaluationPromptMetric2 = (userInput: string) => `
       "feedback": "Subscription model vague. 2025 concrete tech avg: $500/unit (Source: Statista). Suggest: ‘Set tiers at $X-$Y, like Z Co.’s 2025 scale.’"    }
   }
    Use only the following text as the pitch transcript, without adding or imagining content.
-
+  Analyze this pitch transcript conversation chat history (which may or may not contain the main pitch and could be just qna) and provide your JSON output:
+  ${chatHistory}
 `;
 
-export const pitchEvaluationPromptMetric3 = (userInput: string) => `
+export const pitchEvaluationPromptMetric3 = (chatHistory: any) => `
   You are an experienced venture capitalist. I will give you a transcript of a startup pitch.
-  Analyze this pitch transcript and provide your JSON output. 
-  ${userInput}
 
  Please evaluate it based on these two aspects:
   1. **Traction/Awards**
@@ -648,8 +644,10 @@ export const pitchEvaluationPromptMetric3 = (userInput: string) => `
       "score": 6, 
       "feedback": "Subscription model vague. 2025 concrete tech avg: $500/unit (Source: Statista). Suggest: ‘Set tiers at $X-$Y, like Z Co.’s 2025 scale.’"    }
   }
-  Use only the following text as the pitch transcript, without adding or imagining content.
 
+  Use only the following text as the pitch transcript, without adding or imagining content.
+  Analyze this pitch transcript conversation chat history (which may or may not contain the main pitch and could be just qna) and provide your JSON output:
+  ${chatHistory}
 `;
 
 export const knowledgePrompt =(knowledge:any,name:string,tone:string)=>`

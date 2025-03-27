@@ -1,0 +1,4 @@
+.custom-textarea::placeholder {
+    color: #cdcdcd !important;
+    padding:0rem 0.3rem 0.3rem 0rem;
+  }

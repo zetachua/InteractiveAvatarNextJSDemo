@@ -6,11 +6,11 @@ import { cleanResponse, getSonarChatCompletionForMetric, transformFeedback } fro
 const pitchEvaluationResponseMetric3 = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
     try {
-      const { userInput, chatHistory } = req.body;
+      const { chatHistory } = req.body;
       let rubricResult,rubricResult2,citations;
 
       [rubricResult] = await Promise.all([
-        fetchMetric3(userInput, chatHistory),
+        fetchMetric3(chatHistory),
       ]);
       rubricResult2 = rubricResult?.rubricData;
       citations = rubricResult?.citations;
@@ -41,17 +41,18 @@ const pitchEvaluationResponseMetric3 = async (req: NextApiRequest, res: NextApiR
   }
 };
 
-const getSonarMetric3 = async (userInput: string, chatHistory: any) => {
-  const prompt = pitchEvaluationPromptMetric3(userInput);
-  return await getSonarChatCompletionForMetric(userInput, chatHistory, prompt);
+const getSonarMetric3 = async (chatHistory: any) => {
+  const prompt = pitchEvaluationPromptMetric3(chatHistory);
+  return await getSonarChatCompletionForMetric(chatHistory, prompt);
 };
 
-const fetchMetric3 = async (userInput: string, chatHistory: any[]) => {
+const fetchMetric3 = async (chatHistory: any[]) => {
   try {
     let rubricRatingCompletion;
       const [metric3Result] = await Promise.all([
-        getSonarMetric3(userInput, chatHistory),
+        getSonarMetric3(chatHistory),
       ]);
+      console.log(metric3Result,"direct metric3 completion")
 
       console.log("Metric 3 Sonar LLM Completion:", JSON.stringify(metric3Result, null, 2));
 
@@ -96,7 +97,9 @@ const cleanSonarOutputMetric3 = (metric3: any): string => {
       throw new Error("One or more metrics have invalid JSON.");
     }
     console.log("testFn metric3 begin")
-    const metric3Data = JSON.parse(cleanResponse(metric3.choices[0].message.content));
+    const cleanedResponse =cleanResponse(metric3.choices[0].message.content);
+    console.log(cleanedResponse,"testFn2.5 metric3: cleanResponse successful")
+    const metric3Data = JSON.parse(cleanedResponse);
     console.log(metric3Data,"testFn3 metric3: JSON.parse cleanResponse successful")
 
     const defaultMetric = {

@@ -529,7 +529,7 @@ async function endSession() {
         </CardBody>
 
         { stream && <>
-        <TypewriterText text={displayText} feedbackText={feedbackText} questionCount={questionCount}/>
+        <TypewriterText text={displayText} feedbackText={feedbackText}/>
 
         <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
           <div style={{display:!displayRubricAnalytics && !isLoadingSession?'flex':'none',width:'100%',justifyContent:'center',alignItems:'center'}}>

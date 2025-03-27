@@ -6,11 +6,11 @@ import { cleanResponse, getSonarChatCompletionForMetric, transformFeedback } fro
 const pitchEvaluationResponseMetric2 = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
     try {
-      const { userInput, chatHistory } = req.body;
+      const { chatHistory } = req.body;
       let rubricResult,rubricResult2,citations;
 
       [rubricResult] = await Promise.all([
-        fetchMetric2(userInput, chatHistory),
+        fetchMetric2(chatHistory),
       ]);
       rubricResult2 = rubricResult?.rubricData;
       citations = rubricResult?.citations;
@@ -40,20 +40,20 @@ const pitchEvaluationResponseMetric2 = async (req: NextApiRequest, res: NextApiR
   }
 };
 
-const getSonarMetric2 = async (userInput: string, chatHistory: any) => {
-  const prompt = pitchEvaluationPromptMetric2(userInput);
-  return await getSonarChatCompletionForMetric(userInput, chatHistory, prompt);
+const getSonarMetric2 = async (chatHistory: any) => {
+  const prompt = pitchEvaluationPromptMetric2(chatHistory);
+  return await getSonarChatCompletionForMetric(chatHistory, prompt);
 };
 
 
-const fetchMetric2 = async (userInput: string, chatHistory: any[]) => {
+const fetchMetric2 = async (chatHistory: any[]) => {
   try {
     let rubricRatingCompletion;
 
       const [metric2Result] = await Promise.all([
-        getSonarMetric2(userInput, chatHistory),
+        getSonarMetric2(chatHistory),
       ]);
-
+      console.log(metric2Result,"direct metric2 completion")
       console.log("Metric 2 Sonar LLM Completion:", JSON.stringify(metric2Result, null, 2));
 
       rubricRatingCompletion = {
@@ -79,6 +79,7 @@ const fetchMetric2 = async (userInput: string, chatHistory: any[]) => {
       return null;
     }
     const citations = metric2Result?.citations || [];
+    
     const result = {
       rubricData: filteredResponse,
       citations: citations,
@@ -101,7 +102,9 @@ const cleanSonarOutputMetric2 = (metric2:any): string => {
       throw new Error("One or more metrics have invalid JSON.");
     }
     console.log("testFn metric2 begin")
-    const metric2Data = JSON.parse(cleanResponse(metric2.choices[0].message.content));
+    const cleanedResponse =cleanResponse(metric2.choices[0].message.content);
+    console.log(cleanedResponse,"testFn2.5 metric2: cleanResponse successful")
+    const metric2Data = JSON.parse(cleanedResponse);
     console.log(metric2Data,"testFn3 metric2: JSON.parse cleanResponse successful")
 
     const defaultMetric = {
@@ -144,15 +147,28 @@ const cleanSonarOutputMetric2 = (metric2:any): string => {
               suggestion: metric2Data.competitivePosition.suggestion,
             }),
           }
-        : defaultMetric
+        : defaultMetric,
+
+        revenueModel: metric2Data.revenueModel
+        ? {
+            ...metric2Data.revenueModel,
+            feedback: transformFeedback({
+              recap: metric2Data.revenueModel.recap,
+              feedback: metric2Data.revenueModel.feedback,
+              comparison: metric2Data.revenueModel.comparison,
+              suggestions: metric2Data.revenueModel.suggestion,
+            }),
+          }
+        : defaultMetric,
     };
 
     const scores = [
       validatedMetric2.marketSize.score,
       validatedMetric2.solutionValueProposition.score,
       validatedMetric2.competitivePosition.score,
+      validatedMetric2.revenueModel.score,
     ];
-    const overallScore = Math.round(scores.reduce((sum: number, score: number) => sum + score, 0) / 3);
+    const overallScore = Math.round(scores.reduce((sum: number, score: number) => sum + score, 0) / 4);
 
     const summary= metric2Data.summary;
 
@@ -173,12 +189,14 @@ const cleanSonarOutputMetric2 = (metric2:any): string => {
       marketSize: validatedMetric2.marketSize,
       solutionValueProposition: validatedMetric2.solutionValueProposition,
       competitivePosition: validatedMetric2.competitivePosition,
+      revenueModel: validatedMetric2.revenueModel,
       overallScore,
       summary,
       rubricSpecificFeedback: {
         marketSize: validatedMetric2.marketSize.feedback,
         solutionValueProposition: validatedMetric2.solutionValueProposition.feedback,
         competitivePosition: validatedMetric2.competitivePosition.feedback,
+        revenueModel: validatedMetric2.revenueModel.feedback,
       },
     };
 
@@ -189,12 +207,14 @@ const cleanSonarOutputMetric2 = (metric2:any): string => {
       marketSize: { score: 0, feedback: "Unable to evaluate due to Sonar parsing error." },
       solutionValueProposition: { score: 0, feedback: "Unable to evaluate due to Sonar parsing error." },
       competitivePosition: { score: 0, feedback: " Unable to evaluate due to Sonar parsing error." },
+      revenueModel: { score: 0, feedback: " Unable to evaluate due to Sonar parsing error." },
       overallScore: 0,
       summary: "[Market Size, Solution Value Proposition, Compeititive Position] Failed to evaluate pitch due to parsing errors in Sonar responses.",
       rubricSpecificFeedback: {
         marketSize: "Unable to evaluate due to Sonar parsing error.",
         solutionValueProposition: "Unable to evaluate due to Sonar parsing error.",
         competitivePosition: "Unable to evaluate due to Sonar parsing error.",
+        revenueModel: "Unable to evaluate due to Sonar parsing error.",
       },
     };
     return JSON.stringify(defaultData);

@@ -5,7 +5,7 @@ interface TypewriterTextProps {
   feedbackText?: string;
 }
 
-const TypewriterText: React.FC<TypewriterTextProps> = ({ text, feedbackText }) => {
+const TypewriterTextNoAvatar: React.FC<TypewriterTextProps> = ({ text, feedbackText }) => {
   const [displayedText, setDisplayedText] = useState<string>("");
   const [displayedFeedback, setDisplayedFeedback] = useState<string>(""); // Feedback state
   const wordsRef = useRef<string[]>([]); // Store words for response
@@ -42,8 +42,8 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({ text, feedbackText }) =
           if (intervalRef.current) clearInterval(intervalRef.current);
           startFeedbackTyping();
         }
-      }, 350);
-    }, 1500);
+      }, 200);
+    }, 500);
 
     return () => {
       clearTimeout(typingDelay); 
@@ -83,23 +83,10 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({ text, feedbackText }) =
       ref={containerRef}
       className="text-white text-lg font-mono"
       style={{
-        width: '470px',
-        maxHeight: '80px',
-        left:'50%',
-        bottom:'12rem',
-        transform:'translate(-50%,-50%)',
-        position: 'absolute',
-        padding: "2rem",
         fontSize: "14px",
-        textAlign: "left",
-        overflowY: "scroll",
-        scrollbarWidth:'none',
-        backgroundColor:'rgba(255,255,255,0.1)',
-        boxShadow:'2px 2px 0px 0px rgba(0,0,0,0.3)',
-        borderRadius:'20px'
       }}
     >
-      <div style={{ marginBottom: "1rem" }}>
+      <div>
         <span>{displayedText}</span>
       </div>
 
@@ -114,4 +101,4 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({ text, feedbackText }) =
   );
 };
 
-export default TypewriterText;
+export default TypewriterTextNoAvatar;

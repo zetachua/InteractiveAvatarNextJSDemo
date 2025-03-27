@@ -29,8 +29,9 @@ const sonar = {
 };
 
 
-export const getSonarChatCompletionForMetric = async (userInput: string, chatHistory: any, prompt: string) => {
+export const getSonarChatCompletionForMetric = async (chatHistory: any, prompt: string) => {
     const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
+    console.log("metric whats going in ","chatHistory",chatHistory,"prompt",prompt)
     return sonar.chat.completions.create({
       messages: [
         {
@@ -39,11 +40,11 @@ export const getSonarChatCompletionForMetric = async (userInput: string, chatHis
         },
         ...validChatHistory,
         {
-          role: 'user',
-          content: userInput,
+            role: 'user',
+            content: 'Please evaluate the pitch transcript based on the provided instructions.',
         },
       ],
-      model: 'sonar', 
+      model: 'sonar-reasoning'
     });
     // return groq.chat.completions.create({
     //     messages: [
@@ -84,7 +85,7 @@ export const getSonarChatCompletionForMetric = async (userInput: string, chatHis
     const comparison = feedback?.comparison || "";
     const suggestion = feedback?.suggestion || "";
 
-    console.log(transformFeedback,"testFn2: transformFeedback successful")
+    console.log(`${recap}. ${comparison}. ${feedbackText}. ${suggestion}`,"testFn2: transformFeedback successful")
 
     // Concatenate all relevant fields
     return `${recap}. ${comparison}. ${feedbackText}. ${suggestion}`;
