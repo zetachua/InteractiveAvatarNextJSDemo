@@ -14,7 +14,7 @@ export default function App() {
   return (
     <div className="w-screen h-screen relative">
       {/* Button Navigation - Absolute Positioned */}
-      <div className="absolute top-4 left-4 flex gap-4 z-10">
+      {/* <div className="absolute top-4 left-4 flex gap-4 z-10">
         <Button
           className={`${
             activeView === "investors"
@@ -45,7 +45,7 @@ export default function App() {
         >
           Persona Creator Page
         </Button>
-      </div>
+      </div> */}
 
       {/* Toggle Switch for withAvatar - Only shown in investors view */}
       {activeView === "investors" && (
@@ -60,12 +60,19 @@ export default function App() {
       )}
 
       {/* Conditional Component Rendering */}
-      <div className="w-full h-full">
+      {/* <div className="w-full h-full">
         {activeView === "customer" ? (
           <InteractiveAvatar />
         ) : activeView === "persona" ? (
           <InteractiveAvatarKnowledge />
         ) : withAvatar ? (
+          <InteractiveAvatarInvestors />
+        ) : (
+          <InteractiveInvestors />
+        )}
+      </div> */}
+       <div className="w-full h-full">
+       { withAvatar ? (
           <InteractiveAvatarInvestors />
         ) : (
           <InteractiveInvestors />

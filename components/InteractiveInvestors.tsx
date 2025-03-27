@@ -568,7 +568,7 @@ async function endSession() {
 
             </div>
           ) : !isLoadingSession ? (
-            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center"style={{backgroundColor:'rgba(255,255,255,0.2)',borderRadius:'50px',padding:'2rem',maxHeight:'40%'}}>
+            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center"style={{backgroundColor:'rgba(255,255,255,0.2)',borderRadius:'50px',padding:'2rem',maxHeight:'30%'}}>
               <div className="flex flex-col gap-2 w-full" style={{position:'relative'}} >
                  <Select
                     placeholder="Select AI Model"
