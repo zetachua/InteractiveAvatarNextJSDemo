@@ -61,6 +61,7 @@ const getGroqChatCompletion = async (userInput: string, chatHistory: any, prompt
       },
     ],
     model: selectedModel,
+    response_format: { type: "json_object" },
   });
 };
 

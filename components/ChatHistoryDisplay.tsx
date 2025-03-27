@@ -25,11 +25,10 @@ const ChatHistoryDisplay: React.FC<ChatHistoryProps> = ({ chatHistory }) => {
       className="text-white font-mono"
       style={{
         width: "50%",
-        maxHeight: "500px", // Increased height for better visibility
-        minHeight:"499px",
+        height: "600px", // Increased height for better visibility
         position: "absolute",
         left: "50%",
-        bottom: "12rem",
+        bottom: "9rem",
         transform: "translateX(-50%)",
         padding: "1rem",
         overflowY: "auto",
