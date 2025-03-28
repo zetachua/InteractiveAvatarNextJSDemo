@@ -289,3 +289,23 @@ export const grantedPitchRubrics = () => ({
   team: "Students with an 'unfair advantage' among researchers, but no leadership credentials detailed ([4][5]). Top 2025 edtech teams show exits or IP. Suggest: 'Highlight research grants, university ties, or technical certifications to boost credibility.'",
   tractionAwards: "Strong early metrics: 5 users, 7 commitments, 100% retention, >90% accuracy ([3][4]). Lacks revenue or awards. Suggest: 'Introduce freemium tiers ($29/user/month) and track customer acquisition costs to show monetization readiness.'"
 });
+
+export const concretePitchRubrics = () => ({
+  score: 5.7, // Average of individual scores remains unchanged for now
+  competitivePositionScore: 4,
+  elevatorPitchScore: 6,
+  marketOpportunityScore: 7,
+  marketSizeScore: 5,
+  revenueModelScore: 5,
+  solutionValuePropositionScore: 6,
+  tractionAwardsScore: 7,
+  teamScore: 6,
+  competitivePosition: "No named competitors. Industry leaders like Giatec show $10M revenue (Crunchbase). Suggest disclosing how tech differs from established players. Position against traditional manual monitoring methods, emphasizing real-time data + IoT integration to reduce concrete waste.",
+  elevatorPitch: "Cites $4.4M revenue projection from Singapore's 70+ projects but lacks a standout hook. Value prop (bundling by concrete volume) is clear but undifferentiated. Suggestions: 'Highlight AI-powered cost savings exceeding current manual monitoring norms' or quantify per-project ROI metrics.",
+  marketOpportunity: "Claims 70+ Singapore projects annually but doesn't quantify TAM/SAM. BCA alignment is strong validation. Concrete monitoring markets average $15k-$50k per project, supporting the $63k pricing. Suggest: 'Target Asia-Pacific construction tech market projected at $30B by 2025 (Statista).'",
+  marketSize: "Claims 70+ Singapore projects (2020 basis) but no explicit TAM/SAM. Global concrete market: $130B (2025 Statista), Singapore's share ~$5B. Suggest breaking SAM into Asia/Pacific figures, e.g., 'Targeting $X billion Asian concrete sector' using GCP infrastructure projects as benchmark. Quantify SAM as $200M Singapore-based projects leveraging BCA partnerships.",
+  revenueModel: "Charging $63k for 1800 sensors implies ~$35/unit pricing, below industry average $500/unit (Statista). Clarify if one-time or subscription. Suggest hybrid model.",
+  solutionValueProposition: "Differentiates through bundling sensors by concrete volume (small/medium/large). Validates BCA alignment but lacks technical edge. 2025 competitors like Giatec ($10M revenue) use patented sensors at $500/units. Suggest highlighting AI-driven anomaly detection vs. basic monitoring. Adopt Giatec-like patented sensor technology + AI analytics for predictive maintenance, targeting 20% cost savings.",
+  team: "Four engineers with material science, computer, and civil engineering backgrounds show domain expertise but no leadership experience or past exits mentioned. VCs typically favor teams with execution track records. Suggestion: 'Add team member with construction tech startup experience, as seen in successful firms like X (2025 Crunchbase).'",
+  tractionAwards: "Won Built Environment Case Competition and has trials with Grayform, but no revenue metrics or pilot outcomes. BCA validation is critical but needs conversion to commercial traction. Suggestion: 'Report X% adoption rate among trial clients, mirroring successful industry pilots.'"
+});
