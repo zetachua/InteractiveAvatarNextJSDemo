@@ -26,12 +26,9 @@ const ChatHistoryDisplay: React.FC<ChatHistoryProps> = ({ chatHistory }) => {
       ref={chatContainerRef}
       className="text-white font-mono"
       style={{
+        margin: "1rem",
         width: "60%",
         height: "600px", // Increased height for better visibility
-        position: "absolute",
-        left: "50%",
-        bottom: "9rem",
-        transform: "translateX(-50%)",
         padding: "1rem",
         overflowY: "auto",
         scrollbarWidth: "none", // Firefox
