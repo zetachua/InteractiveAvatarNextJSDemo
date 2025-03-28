@@ -102,10 +102,10 @@ export default function InteractiveInvestors() {
   const recognitionRef = useRef<MediaRecorder | null>(null);
   const transcriptRef = useRef<string>(''); 
   const [selectedModel, setSelectedModel] = useState<string>('');
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
-  const [isTimeUp, setIsTimeUp] = useState(false);
-  const [isBeginClock, setIsBeginClock] = useState(false);
-  const [callCount, setCallCount] = useState(0);
+  const [timeLeft, setTimeLeft] = useState<number>(300); // 5 minutes in seconds
+  const [isTimeUp, setIsTimeUp] = useState<boolean>(false);
+  const [isBeginClock, setIsBeginClock] = useState<boolean>(false);
+  const [callCount, setCallCount] = useState<number>(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [pauses, setPauses] = useState<any[]>([]);
