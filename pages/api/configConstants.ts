@@ -28,7 +28,7 @@ export const models = [
 //   'llama3-8b-8192',
 // ];
 
-export const tempUserInput=
+export const concretePitch=
       `so our company offers three bundling
       packages where we categorize
       the construction projects based on the
@@ -229,3 +229,63 @@ And together, we built Lookup.
 We look forward to seeing you at our booth later.
 Thank you.
 `;
+export const lookupPitchRubrics = () => ({
+  score:5.7,
+  competitivePositionScore:0,
+  elevatorPitchScore:7,
+  marketOpportunityScore:8,
+  marketSizeScore:6,
+  revenueModelScore:6,
+  solutionValuePropositionScore:7,
+  tractionAwardsScore:6,
+  teamScore:6,
+  competitivePosition: "Identifies LinkedIn as a data source but not a competitor. Fails to name direct rivals like CareerBuilder, Indeed Career Guides, or AI-driven platforms like TalentNeuron. 2025 market shows platforms like Talentlyft using predictive analytics. Suggest: 'Differentiate by emphasizing exclusive long-term benefit modeling (income/exit pathways), contrasting with LinkedIn's job matching'.",
+  elevatorPitch: "Clearly states problem (career uncertainty) and solution (career mapping via real data)[1][2], but misses a striking opening hook. Example: '80% will switch careers but face experience barriers'[1]. Suggestion: Open with '7 in 10 students struggle to choose majors - we eliminate that uncertainty'[1].",
+  marketOpportunity: "Claims $25M Singapore/$30B global market[1]. Credible but needs SAM breakdown. EdTech market projected to reach $325B by 2025 (Statista)[4]. Suggestion: 'Target $30B professional training sector using career path insights'[1].",
+  marketSize: "Claims Singapore market potential of $25M (projected to $30B globally), but no SAM/SOM breakdown. 2025 career services markets typically have $3B-$5B TAMs regionally (e.g., Southeast Asia), making the Singapore figure plausible but requiring validation against specific post-grad career services[2][5]. Suggest: 'Breakdown SAM to $X for 2-year post-grads in tech/MBA fields, mirroring LinkedIn Talent Solutions' 2025 Asia focus.'",
+  revenueModel: "Freemium model with 'one free map' tier and premium unlimited access. No pricing details – 2025 SaaS career tools typically charge $20-$50/month (e.g., Internships.com). Suggest: 'Set premium tiers at $29.99/month for 5 maps and $99.99/month for enterprise access, mirroring GeeksforGeeks' subscription model'.",
+  solutionValueProposition: "Unique solution using real career path data from 150k+ profiles to generate actionable insights. Differentiates from traditional advisors and job platforms by focusing on predictive pathing[5]. Weakness: No mention of proprietary algorithms or data modeling techniques (e.g., AI/ML applications). 2025 competitors use NLP-based analytics (e.g., Gloat's skills matching). Suggest: 'Highlight NLP-driven pattern recognition across career transitions, similar to Hloom's AI-powered resume tools.'",
+  team: "Molina's knowledge graph experience and Shreya's Intel/Salesforce background are strong[1], but lacks explicit leadership wins. VCs prefer teams with past exits - top 2025 EdTech teams average 1-2 exits per leader[4]. Suggestion: Add 'Built knowledge graphs for Fortune 500s, ensuring data scalability'[1].",
+  tractionAwards: "MVP tested with 30 users, including advisors interested in partnerships[1]. No revenue metrics or awards. Suggestion: Track 'User retention rates since launch' and 'China market pilot timeline'."
+});
+
+
+export const mediVRPitchRubrics = () => ({
+  score: 6, // Average of individual scores below
+  competitivePositionScore: 3,
+  elevatorPitchScore: 6,
+  marketOpportunityScore: 8,
+  marketSizeScore: 5,
+  revenueModelScore: 6,
+  solutionValuePropositionScore: 7,
+  tractionAwardsScore: 7,
+  teamScore: 7,
+  competitivePosition: "No competitor names or direct comparisons provided, limiting analysis depth. Judges expect benchmarking ([2][3]). Suggest: 'Position against VR training platforms with $10M+ revenue by highlighting 30% cost reduction via wireless VR, aligning with industry trends in 2025 medical simulation.'",
+  elevatorPitch: "Effectively communicates problem (high-risk, costly training) and solution (VR simulations with AI feedback), but lacks a punchy hook ([1][4]). Market size ($355B, 13.7% CAGR) included, yet pitch could be sharper. Suggest: 'Cut $7.2M/year training costs with AI-powered VR that outstrips traditional methods.'",
+  marketOpportunity: "Cites $355B global medical simulation market, consistent with 2023 Deloitte medtech reports, but lacks SAM clarity ([2][5]). VR medical training SAM likely $5-15B. Time (75%) and cost ($7.2M) savings need benchmarking. Suggest: 'Focus on $5-15B VR training segment with validated efficiency claims.'",
+  marketSize: "Claims $355B market with 13.7% CAGR, but no SAM/SOM breakdown, which judges prioritize ([1][2]). Suggest: 'Define $X USD target in orthopedics/pediatrics simulation sub-markets, leveraging NUHS/NUS partnerships for credibility.'",
+  revenueModel: "Mentions tiered subscriptions, but lacks pricing specifics ([4][5]). Judges seek financial detail. Suggest: 'Implement $X-$Y per annual seat, mirroring 2025 educational SaaS pricing benchmarks.'",
+  solutionValueProposition: "VR/AI training cuts time by 75% and costs by $7.2M yearly, with Oculus Quest accessibility and hands-tracking differentiation ([5]). Misses IP claims. Suggest: 'Pursue patents for AI feedback algorithms, strengthening competitive edge like leading 2025 medical sim platforms.'",
+  team: "Includes biomedical engineers and medical pros, with one prior startup acquired by Facebook ([4][5]). Leadership achievements beyond acquisition unclear. Top 2025 medtech teams often show 2-3 exits or patents. Suggest: 'Highlight scalable innovation experience from Facebook acquisition.'",
+  tractionAwards: "Strong partnerships with NUHS and NUS Yong Loo Lin School of Medicine, plus Founder's Knight win ([3][4]). Lacks award context and user metrics. Suggest: 'Quantify pilot results or user adoption to match 2025 benchmarks like TechCrunch Startup Battlefield entrants.'"
+});
+
+export const grantedPitchRubrics = () => ({
+  score: 4.5, // Average of individual scores below
+  competitivePositionScore: 0,
+  elevatorPitchScore: 6,
+  marketOpportunityScore: 6,
+  marketSizeScore: 4,
+  revenueModelScore: 5,
+  solutionValuePropositionScore: 7,
+  tractionAwardsScore: 7,
+  teamScore: 4,
+  competitivePosition: "Not provided. Unable to evaluate due to missing data. Judges expect competitive analysis in 2025 SaaS pitches. Suggest: 'Position against form automation tools by emphasizing 80% time reduction and researcher-specific NLP, differentiating from general-purpose platforms.'",
+  elevatorPitch: "Clearly states problem (form-filling monotony) and solution (NLP-powered automation), but lacks a standout hook. 80% time reduction is strong, though market size omitted ([1]). Per 2025 SaaS trends, 30-50% gains are typical (Gartner). Suggest: 'Save 10 hours/month on forms with Granted’s intelligent automation, proven by researchers.'",
+  marketOpportunity: "Targets researchers as beachhead and hints at global form-filling, but lacks SAM/TAM figures ([2]). Global form automation market at $2.8B by 2025 (MarketsAndMarkets). Suggest: 'Quantify $XXM SAM for 50K researchers using grant systems annually, expanding to administrative sectors.'",
+  marketSize: "No TAM/SAM/SOM provided, only implied potential for researchers ([1][2]). Global form automation benchmarks missing. Suggest: 'Define $XXB SAM for academic forms using 2025 grant funding data, aligning with industry reports.'",
+  revenueModel: "Freemium model mentioned but vague on tiers ([4]). 2025 SaaS norms suggest $20-$50/month pricing. Suggest: 'Set $9-$29/user/month tiers for microbiz vs. enterprise, plus white-label API for high-touch contracts.'",
+  solutionValueProposition: "NLP-driven automation with 80% time reduction is compelling, but edge over 2025 competitors unclear ([5]). Suggest: 'Add real-time validation (e.g., patent-pending error detection) to stand out in form automation space.'",
+  team: "Students with an 'unfair advantage' among researchers, but no leadership credentials detailed ([4][5]). Top 2025 edtech teams show exits or IP. Suggest: 'Highlight research grants, university ties, or technical certifications to boost credibility.'",
+  tractionAwards: "Strong early metrics: 5 users, 7 commitments, 100% retention, >90% accuracy ([3][4]). Lacks revenue or awards. Suggest: 'Introduce freemium tiers ($29/user/month) and track customer acquisition costs to show monetization readiness.'"
+});

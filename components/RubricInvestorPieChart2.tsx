@@ -3,7 +3,6 @@ import { PieChart, Pie, Cell, Tooltip, Legend, Text } from 'recharts';
 import { ChatHistory, Rubric2InvestorMetricData, Rubric2InvestorSpecificData } from './KnowledgeClasses';
 import { Button } from '@nextui-org/button';
 import Section from './Section';
-
 // Props for the component
 interface RubricInvestorPieChartProps2 {
   chatHistory: ChatHistory[];
@@ -57,6 +56,7 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
   ${rubricSpecificFeedback?.tractionAwards}
   ${rubricSpecificFeedback?.revenueModel}
   `;
+
 
   console.log(rubricSpecificFeedback, "all the metric feedback");
   const feedbackEntries = Object.entries(rubricSpecificFeedback || {});
@@ -119,7 +119,7 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
         zIndex: '1001',
       }}
     >
-      <Button
+      {/* <Button
         className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
         size="md"
         variant="shadow"
@@ -136,7 +136,7 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
         }}
       >
         Restart Round
-      </Button>
+      </Button> */}
 
       <div
         style={{
@@ -159,11 +159,12 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
           }}
         >
           <b>Perplexity LLM Analysis Overall</b>
-          <div style={{ fontSize: '16px', padding: '0.5rem', textAlign: 'left', whiteSpace: 'pre-line' }}>
+          <div style={{ fontSize: '18px', padding: '0.5rem', textAlign: 'left', whiteSpace: 'pre-line' }}>
             {formattedSummary} <br/>
+            <span> </span>
             <b>Reference Citations:</b>
           </div>
-          <div style={{ display: 'flex', maxHeight: '200px', marginTop: '1rem', overflow: 'scroll', flexDirection: 'column', gap: '1rem', fontSize: '12px', width: '500px', padding: '0.5rem', textAlign: 'left', whiteSpace: 'pre-line' }}>
+          <div style={{ display: 'flex', maxHeight: '200px', marginTop: '1rem', overflow: 'scroll', flexDirection: 'column', gap: '1rem', fontSize: '16px', maxWidth: '90%', padding: '0.5rem', textAlign: 'left', whiteSpace: 'pre-line' }}>
             {citationList?.map((citation, index) => (
               <div key={index}>
                 {index + 1}.
@@ -221,6 +222,40 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
           {feedbackEntries.map(([metric, feedback]) => (
             <Section key={metric} title={metric} feedback={feedback} />
           ))}
+           {/* <button
+          onClick={() => copyToClipboard(combinedText)}
+          style={{
+            position: 'absolute',
+            right: '2%',
+            top: '1%',
+            padding: '0.5rem 1rem',
+            border: 'none',
+            background: 'rgba(255,255,255,0.4)',
+            borderRadius: '50px',
+            color: '#fff',
+            cursor: 'pointer',
+            fontSize: '16px',
+          }}
+        >
+          Copy All
+        </button> */}
+        <button
+         style={{
+          position: 'absolute',
+          right: '-3%',
+          top: '0',
+          padding: '0.5rem 1rem',
+          border: 'none',
+          background: 'rgba(255,255,255,0.4)',
+          borderRadius: '10px',
+          color: '#fff',
+          cursor: 'pointer',
+          fontSize: '16px',
+        }}
+          onClick={() => downloadTextFile()}
+        >
+          Download ChatHistory
+        </button>
         </div>
       </div>
     </div>

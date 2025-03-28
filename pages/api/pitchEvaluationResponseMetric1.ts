@@ -75,6 +75,7 @@ const fetchMetric1 = async (chatHistory: any[]) => {
     }
 
     let filteredResponse = metric1ResultInvestorFilter(responseContent);
+    console.log("testFn5: filteredResponse success",filteredResponse)
 
     if (!filteredResponse) {
       console.log("Invalid rubric JSON format, returning null");
@@ -87,6 +88,7 @@ const fetchMetric1 = async (chatHistory: any[]) => {
       rubricData: filteredResponse,
       citations: citations,
     };
+    console.log('metric1 final result',result)
     return result;
 
   } catch (error) {

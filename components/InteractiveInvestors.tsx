@@ -19,11 +19,12 @@ interface Pause {
 
 import { AudioAnalysisMetrics, ChatHistory,FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
 import { Square,Microphone} from "@phosphor-icons/react";
-import {models, tempUserInput} from '../pages/api/configConstants'
+import {grantedPitchRubrics, lookupPitchRubrics, mediVRPitchRubrics, models} from '../pages/api/configConstants'
 import RubricInvestorPiechart2 from "./RubricInvestorPieChart2";
 import CountdownTimer from "./Countdown";
 import SentimentInvestorPiechart from "./SentimentInvestorPieChart";
 import ChatHistoryDisplay from "./ChatHistoryDisplay";
+import RubricInvestorPiechartExample from "./RubricInvestorPieChartExample";
 
 export default function InteractiveInvestors() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -35,7 +36,10 @@ export default function InteractiveInvestors() {
   const [stream, setStream] = useState(false);
   const [debug, setDebug] = useState<string>();
   const [displayText, setDisplayText]= useState('');
-
+  const [displayLookupPitch,setDisplayLookupPitch]=useState(false);
+  const [displayGrantPitch,setDisplayGrantPitch]=useState(false);
+  const [displayMediVRPitch,setDisplayMediVRPitch]=useState(false);
+  const [displayConcretePitch,setDisplayConcretePitch]=useState(false);
   const [userInput, setUserInput] = useState<string>("");
   const [userInputTextArea, setUserInputTextArea] = useState<string>("");
   const mediaStream = useRef<HTMLVideoElement>(null);
@@ -126,7 +130,7 @@ export default function InteractiveInvestors() {
     setLoadingRubric1(false);
     setLoadingRubric2(false);
     // setLoadingRubric3(false);
-    
+
     setIsTimeUp(false);
     setIsLoadingSession(true);
     setDisplayRubricAnalytics(false);
@@ -623,14 +627,69 @@ async function endSession() {
         {/* {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentScore} />} */}
         {(sentimentJson && rubricJson2) ? 
           <div style={{fontSize: '1.3rem', display:'flex',gap:'1rem',position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>
+            <div style={{display:'flex',position:'absolute',zIndex:'2000',left:'2rem',gap:'1rem'}}>
+              <Button
+                onClick={() => setDisplayLookupPitch(!displayLookupPitch)}
+                className={`w-full text-white ${
+                  !displayLookupPitch
+                    ? 'bg-transparent border border-indigo-500'
+                    : 'bg-gradient-to-tr from-indigo-500 to-indigo-300'
+                }`}
+                size="md"
+                variant="shadow"
+              >
+                LookUp
+              </Button>
+              <Button
+                onClick={() => setDisplayGrantPitch(!displayGrantPitch)}
+                className={`w-full text-white ${
+                  !displayGrantPitch
+                    ? 'bg-transparent border border-indigo-500'
+                    : 'bg-gradient-to-tr from-indigo-500 to-indigo-300'
+                }`}
+                size="md"
+                variant="shadow"
+              >
+                Grant
+              </Button>
+              <Button
+                onClick={() => setDisplayConcretePitch(!displayConcretePitch)}
+                className={`w-full text-white ${
+                  !displayConcretePitch
+                    ? 'bg-transparent border border-indigo-500'
+                    : 'bg-gradient-to-tr from-indigo-500 to-indigo-300'
+                }`}
+                size="md"
+                variant="shadow"
+              >
+                Concrete AI
+              </Button>
+              <Button
+                onClick={() => setDisplayMediVRPitch(!displayMediVRPitch)}
+                className={`w-full text-white ${
+                  !displayMediVRPitch
+                    ? 'bg-transparent border border-indigo-500'
+                    : 'bg-gradient-to-tr from-indigo-500 to-indigo-300'
+                }`}
+                size="md"
+                variant="shadow"
+              >
+                MediVR
+              </Button>
+          </div>
             <RubricInvestorPiechart2  citations={rubricCitations2} data={rubricJson2} overallScore={rubricAllRatings2} summary={rubricSummary2} specificFeedback={rubricSpecificFeedback2} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart2>
-            <SentimentInvestorPiechart audioAnalytics={audioAnalytics} data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0}></SentimentInvestorPiechart>
             {(!rubricCitations2 || loadingRubric1 || loadingRubric2 || loadingRubric)&& 
             <div style={{position:'absolute',width:'400px',zIndex:'2000',color:'black',display:'flex',gap:'1rem',flexDirection:'column',backgroundColor:'rgba(255,255,255)',borderRadius:'20px',padding:'1rem',whiteSpace:'pre-line',top:'50%',left:'50%',transform:'translate(-50%,-50%)',boxShadow:'2px 2px 0px 0px black'}}>
               <div style={{display:'flex',gap:'1rem'}}>{(!rubricCitations2||loadingRubric||loadingRubric1)?<Spinner />:"! "}<span>{loadingRubric1? '[Loading Analysis]':'[Successfully Loaded]'} Elevation Pitch, Team, Market Opportunity</span></div>
               <div style={{display:'flex',gap:'1rem'}}>{(!rubricCitations2||loadingRubric||loadingRubric2)?<Spinner />:"! "}<span>{loadingRubric2? '[Loading Analysis]':'[Successfully Loaded]'} Market Size, Solution Value Proposition, Competitive Position</span></div>
               {/* <div style={{display:'flex',gap:'1rem'}}>{(!rubricCitations2||loadingRubric||loadingRubric3)?<Spinner />:"! "}<span>{loadingRubric3? '[Loading Analysis]':'[Successfully Loaded]'} Traction Awards, Revenue Model</span></div> */}
             </div>}
+            { displayLookupPitch && <RubricInvestorPiechartExample title={'LookUp'} specificFeedback={lookupPitchRubrics()} ></RubricInvestorPiechartExample>}
+            { displayGrantPitch && <RubricInvestorPiechartExample title={'Grant'} specificFeedback={grantedPitchRubrics()} ></RubricInvestorPiechartExample>}
+            { displayMediVRPitch && <RubricInvestorPiechartExample title={'MediVR'} specificFeedback={mediVRPitchRubrics()} ></RubricInvestorPiechartExample>}
+            { displayConcretePitch && <RubricInvestorPiechartExample title={'Concrete'} specificFeedback={lookupPitchRubrics()} ></RubricInvestorPiechartExample>}
+            <SentimentInvestorPiechart audioAnalytics={audioAnalytics} data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0}></SentimentInvestorPiechart>
+
          </div>
          :
          loadingRubric&&

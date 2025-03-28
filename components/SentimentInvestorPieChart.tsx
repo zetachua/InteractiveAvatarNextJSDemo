@@ -131,6 +131,7 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
         flexWrap: 'wrap',
         height: '100%',
         width: '100%',
+        minWidth:'700px'
       }}
     >
 
@@ -153,8 +154,8 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
             justifyContent: 'center',
           }}
         >
-          <b style={{ fontSize: '2rem' }}>Sentiment Overall</b>
-          <div style={{ padding: '0.5rem' }}>{feedbackSummary}</div>
+          <b style={{ fontSize: '24px' }}>Sentiment Overall</b>
+          <div style={{ padding: '0.5rem' ,fontSize:'18px'}}>{feedbackSummary}</div>
         </div>
       </div>
       
@@ -169,8 +170,8 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
           >
             {audioAnalyticsDescriptionVisibility[key as keyof typeof audioAnalyticsDescriptionVisibility] && 
             <AudioAnalyticsDescription metric={key} value={value} />}
-            <h3>{value.toFixed(1)}%</h3>
-            <h4>{key.charAt(0).toUpperCase() + key.slice(1)}</h4>
+            <h4>{value.toFixed(1)}%</h4>
+            <h5>{key.charAt(0).toUpperCase() + key.slice(1)}</h5>
           </div>
         ))}
       </div>

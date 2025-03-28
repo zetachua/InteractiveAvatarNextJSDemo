@@ -118,6 +118,26 @@ export interface Rubric2InvestorSpecificData {
   revenueModel: string;
 }
 
+
+export interface Rubric2InvestorSpecificDataExample {
+  elevatorPitch: string;
+  team: string;
+  marketOpportunity: string;
+  marketSize: string;
+  solutionValueProposition: string;
+  competitivePosition: string;
+  tractionAwards: string;
+  revenueModel: string;
+  score:number;
+  elevatorPitchScore: number;
+  teamScore: number;
+  marketOpportunityScore: number;
+  marketSizeScore: number;
+  solutionValuePropositionScore: number;
+  competitivePositionScore: number;
+  tractionAwardsScore: number;
+  revenueModelScore: number;
+}
 export interface Rubric2InvestorData {
   elevatorPitch: number;
   team: number;

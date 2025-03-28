@@ -31,7 +31,7 @@ import FeedbackPieChart from "./FeedbackPieChart";
 import { AudioAnalysisMetrics, ChatHistory, FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
 import { Square,Microphone} from "@phosphor-icons/react";
 import InteractiveAvatarTextInput from "./InteractiveAvatarTextInput";
-import {models, tempUserInput} from '../pages/api/configConstants'
+import {models} from '../pages/api/configConstants'
 import RubricInvestorPiechart from "./RubricInvestorPieChart";
 import RubricInvestorPiechart2 from "./RubricInvestorPieChart2";
 import CountdownTimer from "./Countdown";
