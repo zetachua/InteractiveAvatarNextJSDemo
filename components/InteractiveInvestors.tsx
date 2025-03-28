@@ -366,6 +366,7 @@ async function endSession() {
   // setLoadingRubric3(true);
   
   setStream(false);
+  setIsBeginClock(false);
 
   try{
     fetchSentiment();
