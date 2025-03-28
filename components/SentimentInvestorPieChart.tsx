@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import {
+  Bar,
+  BarChart,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis
+} from 'recharts';
 import { Button } from '@nextui-org/button';
 import Section from './Section';
 import {
@@ -7,6 +15,8 @@ import {
   FeedbackMetricData,
   AudioAnalysisMetrics
 } from './KnowledgeClasses'; // Assuming you have these types
+import '../styles/meter.css';
+import AudioAnalyticsDescription from './AudioAnalyticsDescription';
 
 // Props for the component
 interface SentimentInvestorPieChartProps {
@@ -28,11 +38,31 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
   feedbackSummary,
   specificFeedback,
 }) => {
-  const {
-    arousal,
-    dominance,
-    valence
-  } = audioAnalytics;
+
+  const [audioAnalyticsDescriptionVisibility, setAudioAnalyticsDescriptionVisibility] = useState({
+    arousal: false,
+    dominance: false,
+    valence: false,
+  });
+
+  const toggleAudioAnalyticsDescriptionVisibility = (key: string) => {
+    if (key === 'arousal') {
+      setAudioAnalyticsDescriptionVisibility(prev => ({
+        ...prev,
+        arousal: !prev.arousal
+      }));
+    } else if (key === 'dominance') {
+      setAudioAnalyticsDescriptionVisibility(prev => ({
+        ...prev,
+        dominance: !prev.dominance
+      }));
+    } else {
+      setAudioAnalyticsDescriptionVisibility(prev => ({
+        ...prev,
+        valence: !prev.valence
+      }));
+    }
+  };
 
   // Destructure values from the feedbackData prop
   const {
@@ -59,20 +89,30 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
     value: value as number,
   }));
   
-  const roundToTwoSignificantFigures = (num:any) => {
-    if (num === 0) return 0;
-    const factor = Math.pow(10, 2 - Math.floor(Math.log10(Math.abs(num))));
-    return Math.round(num * factor) / factor;
-  };
-  const roundedArousal = roundToTwoSignificantFigures(arousal);
-  const roundedDominance = roundToTwoSignificantFigures(dominance);
-  const roundedValence = roundToTwoSignificantFigures(valence);
+  // const roundToTwoSignificantFigures = (num:any) => {
+  //   if (num === 0) return 0;
+  //   const factor = Math.pow(10, 2 - Math.floor(Math.log10(Math.abs(num))));
+  //   return Math.round(num * factor) / factor;
+  // };
+  // const roundedArousal = roundToTwoSignificantFigures(arousal);
+  // const roundedDominance = roundToTwoSignificantFigures(dominance);
+  // const roundedValence = roundToTwoSignificantFigures(valence);
+
+  // Colors for the meter chart
+  const getMeterColor = (value: number) => {
+    if (value < 50) return '#FF6B6B';
+    if (value < 55) return '#FFC300';
+    if (value < 60) return '#4ECDC4';
+    if (value < 65) return '#45B7D1';
+    return '#2AB673';
+  }
 
   // Colors for the bar chart
   const getBarColor = (value: number) => {
     if (value <= 1) return '#FF6B6B';  // Red for low values
-    if (value <= 2) return '#4ECDC4';  // Teal for medium values
-    if (value <= 3) return '#45B7D1';  // Blue for higher values
+    if (value <= 2) return '#FFC300';  // Orange for low values
+    if (value <= 3) return '#4ECDC4';  // Teal for medium values
+    if (value <= 4) return '#45B7D1';  // Blue for higher values
     return '#2AB673';  // Green for highest values
   };
 
@@ -89,10 +129,8 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
         justifyContent: 'center',
         alignItems: 'center',
         flexWrap: 'wrap',
-        position: 'relative',
         height: '100%',
         width: '100%',
-        zIndex: '1001',
       }}
     >
 
@@ -117,50 +155,29 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
         >
           <b style={{ fontSize: '2rem' }}>Sentiment Overall</b>
           <div style={{ padding: '0.5rem' }}>{feedbackSummary}</div>
-          <div
-            style={{
-              position: 'relative',
-              margin: 'auto',
-              marginTop: '.8rem',
-              padding: '1rem',
-              background: 'rgba(255, 255, 255, 0.1)',
-              borderRadius: '10px',
-              textAlign: 'center',
-              width: '85%',
-              color: '#fff',
-            }}
-          >
-            {/* {!isAudioMetricDescriptionHidden && <div
-              style={{
-                position: 'absolute',
-                bottom: '100%',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                backgroundColor: 'rgba(200, 200, 200)',
-                color: '#fff',
-                padding: '10px',
-                borderRadius: '5px',
-                fontSize: '14px',
-              }}
-            >
-              <p><b>Arousal:</b> Represents the intensity of emotion.</p>
-              <p><b>Dominance:</b> Measures the perceived level of control associated with an emotion.</p>
-              <p><b>Valence:</b> Measures the pleasantness or unpleasantness of the emotion.</p>
-            </div>} */}
-            <div style={{ fontSize: '1.5rem' }}><b>Pitch Overall: {(roundedArousal+roundedDominance+roundedValence)/3<0.7?'Mid':(roundedArousal+roundedDominance+roundedValence)<0.8?'Good':'Excellent'}</b> </div>
-            <b>Arousal:</b> {roundedArousal} | <b>Dominance:</b> {roundedDominance} | <b>Valence:</b> {roundedValence}
-             <p></p>
-             <div style={{textAlign:'left',padding:'0.5rem'}}>
-              <p><b>Arousal:</b> Intensity of emotion.</p>
-              <p><b>Dominance:</b> Perceived level of control associated with an emotion.</p>
-              <p><b>Valence:</b> Pleasantness or unpleasantness of the emotion.</p>
-            </div>
-          </div>
         </div>
       </div>
+      
+      <div className='meter'>
+        {Object.entries(audioAnalytics).map(([key, value]) => (
+          <div
+            key={key}
+            className='progress less'
+            style={{ '--i': value, '--clr': getMeterColor(value) } as React.CSSProperties}
+            onMouseEnter={() => toggleAudioAnalyticsDescriptionVisibility(key)}
+            onMouseLeave={() => toggleAudioAnalyticsDescriptionVisibility(key)}
+          >
+            {audioAnalyticsDescriptionVisibility[key as keyof typeof audioAnalyticsDescriptionVisibility] && 
+            <AudioAnalyticsDescription metric={key} value={value} />}
+            <h3>{value}%</h3>
+            <h4>{key.charAt(0).toUpperCase() + key.slice(1)}</h4>
+          </div>
+        ))}
+      </div>
+
       <div
         style={{
-          marginTop: '2rem',
+          margin: '2rem 2rem 2rem 0',
           fontWeight: 600,
           fontSize: '24px',
           borderRadius: '10px',
@@ -171,7 +188,7 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
       >
         {roundedOverallScore}/5
       </div>
-      <ResponsiveContainer style={{ marginTop: '3rem' }} width='90%' height={400}>
+      <ResponsiveContainer width='90%' height={400}>
         <BarChart
           layout='vertical'
           data={chartData}
