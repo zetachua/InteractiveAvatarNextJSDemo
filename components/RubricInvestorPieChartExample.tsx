@@ -1,16 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, Text } from 'recharts';
-import { Rubric2InvestorSpecificDataExample } from './KnowledgeClasses';
+import { Rubric2InvestorSpecificDataExample, AudioAnalysisMetrics } from './KnowledgeClasses';
 import Section from './Section';
+import '../styles/meter.css';
+
 // Props for the component
 interface RubricInvestorPieChartProps2 {
   specificFeedback?: Rubric2InvestorSpecificDataExample;
   title:string;
+  audioAnalytics: AudioAnalysisMetrics
 }
 
 const RubricInvestorPiechartExample: React.FC<RubricInvestorPieChartProps2> = ({
   specificFeedback,
-  title
+  title,
+  audioAnalytics
 }) => {
   const rubricSpecificFeedback: Rubric2InvestorSpecificDataExample = specificFeedback ?? {} as Rubric2InvestorSpecificDataExample;
   const rubricOverallScore: number = specificFeedback?.score ?? 0;
@@ -73,6 +77,13 @@ const RubricInvestorPiechartExample: React.FC<RubricInvestorPieChartProps2> = ({
       ? Math.ceil((rubricOverallScore + Number.EPSILON) * 10) / 10
       : 0;
 
+  const getMeterColor = (value: number) => {
+    if (value < 50) return '#FF6B6B';
+    if (value < 55) return '#FFC300';
+    if (value < 60) return '#4ECDC4';
+    if (value < 65) return '#45B7D1';
+    return '#2AB673';
+  };
 
   return (
     <div
@@ -110,17 +121,26 @@ const RubricInvestorPiechartExample: React.FC<RubricInvestorPieChartProps2> = ({
         >
           <b>{title} Startup LLM Analysis </b>
         </div>
+
+        <div className='meter'>
+          {Object.entries(audioAnalytics).map(([key, value]) => (
+            <div
+              key={key}
+              className='progress'
+              style={{ '--i': value, '--clr': getMeterColor(value) } as React.CSSProperties}
+            >
+              <h4>{value.toFixed(1)}%</h4>
+              <h5>{key.charAt(0).toUpperCase() + key.slice(1)}</h5>
+            </div>
+          ))}
+        </div>
+
         <div
           style={{
             fontWeight: 600,
             fontSize: '24px',
             padding: '0rem 1.2rem 0rem 1.2rem',
             borderRadius: '10px',
-            zIndex: '1000',
-            position: 'absolute',
-            top: '8%',
-            left: '50%',
-            transform: 'translate(-50%,-50%)',
             color: '#000',
             backgroundColor: '#fff',
           }}

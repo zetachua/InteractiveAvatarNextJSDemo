@@ -163,7 +163,7 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
         {Object.entries(audioAnalytics).map(([key, value]) => (
           <div
             key={key}
-            className='progress less'
+            className='progress hoverable'
             style={{ '--i': value, '--clr': getMeterColor(value) } as React.CSSProperties}
             onMouseEnter={() => toggleAudioAnalyticsDescriptionVisibility(key)}
             onMouseLeave={() => toggleAudioAnalyticsDescriptionVisibility(key)}

@@ -490,6 +490,28 @@ async function endSession() {
     }
   };
 
+  // Hardcoded senior's audio analytics
+  const lookUpAudioAnalytics = {
+    arousal: 63.93736,
+    dominance: 68.145305,
+    valence: 52.96149
+  };
+  const grantedAudioAnalytics = {
+    arousal: 70.39725,
+    dominance: 73.31582,
+    valence: 58.8054
+  };
+  const mediVRAudioAnalytics = {
+    arousal: 65.83064,
+    dominance: 71.53572,
+    valence: 64.74939
+  };
+  const concreteAIAudioAnalytics = {
+    arousal: 67.238104,
+    dominance: 70.651746,
+    valence: 67.704296
+  };
+
   return (
     <div className="flex flex-col "style={{display:'flex',justifyContent:'center',alignItems:'center'}} >
       <Card className="w-screen h-screen overflow-hidden border-none rounded-none" style={{background: 'linear-gradient(to top, #987B8C, #F0C7C2)'}}>
@@ -691,10 +713,10 @@ async function endSession() {
               <div style={{display:'flex',gap:'1rem'}}>{(!rubricCitations2||loadingRubric||loadingRubric2)?<Spinner />:"! "}<span>{loadingRubric2? '[Loading Analysis]':'[Successfully Loaded]'} Market Size, Solution Value Proposition, Competitive Position</span></div>
               {/* <div style={{display:'flex',gap:'1rem'}}>{(!rubricCitations2||loadingRubric||loadingRubric3)?<Spinner />:"! "}<span>{loadingRubric3? '[Loading Analysis]':'[Successfully Loaded]'} Traction Awards, Revenue Model</span></div> */}
             </div>}
-            { displayLookupPitch && <RubricInvestorPiechartExample title={'LookUp'} specificFeedback={lookupPitchRubrics()} ></RubricInvestorPiechartExample>}
-            { displayGrantPitch && <RubricInvestorPiechartExample title={'Grant'} specificFeedback={grantedPitchRubrics()} ></RubricInvestorPiechartExample>}
-            { displayMediVRPitch && <RubricInvestorPiechartExample title={'MediVR'} specificFeedback={mediVRPitchRubrics()} ></RubricInvestorPiechartExample>}
-            { displayConcretePitch && <RubricInvestorPiechartExample title={'Concrete'} specificFeedback={concretePitchRubrics()} ></RubricInvestorPiechartExample>}
+            { displayLookupPitch && <RubricInvestorPiechartExample title={'LookUp'} specificFeedback={lookupPitchRubrics()} audioAnalytics={lookUpAudioAnalytics} />}
+            { displayGrantPitch && <RubricInvestorPiechartExample title={'Grant'} specificFeedback={grantedPitchRubrics()} audioAnalytics={grantedAudioAnalytics} />}
+            { displayMediVRPitch && <RubricInvestorPiechartExample title={'MediVR'} specificFeedback={mediVRPitchRubrics()} audioAnalytics={mediVRAudioAnalytics} />}
+            { displayConcretePitch && <RubricInvestorPiechartExample title={'Concrete'} specificFeedback={lookupPitchRubrics()} audioAnalytics={concreteAIAudioAnalytics} />}
             <SentimentInvestorPiechart audioAnalytics={audioAnalytics} data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0}></SentimentInvestorPiechart>
 
          </div>
