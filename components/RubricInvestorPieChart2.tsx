@@ -8,12 +8,12 @@ import Section from './Section';
 interface RubricInvestorPieChartProps2 {
   chatHistory: ChatHistory[];
   resetAllStates: () => void;
-  summary?: string; // Make optional since we're providing default from JSON
+  summary?: string;
   totalRounds: number;
-  specificFeedback?: Rubric2InvestorSpecificData; // Make optional
-  data?: Rubric2InvestorMetricData; // Optional data
-  overallScore?: number; // Optional overall score
-  citations?:string;
+  specificFeedback?: Rubric2InvestorSpecificData;
+  data?: Rubric2InvestorMetricData;
+  overallScore?: number;
+  citations?: string;
 }
 
 const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
@@ -26,17 +26,16 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
   specificFeedback,
   resetAllStates,
 }) => {
-  // Use JSON data as fallback/default values
   const rubricMetrics: Rubric2InvestorMetricData = data ?? {} as Rubric2InvestorMetricData;
-  const rubricSummary: string = summary ?? ''; 
+  const rubricSummary: string = summary ?? '';
   const formattedSummary = rubricSummary
-    .split(/[.!?]\s+/) // Split on sentence-ending punctuation
-    .filter(sentence => sentence.trim().length > 0) // Remove empty entries
-    .map(sentence => `- ${sentence.trim()}`) // Add bullet point to each sentence
-    .join('\n'); // Join with actual newlines
-  const rubricSpecificFeedback: Rubric2InvestorSpecificData = specificFeedback ?? {} as Rubric2InvestorSpecificData; 
-  const rubricOverallScore: number = overallScore ?? 0; 
-  
+    .split(/[.!?]\s+/)
+    .filter(sentence => sentence.trim().length > 0)
+    .map(sentence => `- ${sentence.trim()}`)
+    .join('\n');
+  const rubricSpecificFeedback: Rubric2InvestorSpecificData = specificFeedback ?? {} as Rubric2InvestorSpecificData;
+  const rubricOverallScore: number = overallScore ?? 0;
+
   const copyToClipboard = (text: string) => {
     navigator.clipboard
       .writeText(text)
@@ -59,7 +58,7 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
   ${rubricSpecificFeedback?.revenueModel}
   `;
 
-  console.log(rubricSpecificFeedback,"all the metric feedback")
+  console.log(rubricSpecificFeedback, "all the metric feedback");
   const feedbackEntries = Object.entries(rubricSpecificFeedback || {});
 
   const downloadTextFile = () => {
@@ -78,32 +77,33 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
-  
+
   const chartData = Object.entries(rubricMetrics).map(([key, value]) => ({
     name: key.charAt(0).toUpperCase() + key.slice(1),
     value: value as number,
   }));
 
-  const COLORS = [
-    '#A8DADC', // Soft light blue
-    '#FBAFC5', // Soft pink
-    '#E1FAEE', // Light mint green
-    '#F5D0C5', // Warm peach
-    '#BFD8B8', // Soft sage green
-    '#FFC1E3', // Pastel pink
-    '#D1B3D3', // Light lavender
-    '#FFE156', // Soft yellow
-    '#C9E4CA', // Pale olive green
-    '#FF9F1C'  // Warm orange
-  ];
-  
+  // Function to determine color based on score (0-1 scale assumed)
+  const getColor = (score: number) => {
+    if (score <= 5) {
+      // Red gradient: darker red for lower scores, brighter red for higher scores up to 0.5
+      const intensity = score / 5; // Normalize to 0-1 within red range (0 to 0.5)
+      const redValue = Math.floor(100 + (155 * intensity)); // From #640000 (very dark red) to #FF0000 (bright red)
+      return `rgb(${redValue}, 0, 0)`;
+    } else {
+      // Green gradient: darker green for scores just above 0.5, brighter green for higher scores
+      const intensity = (score - 5) / 5; // Normalize to 0-1 within green range (0.5 to 1)
+      const greenValue = Math.floor(100 + (155 * intensity)); // From #006400 (dark green) to #00FF00 (bright green)
+      return `rgb(0, ${greenValue}, 0)`;
+    }
+  };
+
   const roundedOverallScore =
     rubricOverallScore !== undefined
       ? Math.ceil((rubricOverallScore + Number.EPSILON) * 10) / 10
       : 0;
 
   const citationList = citations?.split(',');
-
 
   return (
     <div
@@ -119,7 +119,6 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
         zIndex: '1001',
       }}
     >
-      {/* Rest of your component remains the same, just update the props usage */}
       <Button
         className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
         size="md"
@@ -159,15 +158,15 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
             marginBottom: '-2rem'
           }}
         >
-          <b>Perplexity LLM Anaylsis Overall</b>
-          <div style={{ fontSize: '16px', padding: '0.5rem',textAlign:'left' ,whiteSpace:'pre-line'}}>
+          <b>Perplexity LLM Analysis Overall</b>
+          <div style={{ fontSize: '16px', padding: '0.5rem', textAlign: 'left', whiteSpace: 'pre-line' }}>
             {formattedSummary} <br/>
             <b>Reference Citations:</b>
-            </div>
-          <div style={{ display:'flex',maxHeight:'200px',marginTop:'1rem',overflow:'scroll',flexDirection:'column',gap:'1rem',fontSize: '12px', width: '500px', padding: '0.5rem', textAlign: 'left', whiteSpace: 'pre-line' }}>
+          </div>
+          <div style={{ display: 'flex', maxHeight: '200px', marginTop: '1rem', overflow: 'scroll', flexDirection: 'column', gap: '1rem', fontSize: '12px', width: '500px', padding: '0.5rem', textAlign: 'left', whiteSpace: 'pre-line' }}>
             {citationList?.map((citation, index) => (
               <div key={index}>
-                {index+1}.
+                {index + 1}.
                 <u><a href={citation} target="_blank" rel="noopener noreferrer">
                   {citation}
                 </a></u>
@@ -202,8 +201,8 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
             outerRadius={150}
             label
           >
-            {chartData.map((_, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            {chartData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={getColor(entry.value)} />
             ))}
           </Pie>
           <Tooltip />
