@@ -460,7 +460,7 @@ export default function InteractiveAvatarKnowledge() {
           )}
         </CardBody>
       {stream && <>
-       <TypewriterText text={displayText} feedbackText={''} questionCount={0}/>
+       <TypewriterText text={displayText} feedbackText={''}/>
 
         <div style={{width:'500px',margin:'auto',display:'flex',justifyContent:'center',alignItems:'center'}}>
           <div style={{display: 'flex',width:'100%',justifyContent:'center',alignItems:'center'}}>
