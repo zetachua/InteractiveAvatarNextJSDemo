@@ -508,7 +508,7 @@ async function endSession() {
 
               <CountdownTimer isTimeUp={isTimeUp} timeLeft={timeLeft} />
 
-              <div className="w-full justify-center items-center flex overflow-hidden" style={{flexDirection:'column', marginTop: '130px'}}>
+              <div className="w-full justify-center items-center flex overflow-hidden" style={{flexDirection:'column', marginTop: '50px'}}>
                 {/* <video
                   ref={mediaStream}
                   autoPlay
@@ -562,7 +562,7 @@ async function endSession() {
                           fontSize:'14px',
                           justifyContent:'center',
                           alignContent:'center',
-                          maxHeight: "90px!important",
+                          maxHeight: "70px!important",
                           minHeight: "20px!important",
                           overflowY: "scroll",
                           scrollbarWidth: "none", // Firefox
