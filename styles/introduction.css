@@ -1,0 +1,29 @@
+.introduction-container {
+    width: 700px;
+    background: #444;
+    border-radius: 10px;
+    padding: 1rem;
+    text-align: center;
+    border-width: 1px;
+    border-color: rgba(255, 255, 255, 0.16);
+    background-image: linear-gradient(90deg, rgba(50, 181, 255, 0.07) 9.15%, rgba(255, 114, 224, 0.07) 104.07%), none;
+    background-color: rgba(22, 23, 26, 0.3);
+}
+
+.introduction-container h1 {
+    font-weight: 600;
+    font-size: 1.2rem;
+    margin-bottom: 10px;
+}
+
+.introduction-container button {
+    margin-top: 10px;
+    background: #444;
+    padding: 7px 20px;
+    border-radius: 20px;
+    transition: background 0.3s ease-in-out;
+}
+
+.introduction-container button:hover {
+    background: #555;
+}

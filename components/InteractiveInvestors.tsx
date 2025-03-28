@@ -25,6 +25,7 @@ import CountdownTimer from "./Countdown";
 import SentimentInvestorPiechart from "./SentimentInvestorPieChart";
 import ChatHistoryDisplay from "./ChatHistoryDisplay";
 import RubricInvestorPiechartExample from "./RubricInvestorPieChartExample";
+import Introduction from "./Introduction";
 
 export default function InteractiveInvestors() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -103,35 +104,37 @@ export default function InteractiveInvestors() {
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
   const [isTimeUp, setIsTimeUp] = useState(false);
+  const [isBeginClock, setIsBeginClock] = useState(false);
   const [callCount, setCallCount] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [pauses, setPauses] = useState<any[]>([]);
 
   useEffect(() => {
-    if (callCount == 2 || timeLeft <= 0) {
-      setIsTimeUp(true);
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-        setIsRecording(false);
+    if (isBeginClock) {
+      if (callCount == 2 || timeLeft <= 0) {
+        setIsTimeUp(true);
+        if (recognitionRef.current) {
+          recognitionRef.current.stop();
+          setIsRecording(false);
+        }
+        return;
       }
-      return;
+
+      const timer = setInterval(() => {
+        setTimeLeft((prevTime) => prevTime - 1);
+      }, 1000);
+
+      return () => clearInterval(timer);
     }
-
-    const timer = setInterval(() => {
-      setTimeLeft((prevTime) => prevTime - 1);
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [callCount, timeLeft]);
+  }, [callCount, timeLeft, isBeginClock]);
 
   async function startSession() {
     setLoadingRubric(false);
     setLoadingRubric1(false);
     setLoadingRubric2(false);
     // setLoadingRubric3(false);
-
-    setIsTimeUp(false);
+    
     setIsLoadingSession(true);
     setDisplayRubricAnalytics(false);
     setStream(true);
@@ -177,6 +180,7 @@ export default function InteractiveInvestors() {
   const resetAllStates=()=>{
     setTimeLeft(300);
     setIsTimeUp(false);
+    setIsBeginClock(false);
     setCallCount(0);
     setFeedbackText('');
     setDisplayText('');
@@ -209,9 +213,9 @@ export default function InteractiveInvestors() {
       oralPresentation: ''
     });
     setAudioAnalytics({
-      arousal: 50,
-      dominance: 60,
-      valence: 70
+      arousal: 0,
+      dominance: 0,
+      valence: 0
     });
   }
 
@@ -491,36 +495,38 @@ async function endSession() {
       <Card className="w-screen h-screen overflow-hidden border-none rounded-none" style={{background: 'linear-gradient(to top, #987B8C, #F0C7C2)'}}>
         <CardBody className="flex flex-col justify-center items-center">
           {stream ? (
-            <div className="w-full justify-center items-center flex overflow-hidden" style={{flexDirection:'column'}}>
-              <video
-                ref={mediaStream}
-                autoPlay
-                playsInline
-                style={{
-                  width: "90%",
-                  height: "80%",
-                  marginBottom:'4rem',
-                  objectFit: "contain",
-                  borderRadius:'5px',
-                }}
-              >
-                <track kind="captions" />
-              </video>
-              <div className="flex flex-row gap-2 absolute top-3">
+            <>
               <Button
-                  className="bg-gradient-to-tr from-indigo-500 to-indigo-300  text-white rounded-lg"
-                  size="md"
-                  variant="shadow"
-                  onClick={endSession}
+                className="bg-gradient-to-tr from-indigo-500 to-indigo-300  text-white rounded-lg"
+                size="md"
+                variant="shadow"
+                onClick={endSession}
+                style={{position: 'absolute', top: '45px'}}
+              >
+                End session
+              </Button>
+
+              <CountdownTimer isTimeUp={isTimeUp} timeLeft={timeLeft} />
+
+              <div className="w-full justify-center items-center flex overflow-hidden" style={{flexDirection:'column', marginTop: '130px'}}>
+                {/* <video
+                  ref={mediaStream}
+                  autoPlay
+                  playsInline
+                  style={{
+                    width: "90%",
+                    height: "80%",
+                    marginBottom:'4rem',
+                    objectFit: "contain",
+                    borderRadius:'5px',
+                  }}
                 >
-                  End session
-                </Button>
-              </div>
-              <div style={{position:'relative',width:'100%',height:'100%'}}>
+                  <track kind="captions" />
+                </video> */}
                 <ChatHistoryDisplay chatHistory={chatHistory}></ChatHistoryDisplay>
-                <div className="flex flex-col items-center" style={{flexDirection:'row',justifyContent:'center',marginBottom:'2rem',display:'flex',}}>
+                <div className="flex flex-col items-center" style={{flexDirection:'row'}}>
                   {/* Input field to capture user input */}
-                 
+                
                 {/* <div>
                     <h3>Pauses:</h3>
                     {pauses.length > 0 ? (
@@ -536,55 +542,59 @@ async function endSession() {
                     )}
                   </div> */}
                   
-               
-                  <textarea
-                    placeholder="Type your message..."
-                    value={userInputTextArea}
-                    onChange={(e) =>{
-                      setUserInput(e.target.value)
-                      setUserInputTextArea(e.target.value)
-                    }}
-                    className="custom-textarea"
-                    style={{
-                      display:'flex',
-                      backgroundColor:'rgba(255,255,255,0.2)',
-                      boxShadow: "2px 2px 0px 0px rgba(0, 0, 0, 1)", // Black shadow
-                      textAlign: "left",
-                      padding: "0.5rem 0.5rem 0.5rem 1rem",
-                      width: "470px",
-                      fontSize:'14px',
-                      justifyContent:'center',
-                      alignContent:'center',
-                      maxHeight: "90px!important",
-                      minHeight: "20px!important",
-                      overflowY: "scroll",
-                      scrollbarWidth: "none", // Firefox
-                      borderRadius: "20px",
-                      border: "none", // Remove default borders that might interfere
-                      outline: "none", // Remove default focus outline if unwanted
-                    }}
-                  >
-                  </textarea>
-                  <Button
-                  onClick={()=>{
-                    handleSpeak(userInput);
-                    setUserInputTextArea('');
-                  }}
-                  isDisabled={!userInput.trim() || isLoadingRepeat}
-                  style={{ margin: '0rem 0rem 0rem 1rem',background:'rgba(255,255,255,0.1)'}}
-                    >
-                  {isLoadingRepeat ? <Spinner /> :  "Send"}
-                  </Button>
-                  <Button
-                    onClick={toggleSpeechToText}
-                    style={{ background:'rgba(255,255,255,0.1)',margin: '0.5rem' ,borderRadius:'100px'}}
-                  >
-                  {isRecording ? <div className={`wave`} />: <>Talk <Microphone size={14} /></>}
-                </Button>
+              
+                  {isBeginClock ? (
+                    <>
+                      <textarea
+                        placeholder="Type your message..."
+                        value={userInputTextArea}
+                        onChange={(e) =>{
+                          setUserInput(e.target.value)
+                          setUserInputTextArea(e.target.value)
+                        }}
+                        className="custom-textarea"
+                        style={{
+                          backgroundColor:'rgba(255,255,255,0.2)',
+                          boxShadow: "2px 2px 0px 0px rgba(0, 0, 0, 1)", // Black shadow
+                          textAlign: "left",
+                          padding: "0.5rem 0.5rem 0.5rem 1rem",
+                          width: "470px",
+                          fontSize:'14px',
+                          justifyContent:'center',
+                          alignContent:'center',
+                          maxHeight: "90px!important",
+                          minHeight: "20px!important",
+                          overflowY: "scroll",
+                          scrollbarWidth: "none", // Firefox
+                          borderRadius: "20px",
+                          border: "none", // Remove default borders that might interfere
+                          outline: "none", // Remove default focus outline if unwanted
+                        }}
+                      >
+                      </textarea>
+                      <Button
+                        onClick={()=>{
+                          handleSpeak(userInput);
+                          setUserInputTextArea('');
+                        }}
+                        isDisabled={!userInput.trim() || isLoadingRepeat}
+                        style={{margin: '0rem 0rem 0rem 1rem',background:'rgba(255,255,255,0.1)'}}
+                          >
+                        {isLoadingRepeat ? <Spinner /> :  "Send"}
+                      </Button>
+                      <Button
+                        onClick={toggleSpeechToText}
+                        style={{ background:'rgba(255,255,255,0.1)',margin: '0.5rem' ,borderRadius:'100px'}}
+                      >
+                        {isRecording ? <div className={`wave`} />: <>Talk <Microphone size={14} /></>}
+                      </Button>
+                    </>
+                  ) : (
+                    <Introduction setIsBeginClock={setIsBeginClock} />
+                  )}
                 </div>
               </div>
-
-            </div>
+            </>
           ) : !isLoadingSession ? (
             <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center"style={{backgroundColor:'rgba(255,255,255,0.2)',borderRadius:'50px',padding:'2rem',maxHeight:'30%'}}>
               <div className="flex flex-col gap-2 w-full" style={{position:'relative'}} >
@@ -620,9 +630,6 @@ async function endSession() {
             <Spinner color="default" size="lg" />
           )}
         </CardBody>
-        { stream && 
-          <CountdownTimer isTimeUp={isTimeUp} timeLeft={timeLeft}></CountdownTimer>
-        }
 
         {/* {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentScore} />} */}
         {(sentimentJson && rubricJson2) ? 
