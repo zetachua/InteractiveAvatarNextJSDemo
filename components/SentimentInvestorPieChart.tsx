@@ -105,7 +105,7 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
     if (value < 60) return '#4ECDC4';
     if (value < 65) return '#45B7D1';
     return '#2AB673';
-  }
+  };
 
   // Colors for the bar chart
   const getBarColor = (value: number) => {
@@ -169,7 +169,7 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
           >
             {audioAnalyticsDescriptionVisibility[key as keyof typeof audioAnalyticsDescriptionVisibility] && 
             <AudioAnalyticsDescription metric={key} value={value} />}
-            <h3>{value}%</h3>
+            <h3>{value.toFixed(1)}%</h3>
             <h4>{key.charAt(0).toUpperCase() + key.slice(1)}</h4>
           </div>
         ))}

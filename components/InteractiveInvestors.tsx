@@ -205,9 +205,9 @@ export default function InteractiveInvestors() {
       oralPresentation: ''
     });
     setAudioAnalytics({
-      arousal: 0,
-      dominance: 0,
-      valence: 0
+      arousal: 50,
+      dominance: 60,
+      valence: 70
     });
   }
 
@@ -318,7 +318,14 @@ export default function InteractiveInvestors() {
 
       const data = await response.json();
       console.log("Analysis:", data);
-      setAudioAnalytics(data);
+      const arousal = data.arousal * 100;
+      const dominance = data.dominance * 100;
+      const valence = data.valence * 100;
+      setAudioAnalytics({
+        arousal: arousal,
+        dominance: dominance,
+        valence: valence
+      });
     } catch (error) {
       console.error("Error during analysis:", error);
       setDebug("Error during audio analysis");
