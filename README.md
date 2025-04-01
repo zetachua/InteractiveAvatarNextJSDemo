@@ -41,7 +41,7 @@ After you see Monica appear on the screen, you can enter text into the input lab
 
 If you want to see a different Avatar or try a different voice, you can close the session and enter the IDs and then 'start' the session again. Please see below for information on where to retrieve different Avatar and voice IDs that you can use.
 
-### Which Avatars can I use with this project?
+### Which Avatars can I use with this project ?
 
 By default, there are several Public Avatars that can be used in Interactive Avatar. (AKA Interactive Avatars.) You can find the Avatar IDs for these Public Avatars by navigating to [app.heygen.com/interactive-avatar](https://app.heygen.com/interactive-avatar) and clicking 'Select Avatar' and copying the avatar id.
 
