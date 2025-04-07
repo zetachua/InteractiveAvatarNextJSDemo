@@ -41,16 +41,16 @@ async def audio_analysis(file: UploadFile):
         sampling_rate = 16000
         signal, sampling_rate = librosa.load(temp_file_path, sr=sampling_rate)
 
-        # Analysing arousal, dominance, and valence
+        # Analysing excitedness (arousal), control (dominance), and pleasantness (valence)
         signal = signal.astype(np.float32)
         result = model(signal, sampling_rate)["logits"][0]
-        arousal = result[0]
-        dominance = result[1]
-        valence = result[2]
+        excitedness = result[0]
+        control = result[1]
+        pleasantness = result[2]
         return {
-            "arousal": arousal,
-            "dominance": dominance,
-            "valence": valence
+            "excitedness": excitedness,
+            "control": control,
+            "pleasantness": pleasantness
         }
     
     except Exception as e:

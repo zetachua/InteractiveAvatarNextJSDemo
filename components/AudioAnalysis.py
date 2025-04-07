@@ -76,7 +76,7 @@ def transcribe():
         print(f"Error during transcription: {e}")
         return jsonify({'error': str(e)}), 500
 
-# Route for audio analysis (arousal, dominance, and valence)
+# Route for audio analysis (excitedness (arousal), control (dominance), and pleasantness (valence))
 @app.route("/audio_analysis", methods=["POST"])
 def audio_analysis():
     print("Handling audio analysis request")
@@ -92,17 +92,17 @@ def audio_analysis():
         result = np.array(result).mean(axis=0)
 
         # Convert np.float32 to native float
-        arousal = float(result[0])
-        dominance = float(result[1])
-        valence = float(result[2])
+        excitedness = float(result[0])
+        control = float(result[1])
+        pleasantness = float(result[2])
 
-        print(f"Arousal: {arousal}, Dominance: {dominance}, Valence: {valence}")
+        print(f"Excitedness: {excitedness}, Control: {control}, Pleasantness: {pleasantness}")
 
         # Return the audio analysis result
         return jsonify({
-            "arousal": arousal,
-            "dominance": dominance,
-            "valence": valence,
+            "excitedness": excitedness,
+            "control": control,
+            "pleasantness": pleasantness,
         })
     
     except Exception as e:

@@ -1,8 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { PieChart, Pie, Cell, Tooltip, Legend, Text } from 'recharts';
+import {
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  PieChart,
+  Pie,
+  Radar,
+  RadarChart,
+  Cell,
+  Tooltip,
+  Legend
+} from 'recharts';
 import { Rubric2InvestorSpecificDataExample, AudioAnalysisMetrics } from './KnowledgeClasses';
 import Section from './Section';
-import '../styles/meter.css';
 
 // Props for the component
 interface RubricInvestorPieChartProps2 {
@@ -57,6 +67,11 @@ const RubricInvestorPiechartExample: React.FC<RubricInvestorPieChartProps2> = ({
     value: value as number,
   }));
 
+  const radarData = Object.entries(audioAnalytics).map(([key, value]) => ({
+    trait: key.charAt(0).toUpperCase() + key.slice(1),
+    value: value as number,
+  }));
+
   // Function to determine color based on score (0-1 scale assumed)
   const getColor = (score: number) => {
     if (score <= 5) {
@@ -76,14 +91,6 @@ const RubricInvestorPiechartExample: React.FC<RubricInvestorPieChartProps2> = ({
     rubricOverallScore !== undefined
       ? Math.ceil((rubricOverallScore + Number.EPSILON) * 10) / 10
       : 0;
-
-  const getMeterColor = (value: number) => {
-    if (value < 50) return '#FF6B6B';
-    if (value < 55) return '#FFC300';
-    if (value < 60) return '#4ECDC4';
-    if (value < 65) return '#45B7D1';
-    return '#2AB673';
-  };
 
   return (
     <div
@@ -122,17 +129,14 @@ const RubricInvestorPiechartExample: React.FC<RubricInvestorPieChartProps2> = ({
           <b>{title} Startup LLM Analysis </b>
         </div>
 
-        <div className='meter'>
-          {Object.entries(audioAnalytics).map(([key, value]) => (
-            <div
-              key={key}
-              className='progress'
-              style={{ '--i': value, '--clr': getMeterColor(value) } as React.CSSProperties}
-            >
-              <h4>{value.toFixed(1)}%</h4>
-              <h5>{key.charAt(0).toUpperCase() + key.slice(1)}</h5>
-            </div>
-          ))}
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}>
+          <RadarChart cy="70%" outerRadius={160} width={600} height={400} data={radarData}>
+            <PolarGrid />
+            <PolarAngleAxis dataKey="trait" tick={{ dy: -20 }} />
+            <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 20, opacity: 0.8 }} />
+            <Radar name="Emotion Levels" dataKey="value" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
+            <Tooltip contentStyle={{ color: 'black' }} />
+          </RadarChart>
         </div>
 
         <div

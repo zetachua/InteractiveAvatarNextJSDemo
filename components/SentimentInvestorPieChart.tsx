@@ -3,6 +3,11 @@ import {
   Bar,
   BarChart,
   Cell,
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -15,8 +20,6 @@ import {
   FeedbackMetricData,
   AudioAnalysisMetrics
 } from './KnowledgeClasses'; // Assuming you have these types
-import '../styles/meter.css';
-import AudioAnalyticsDescription from './AudioAnalyticsDescription';
 
 // Props for the component
 interface SentimentInvestorPieChartProps {
@@ -39,31 +42,6 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
   specificFeedback,
 }) => {
 
-  const [audioAnalyticsDescriptionVisibility, setAudioAnalyticsDescriptionVisibility] = useState({
-    arousal: false,
-    dominance: false,
-    valence: false,
-  });
-
-  const toggleAudioAnalyticsDescriptionVisibility = (key: string) => {
-    if (key === 'arousal') {
-      setAudioAnalyticsDescriptionVisibility(prev => ({
-        ...prev,
-        arousal: !prev.arousal
-      }));
-    } else if (key === 'dominance') {
-      setAudioAnalyticsDescriptionVisibility(prev => ({
-        ...prev,
-        dominance: !prev.dominance
-      }));
-    } else {
-      setAudioAnalyticsDescriptionVisibility(prev => ({
-        ...prev,
-        valence: !prev.valence
-      }));
-    }
-  };
-
   // Destructure values from the feedbackData prop
   const {
     clarity,
@@ -84,11 +62,16 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
   console.log(overallScore,"overallScore")
 
   // Construct the chart data
-  const chartData = Object.entries(rubricMetrics).map(([key, value]) => ({
+  const barData = Object.entries(rubricMetrics).map(([key, value]) => ({
     name: key.charAt(0).toUpperCase() + key.slice(1),
     value: value as number,
   }));
-  
+
+  const radarData = Object.entries(audioAnalytics).map(([key, value]) => ({
+    trait: key.charAt(0).toUpperCase() + key.slice(1),
+    value: value as number,
+  }));
+
   // const roundToTwoSignificantFigures = (num:any) => {
   //   if (num === 0) return 0;
   //   const factor = Math.pow(10, 2 - Math.floor(Math.log10(Math.abs(num))));
@@ -97,15 +80,6 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
   // const roundedArousal = roundToTwoSignificantFigures(arousal);
   // const roundedDominance = roundToTwoSignificantFigures(dominance);
   // const roundedValence = roundToTwoSignificantFigures(valence);
-
-  // Colors for the meter chart
-  const getMeterColor = (value: number) => {
-    if (value < 50) return '#FF6B6B';
-    if (value < 55) return '#FFC300';
-    if (value < 60) return '#4ECDC4';
-    if (value < 65) return '#45B7D1';
-    return '#2AB673';
-  };
 
   // Colors for the bar chart
   const getBarColor = (value: number) => {
@@ -158,22 +132,15 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
           <div style={{ padding: '0.5rem' ,fontSize:'18px'}}>{feedbackSummary}</div>
         </div>
       </div>
-      
-      <div className='meter'>
-        {Object.entries(audioAnalytics).map(([key, value]) => (
-          <div
-            key={key}
-            className='progress hoverable'
-            style={{ '--i': value, '--clr': getMeterColor(value) } as React.CSSProperties}
-            onMouseEnter={() => toggleAudioAnalyticsDescriptionVisibility(key)}
-            onMouseLeave={() => toggleAudioAnalyticsDescriptionVisibility(key)}
-          >
-            {audioAnalyticsDescriptionVisibility[key as keyof typeof audioAnalyticsDescriptionVisibility] && 
-            <AudioAnalyticsDescription metric={key} value={value} />}
-            <h4>{value.toFixed(1)}%</h4>
-            <h5>{key.charAt(0).toUpperCase() + key.slice(1)}</h5>
-          </div>
-        ))}
+
+      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}>
+        <RadarChart cy="70%" outerRadius={160} width={600} height={350} data={radarData}>
+          <PolarGrid />
+          <PolarAngleAxis dataKey="trait" tick={{ dy: -20 }} />
+          <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 20, opacity: 0.8 }} />
+          <Radar name="Emotion Levels" dataKey="value" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.6} />
+          <Tooltip contentStyle={{ color: 'black' }} />
+        </RadarChart>
       </div>
 
       <div
@@ -192,7 +159,7 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
       <ResponsiveContainer width='90%' height={400}>
         <BarChart
           layout='vertical'
-          data={chartData}
+          data={barData}
         >
           <XAxis
             type='number'
@@ -204,7 +171,7 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
             dataKey='value'
             label={false}
           >
-            {chartData.map((entry, index) => (
+            {barData.map((entry, index) => (
               <Cell
                 key={`bar-${index}`}
                 fill={getBarColor(entry.value)}

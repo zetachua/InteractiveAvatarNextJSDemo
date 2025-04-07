@@ -268,7 +268,7 @@ export interface ChatHistory {
 }
 
 export interface AudioAnalysisMetrics {
-  arousal: number;
-  dominance: number;
-  valence: number;
+  excitedness: number;
+  control: number;
+  pleasantness: number;
 }

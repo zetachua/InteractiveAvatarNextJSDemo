@@ -88,9 +88,9 @@ export default function InteractiveInvestors() {
     engagement: "",
   });
   const [audioAnalytics, setAudioAnalytics] = useState<AudioAnalysisMetrics>({
-    arousal: 0,
-    dominance: 0,
-    valence: 0
+    excitedness: 0,
+    control: 0,
+    pleasantness: 0
   });
   const [sentimentScore, setSentimentScore] = useState<number>(0); 
   const [rubricJson, setRubricJson] = useState<RubricInvestorData | null>(null);
@@ -213,9 +213,9 @@ export default function InteractiveInvestors() {
       oralPresentation: ''
     });
     setAudioAnalytics({
-      arousal: 0,
-      dominance: 0,
-      valence: 0
+      excitedness: 0,
+      control: 0,
+      pleasantness: 0
     });
   }
 
@@ -326,13 +326,13 @@ export default function InteractiveInvestors() {
 
       const data = await response.json();
       console.log("Analysis:", data);
-      const arousal = data.arousal * 100;
-      const dominance = data.dominance * 100;
-      const valence = data.valence * 100;
+      const excitedness = data.excitedness * 100;
+      const control = data.control * 100;
+      const pleasantness = data.pleasantness * 100;
       setAudioAnalytics({
-        arousal: arousal,
-        dominance: dominance,
-        valence: valence
+        excitedness: excitedness,
+        control: control,
+        pleasantness: pleasantness
       });
     } catch (error) {
       console.error("Error during analysis:", error);
@@ -493,24 +493,24 @@ async function endSession() {
 
   // Hardcoded senior's audio analytics
   const lookUpAudioAnalytics = {
-    arousal: 63.93736,
-    dominance: 68.145305,
-    valence: 52.96149
+    excitedness: 63.93736,
+    control: 68.145305,
+    pleasantness: 52.96149
   };
   const grantedAudioAnalytics = {
-    arousal: 70.39725,
-    dominance: 73.31582,
-    valence: 58.8054
+    excitedness: 70.39725,
+    control: 73.31582,
+    pleasantness: 58.8054
   };
   const mediVRAudioAnalytics = {
-    arousal: 65.83064,
-    dominance: 71.53572,
-    valence: 64.74939
+    excitedness: 65.83064,
+    control: 71.53572,
+    pleasantness: 64.74939
   };
   const concreteAIAudioAnalytics = {
-    arousal: 67.238104,
-    dominance: 70.651746,
-    valence: 67.704296
+    excitedness: 67.238104,
+    control: 70.651746,
+    pleasantness: 67.704296
   };
 
   return (
