@@ -36,12 +36,23 @@ jobs:
     - run: echo "Running on self-hosted runner"
     - run: npm ci
     - run: npm run build --if-present
-    - name: Restart the App
+   - name: Restart the App
       run: |
-        # Stop any existing app process (adjust the port if different)
-        pkill -f "next start" || echo "No existing app process found"
+        # Stop any process using port 3000
+        echo "Checking for processes on port 3000..."
+        lsof -i :3000 -t | xargs kill -9 || echo "No process found on port 3000"
+        # Ensure the kill command has time to complete
+        sleep 2
         # Start the app in the background
+        echo "Starting the app..."
         npm run start &
-        # Wait a few seconds for the app to start
+        # Wait for the app to initialize
         sleep 5
+        # Verify the app is running
+        if lsof -i :3000; then
+          echo "App is running on port 3000"
+        else
+          echo "Failed to start app on port 3000" && exit 1
+        fi
+      shell: /usr/bin/bash -e {0}
     - run: npm test
