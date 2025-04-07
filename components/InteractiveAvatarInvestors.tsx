@@ -103,9 +103,9 @@ export default function InteractiveAvatarInvestors() {
     engagement: "",
   });
   const [audioAnalytics, setAudioAnalytics] = useState<AudioAnalysisMetrics>({
-    arousal: 0,
-    dominance: 0,
-    valence: 0
+    excitedness: 0,
+    control: 0,
+    pleasantness: 0
   });
   const [sentimentScore, setSentimentScore] = useState<number>(0); 
   const [rubricJson, setRubricJson] = useState<RubricInvestorData | null>(null);
@@ -370,9 +370,9 @@ console.log(chatHistory,"chatHistory")
       oralPresentation: ''
     });
     setAudioAnalytics({
-      arousal: 0,
-      dominance: 0,
-      valence: 0
+      excitedness: 0,
+      control: 0,
+      pleasantness: 0
     });
   }
 
