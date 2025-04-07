@@ -104,7 +104,7 @@ export const concretePitch=
 
 export const grantedPitch=`
 
-Hi! We are Granted, and we are here to solve a problem that a lot of us have: filling up forms.
+ Hi! We are Granted, and we are here to solve a problem that a lot of us have: filling up forms.
 It’s something we do throughout our lives. Sometimes these forms are short and simple, but other times they can be long, tedious, and dreary. Nevertheless, they’re mandatory, and yet we still have to fill them up with a lot of the same data we use for other forms anyway. It feels like a waste. That’s what my CTO and I thought, based on all our experiences through research projects, public administration, schooling, and just daily life—the bureaucracy of daily life.
 So, we introduced to you Granted Forms, your administrative assistant.
 
