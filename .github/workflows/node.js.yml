@@ -37,7 +37,7 @@ jobs:
     - run: npm ci
     - run: npm run build --if-present
    - name: Restart the App
-      run: |
+    - run: |
         # Stop any process using port 3000
         echo "Checking for processes on port 3000..."
         lsof -i :3000 -t | xargs kill -9 || echo "No process found on port 3000"
