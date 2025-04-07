@@ -12,7 +12,7 @@ on:
 jobs:
   build:
 
-    runs-on: Ubuntu-irl
+    runs-on: ubuntu-irl
 
     strategy:
       matrix:
@@ -26,6 +26,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
+    - run: echo "Running on self-hosted runner"
     - run: npm ci
     - run: npm run build --if-present
     - run: npm test
