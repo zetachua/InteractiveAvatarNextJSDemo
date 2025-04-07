@@ -1,26 +1,33 @@
-# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
-# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
-
 name: Node.js CI
 
 on:
   push:
-    branches: [ "realtime-alpha-demo" ]
+    branches: ["realtime-alpha-demo"]
   pull_request:
-    branches: [ "realtime-alpha-demo" ]
+    branches: ["realtime-alpha-demo"]
 
 jobs:
   build:
-
     runs-on: self-hosted
-
     strategy:
       matrix:
         node-version: [18.x, 20.x, 22.x]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-
     steps:
     - uses: actions/checkout@v4
+      with:
+        clean: true  # Ensures a clean working directory
+        fetch-depth: 0  # Fetches all history
+        ref: ${{ github.ref }}  # Checks out the ref that triggered the event
+    - name: Fetch Latest Changes with Git Pull
+      run: |
+        git pull origin realtime-alpha-demo
+    - name: Debug Checkout
+      run: |
+        echo "Current branch: $(git branch --show-current)"
+        echo "Latest commit: $(git log -1 --pretty=%H)"
+        echo "Event ref: ${{ github.ref }}"
+        echo "Event SHA: ${{ github.sha }}"
     - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
