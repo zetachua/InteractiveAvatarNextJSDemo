@@ -14,7 +14,7 @@ jobs:
         node-version: [18.x, 20.x, 22.x]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v3
       with:
         clean: true  # Ensures a clean working directory
         fetch-depth: 0  # Fetches all history
