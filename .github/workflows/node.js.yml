@@ -36,4 +36,12 @@ jobs:
     - run: echo "Running on self-hosted runner"
     - run: npm ci
     - run: npm run build --if-present
+    - name: Restart the App
+      run: |
+        # Stop any existing app process (adjust the port if different)
+        pkill -f "next start" || echo "No existing app process found"
+        # Start the app in the background
+        npm run start &
+        # Wait a few seconds for the app to start
+        sleep 5
     - run: npm test
