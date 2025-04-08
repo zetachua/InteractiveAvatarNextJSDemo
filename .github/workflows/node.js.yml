@@ -40,32 +40,34 @@ jobs:
       run: |
         # Debugging: Show current processes and port usage
         echo "Current Node processes:"
-        ps aux | grep '[n]ode' || echo "No node processes found"
-        echo "Current port 3000 usage (netstat):"
-        sudo netstat -tulnp | grep 3000 || echo "Nothing on port 3000 (netstat)"
-        echo "Current port 3000 usage (lsof):"
-        timeout 5s sudo -n lsof -i :3000 || echo "lsof timed out or found nothing"
+        timeout 5s ps aux | grep '[n]ode' || echo "ps timed out or no node processes found"
 
-        # Attempt to stop any process using port 3000
-        echo "Attempting to free port 3000..."
+        # Kill any lingering Next.js processes
+        echo "Killing any lingering Next.js processes..."
+        timeout 5s pkill -9 -f "next dev" || echo "No next dev processes killed or pkill timed out"
+        timeout 5s pkill -9 -f "next start" || echo "No next start processes killed or pkill timed out"
+        sleep 2
+
+        # Check and free port 3000 with a simple approach
+        echo "Checking and freeing port 3000..."
         if timeout 5s sudo -n lsof -i :3000 -t | grep -q .; then
-          echo "Killing processes on port 3000 (lsof)..."
-          timeout 5s sudo -n lsof -i :3000 -t | xargs -r sudo -n kill -9
+          echo "Found processes on port 3000, killing them..."
+          timeout 5s sudo -n lsof -i :3000 -t | xargs -r sudo -n kill -9 || echo "Failed to kill with lsof"
           sleep 2
         else
-          echo "No processes found with lsof, trying ss..."
-          if timeout 5s sudo -n ss -tuln -p | grep :3000 | grep -q .; then
-            echo "Killing processes on port 3000 (ss)..."
-            timeout 5s sudo -n ss -tuln -p | grep :3000 | awk '{print $NF}' | grep -o '[0-9]\+' | xargs -r sudo -n kill -9
-            sleep 2
-          else
-            echo "No processes detected on port 3000"
-          fi
+          echo "No processes found on port 3000 with lsof"
         fi
 
-        # Verify port is free
+        # Fallback: Kill known Next.js PID if still running
+        if ps -p 193617 > /dev/null; then
+          echo "Killing known Next.js PID 193617..."
+          timeout 5s sudo -n kill -9 193617 || echo "Failed to kill PID 193617"
+          sleep 2
+        fi
+
+        # Verify port is free, fallback to 3001 if needed
         if timeout 5s sudo -n lsof -i :3000; then
-          echo "Port 3000 still in use! Switching to fallback port 3001..."
+          echo "Port 3000 still in use! Switching to port 3001..."
           PORT=3001
         else
           echo "Port 3000 is free"
@@ -74,7 +76,7 @@ jobs:
 
         # Start the app on the chosen port
         echo "Starting the app on port $PORT..."
-        npm run start -- -p $PORT &
+        timeout 30s npm run start -- -p $PORT &
         APP_PID=$!
         sleep 5
 
