@@ -14,7 +14,7 @@ jobs:
         node-version: [18.x, 20.x, 22.x]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         clean: true  # Ensures a clean working directory
         fetch-depth: 0  # Fetches all history
@@ -40,23 +40,24 @@ jobs:
       run: |
         # Stop any process using port 3000
         echo "Checking for processes on port 3000..."
-        echo "Running lsof with sudo..."
-        if sudo lsof -i :3000; then
+        echo "Running lsof with sudo (timeout 10s)..."
+        # Use timeout to prevent hanging, and sudo with -n for non-interactive
+        if timeout 10s sudo -n lsof -i :3000; then
           echo "Found processes, killing them..."
-          sudo lsof -i :3000 -t | xargs -r sudo kill -9
+          sudo -n lsof -i :3000 -t | xargs -r sudo -n kill -9
           sleep 2
         else
-          echo "No processes found with lsof, trying ss..."
-          if sudo ss -tuln | grep :3000; then
+          echo "No processes found with lsof or lsof timed out, trying ss..."
+          if timeout 10s sudo -n ss -tuln | grep :3000; then
             echo "Found processes with ss, killing them..."
-            sudo ss -tuln -p | grep :3000 | awk '{print $NF}' | grep -o '[0-9]\+' | xargs -r sudo kill -9
+            sudo -n ss -tuln -p | grep :3000 | awk '{print $NF}' | grep -o '[0-9]\+' | xargs -r sudo -n kill -9
             sleep 2
           else
-            echo "No processes found on port 3000 with ss"
+            echo "No processes found on port 3000 with ss or ss timed out"
           fi
         fi
         # Verify port is free
-        if sudo lsof -i :3000; then
+        if timeout 10s sudo -n lsof -i :3000; then
           echo "Port 3000 still in use after kill attempts!" && exit 1
         else
           echo "Port 3000 is free"
@@ -67,7 +68,7 @@ jobs:
         # Wait for the app to initialize
         sleep 5
         # Verify the app is running
-        if sudo lsof -i :3000; then
+        if timeout 10s sudo -n lsof -i :3000; then
           echo "App is running on port 3000"
         else
           echo "Failed to start app on port 3000" && exit 1
