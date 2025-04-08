@@ -36,41 +36,41 @@ jobs:
     - run: echo "Running on self-hosted runner"
     - run: npm ci
     - run: npm run build --if-present
-  - name: Restart the App
-    run: |
-      # Stop any process using port 3000
-      echo "Checking for processes on port 3000..."
-      echo "Running lsof with sudo..."
-      if sudo lsof -i :3000; then
-        echo "Found processes, killing them..."
-        sudo lsof -i :3000 -t | xargs -r sudo kill -9
-        sleep 2
-      else
-        echo "No processes found with lsof, trying ss..."
-        if sudo ss -tuln | grep :3000; then
-          echo "Found processes with ss, killing them..."
-          sudo ss -tuln -p | grep :3000 | awk '{print $NF}' | grep -o '[0-9]\+' | xargs -r sudo kill -9
+    - name: Restart the App
+      run: |
+        # Stop any process using port 3000
+        echo "Checking for processes on port 3000..."
+        echo "Running lsof with sudo..."
+        if sudo lsof -i :3000; then
+          echo "Found processes, killing them..."
+          sudo lsof -i :3000 -t | xargs -r sudo kill -9
           sleep 2
         else
-          echo "No processes found on port 3000 with ss"
+          echo "No processes found with lsof, trying ss..."
+          if sudo ss -tuln | grep :3000; then
+            echo "Found processes with ss, killing them..."
+            sudo ss -tuln -p | grep :3000 | awk '{print $NF}' | grep -o '[0-9]\+' | xargs -r sudo kill -9
+            sleep 2
+          else
+            echo "No processes found on port 3000 with ss"
+          fi
         fi
-      fi
-      # Verify port is free
-      if sudo lsof -i :3000; then
-        echo "Port 3000 still in use after kill attempts!" && exit 1
-      else
-        echo "Port 3000 is free"
-      fi
-      # Start the app in the background
-      echo "Starting the app..."
-      npm run start &
-      # Wait for the app to initialize
-      sleep 5
-      # Verify the app is running
-      if sudo lsof -i :3000; then
-        echo "App is running on port 3000"
-      else
-        echo "Failed to start app on port 3000" && exit 1
-      fi
-    shell: /usr/bin/bash -e {0}
+        # Verify port is free
+        if sudo lsof -i :3000; then
+          echo "Port 3000 still in use after kill attempts!" && exit 1
+        else
+          echo "Port 3000 is free"
+        fi
+        # Start the app in the background
+        echo "Starting the app..."
+        npm run start &
+        # Wait for the app to initialize
+        sleep 5
+        # Verify the app is running
+        if sudo lsof -i :3000; then
+          echo "App is running on port 3000"
+        else
+          echo "Failed to start app on port 3000" && exit 1
+        fi
+      shell: /usr/bin/bash -e {0}
     - run: npm test
