@@ -1,4 +1,4 @@
-name: Node.js CI
+name: Node.js CI - Realtime Demo Deployment
 
 on:
   push:
@@ -8,69 +8,69 @@ on:
 
 jobs:
   build:
+    name: Build and Deploy Node.js App
     runs-on: self-hosted
     strategy:
       matrix:
-        node-version: [18.x, 20.x, 22.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+        node-version: [18.x, 20.x, 22.x]  # Matrix for multiple Node.js versions
+
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
       with:
         clean: true  # Ensures a clean working directory
         fetch-depth: 0  # Fetches all history
         ref: ${{ github.ref }}  # Checks out the ref that triggered the event
-    - name: Fetch Latest Changes with Git Pull
-      run: |
-        git pull origin realtime-alpha-demo
-    - name: Debug Checkout
+
+    - name: Debug Checkout Information
       run: |
         echo "Current branch: $(git branch --show-current)"
         echo "Latest commit: $(git log -1 --pretty=%H)"
         echo "Event ref: ${{ github.ref }}"
         echo "Event SHA: ${{ github.sha }}"
-    - name: Use Node.js ${{ matrix.node-version }}
+
+    - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-    - run: echo "Running on self-hosted runner"
-    - run: npm ci
-    - run: npm run build --if-present
-    - name: Restart the App
+
+    - name: Install Dependencies
+      run: npm ci
+
+    - name: Build the Application
+      run: npm run build --if-present
+
+    - name: Stop any process on port 3000
       run: |
-        # Stop any process using port 3000
         echo "Checking for processes on port 3000..."
-        echo "Running lsof with sudo..."
-        if sudo lsof -i :3000; then
-          echo "Found processes, killing them..."
+        if sudo lsof -i :3000 > /dev/null; then
+          echo "Found processes on port 3000. Killing them..."
           sudo lsof -i :3000 -t | xargs -r sudo kill -9
           sleep 2
         else
-          echo "No processes found with lsof, trying ss..."
-          if sudo ss -tuln | grep :3000; then
-            echo "Found processes with ss, killing them..."
-            sudo ss -tuln -p | grep :3000 | awk '{print $NF}' | grep -o '[0-9]\+' | xargs -r sudo kill -9
-            sleep 2
-          else
-            echo "No processes found on port 3000 with ss"
-          fi
+          echo "No processes found using port 3000."
         fi
-        # Verify port is free
-        if sudo lsof -i :3000; then
-          echo "Port 3000 still in use after kill attempts!" && exit 1
+
+    - name: Verify Port 3000 is Free
+      run: |
+        if sudo lsof -i :3000 > /dev/null; then
+          echo "Port 3000 is still in use after kill attempts!" && exit 1
         else
-          echo "Port 3000 is free"
+          echo "Port 3000 is free."
         fi
-        # Start the app in the background
-        echo "Starting the app..."
-        npm run start &
-        # Wait for the app to initialize
-        sleep 5
+
+    - name: Restart the App
+      run: |
+        echo "Starting the app on port 3000..."
+        npm run start &  # Start the app in the background
+        sleep 5  # Wait for the app to initialize
         # Verify the app is running
-        if sudo lsof -i :3000; then
-          echo "App is running on port 3000"
+        if sudo lsof -i :3000 > /dev/null; then
+          echo "App is successfully running on port 3000."
         else
-          echo "Failed to start app on port 3000" && exit 1
+          echo "Failed to start app on port 3000!" && exit 1
         fi
-      shell: /usr/bin/bash -e {0}
-    - run: npm test
+
+    - name: Run Tests
+      run: npm test
