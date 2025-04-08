@@ -38,8 +38,7 @@ jobs:
     - run: npm run build --if-present
     - name: Restart the App
       run: |
-
-        npx kill-port 3000
+        sudo lsof -i :3000 -t | xargs -r sudo kill -9
        
         # Start the app in the background
         npm run start &
