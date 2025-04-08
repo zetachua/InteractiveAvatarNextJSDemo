@@ -1,4 +1,4 @@
-name: Node.js CI - Realtime Demo Deployment
+name: Node.js CI
 
 on:
   push:
@@ -8,69 +8,40 @@ on:
 
 jobs:
   build:
-    name: Build and Deploy Node.js App
     runs-on: self-hosted
     strategy:
       matrix:
-        node-version: [18.x, 20.x, 22.x]  # Matrix for multiple Node.js versions
-
+        node-version: [18.x, 20.x, 22.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
       with:
         clean: true  # Ensures a clean working directory
         fetch-depth: 0  # Fetches all history
         ref: ${{ github.ref }}  # Checks out the ref that triggered the event
-
-    - name: Debug Checkout Information
+    - name: Fetch Latest Changes with Git Pull
+      run: |
+        git pull origin realtime-alpha-demo
+    - name: Debug Checkout
       run: |
         echo "Current branch: $(git branch --show-current)"
         echo "Latest commit: $(git log -1 --pretty=%H)"
         echo "Event ref: ${{ github.ref }}"
         echo "Event SHA: ${{ github.sha }}"
-
-    - name: Setup Node.js
+    - name: Use Node.js ${{ matrix.node-version }}
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-
-    - name: Install Dependencies
-      run: npm ci
-
-    - name: Build the Application
-      run: npm run build --if-present
-
-    - name: Stop any process on port 3000
-      run: |
-        echo "Checking for processes on port 3000..."
-        if sudo lsof -i :3000 > /dev/null; then
-          echo "Found processes on port 3000. Killing them..."
-          sudo lsof -i :3000 -t | xargs -r sudo kill -9
-          sleep 2
-        else
-          echo "No processes found using port 3000."
-        fi
-
-    - name: Verify Port 3000 is Free
-      run: |
-        if sudo lsof -i :3000 > /dev/null; then
-          echo "Port 3000 is still in use after kill attempts!" && exit 1
-        else
-          echo "Port 3000 is free."
-        fi
-
+    - run: echo "Running on self-hosted runner"
+    - run: npm ci
+    - run: npm run build --if-present
     - name: Restart the App
       run: |
-        echo "Starting the app on port 3000..."
-        npm run start &  # Start the app in the background
-        sleep 5  # Wait for the app to initialize
-        # Verify the app is running
-        if sudo lsof -i :3000 > /dev/null; then
-          echo "App is successfully running on port 3000."
-        else
-          echo "Failed to start app on port 3000!" && exit 1
-        fi
-
-    - name: Run Tests
-      run: npm test
+        # Stop any existing app process (adjust the port if different)
+        pkill -f "next start" || echo "No existing app process found"
+        # Start the app in the background
+        npm run start &
+        # Wait a few seconds for the app to start
+        sleep 5
+    - run: npm test
