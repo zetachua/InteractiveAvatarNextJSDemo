@@ -75,5 +75,5 @@ jobs:
             echo "Failed to start app on port $PORT" && exit 1
           fi
         fi
-      shell: /usr/bin/bash -e {0}/bin/bash -e {0}
+      shell: /usr/bin/bash -e {0}
     - run: npm test
