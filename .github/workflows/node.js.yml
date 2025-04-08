@@ -39,15 +39,8 @@ jobs:
     - name: Restart the App
       run: |
 
-        # Check if port 3000 is in use
-        if sudo lsof -i :3000; then
-          echo "Found processes on port 3000, stopping them..."
-          # Kill the processes using port 3000
-          sudo lsof -i :3000 -t | xargs -r sudo kill -9
-          sleep 2
-        else
-          echo "No processes found on port 3000."
-        fi
+        npx kill-port 3000
+       
         # Start the app in the background
         npm run start &
         sleep 5
