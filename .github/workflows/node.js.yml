@@ -36,24 +36,27 @@ jobs:
     - run: echo "Running on self-hosted runner"
     - run: npm ci
     - run: npm run build --if-present
-   - name: Restart the App
+  - name: Restart the App
     run: |
       # Stop any process using port 3000
       echo "Checking for processes on port 3000..."
-      if lsof -i :3000; then
-        echo "Found processes on port 3000, attempting to kill..."
-        lsof -i :3000 -t | xargs -r kill -9
+      echo "Running lsof with sudo..."
+      if sudo lsof -i :3000; then
+        echo "Found processes, killing them..."
+        sudo lsof -i :3000 -t | xargs -r sudo kill -9
         sleep 2
-        if lsof -i :3000; then
-          echo "Failed to kill process on port 3000, trying netstat fallback..."
-          sudo netstat -tulnp | grep :3000 | awk '{print $7}' | cut -d'/' -f1 | xargs -r kill -9
-          sleep 2
-        fi
       else
-        echo "No process found on port 3000"
+        echo "No processes found with lsof, trying ss..."
+        if sudo ss -tuln | grep :3000; then
+          echo "Found processes with ss, killing them..."
+          sudo ss -tuln -p | grep :3000 | awk '{print $NF}' | grep -o '[0-9]\+' | xargs -r sudo kill -9
+          sleep 2
+        else
+          echo "No processes found on port 3000 with ss"
+        fi
       fi
       # Verify port is free
-      if lsof -i :3000; then
+      if sudo lsof -i :3000; then
         echo "Port 3000 still in use after kill attempts!" && exit 1
       else
         echo "Port 3000 is free"
@@ -64,7 +67,7 @@ jobs:
       # Wait for the app to initialize
       sleep 5
       # Verify the app is running
-      if lsof -i :3000; then
+      if sudo lsof -i :3000; then
         echo "App is running on port 3000"
       else
         echo "Failed to start app on port 3000" && exit 1
