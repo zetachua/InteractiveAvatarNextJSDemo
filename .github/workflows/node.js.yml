@@ -12,12 +12,13 @@ jobs:
     strategy:
       matrix:
         node-version: [18.x, 20.x, 22.x]
+        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
     steps:
     - uses: actions/checkout@v4
       with:
-        clean: true
-        fetch-depth: 0
-        ref: ${{ github.ref }}
+        clean: true  # Ensures a clean working directory
+        fetch-depth: 0  # Fetches all history
+        ref: ${{ github.ref }}  # Checks out the ref that triggered the event
     - name: Fetch Latest Changes with Git Pull
       run: |
         git pull origin realtime-alpha-demo
@@ -36,27 +37,19 @@ jobs:
     - run: npm ci
     - run: npm run build --if-present
     - name: Restart the App
-      shell: cmd
       run: |
-        :: Check and kill process on port 3000
-        netstat -aon | findstr ":3000" >nul
-        if %ERRORLEVEL% EQU 0 (
-          for /f "tokens=5" %%i in ('netstat -aon ^| findstr ":3000"') do (
-            taskkill /PID %%i /F
-          )
-        ) else (
-          echo "No process found on port 3000"
-        )
-        
-        :: Start the app in the background
-        start /B npm run start
-        timeout /T 5
 
-        :: Verify the app is running on port 3000
-        netstat -aon | findstr ":3000" >nul
-        if %ERRORLEVEL% EQU 0 (
+        npx kill-port 3000
+       
+        # Start the app in the background
+        npm run start &
+        sleep 5
+
+        # Verify the app is running on port 3000
+        if sudo lsof -i :3000; then
           echo "App is running on port 3000"
-        ) else (
-          echo "Failed to start app on port 3000" && exit /B 1
-        )
+        else
+          echo "Failed to start app on port 3000" && exit 1
+        fi
+
     - run: npm test
