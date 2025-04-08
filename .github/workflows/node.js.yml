@@ -38,40 +38,51 @@ jobs:
     - run: npm run build --if-present
     - name: Restart the App
       run: |
-        # Stop any process using port 3000
-        echo "Checking for processes on port 3000..."
-        echo "Running lsof with sudo (timeout 10s)..."
-        # Use timeout to prevent hanging, and sudo with -n for non-interactive
-        if timeout 10s sudo -n lsof -i :3000; then
-          echo "Found processes, killing them..."
-          sudo -n lsof -i :3000 -t | xargs -r sudo -n kill -9
+        # Debugging: Show current processes and port usage
+        echo "Current Node processes:"
+        ps aux | grep '[n]ode' || echo "No node processes found"
+        echo "Current port 3000 usage (netstat):"
+        sudo netstat -tulnp | grep 3000 || echo "Nothing on port 3000 (netstat)"
+        echo "Current port 3000 usage (lsof):"
+        timeout 5s sudo -n lsof -i :3000 || echo "lsof timed out or found nothing"
+
+        # Attempt to stop any process using port 3000
+        echo "Attempting to free port 3000..."
+        if timeout 5s sudo -n lsof -i :3000 -t | grep -q .; then
+          echo "Killing processes on port 3000 (lsof)..."
+          timeout 5s sudo -n lsof -i :3000 -t | xargs -r sudo -n kill -9
           sleep 2
         else
-          echo "No processes found with lsof or lsof timed out, trying ss..."
-          if timeout 10s sudo -n ss -tuln | grep :3000; then
-            echo "Found processes with ss, killing them..."
-            sudo -n ss -tuln -p | grep :3000 | awk '{print $NF}' | grep -o '[0-9]\+' | xargs -r sudo -n kill -9
+          echo "No processes found with lsof, trying ss..."
+          if timeout 5s sudo -n ss -tuln -p | grep :3000 | grep -q .; then
+            echo "Killing processes on port 3000 (ss)..."
+            timeout 5s sudo -n ss -tuln -p | grep :3000 | awk '{print $NF}' | grep -o '[0-9]\+' | xargs -r sudo -n kill -9
             sleep 2
           else
-            echo "No processes found on port 3000 with ss or ss timed out"
+            echo "No processes detected on port 3000"
           fi
         fi
+
         # Verify port is free
-        if timeout 10s sudo -n lsof -i :3000; then
-          echo "Port 3000 still in use after kill attempts!" && exit 1
+        if timeout 5s sudo -n lsof -i :3000; then
+          echo "Port 3000 still in use! Switching to fallback port 3001..."
+          PORT=3001
         else
           echo "Port 3000 is free"
+          PORT=3000
         fi
-        # Start the app in the background
-        echo "Starting the app..."
-        npm run start &
-        # Wait for the app to initialize
+
+        # Start the app on the chosen port
+        echo "Starting the app on port $PORT..."
+        npm run start -- -p $PORT &
+        APP_PID=$!
         sleep 5
+
         # Verify the app is running
-        if timeout 10s sudo -n lsof -i :3000; then
-          echo "App is running on port 3000"
+        if timeout 5s sudo -n lsof -i :$PORT; then
+          echo "App is running on port $PORT (PID: $APP_PID)"
         else
-          echo "Failed to start app on port 3000" && exit 1
+          echo "Failed to start app on port $PORT" && exit 1
         fi
       shell: /usr/bin/bash -e {0}
     - run: npm test
