@@ -41,19 +41,31 @@ jobs:
     - name: Build the Application
       run: npm run build --if-present
 
-    - name: Stop Any Existing App Process on Port 3000
+    - name: Check and Stop Existing App Process on Port 3000
       run: |
-        echo "Checking for existing processes using port 3000..."
+        echo "Checking for existing processes on port 3000..."
+        # First, try using lsof to check if port 3000 is in use
         if sudo lsof -i :3000 &>/dev/null; then
           echo "Found processes on port 3000. Killing them..."
           sudo lsof -i :3000 -t | xargs sudo kill -9
           sleep 2
         else
-          echo "No existing processes found on port 3000."
+          echo "No existing processes found on port 3000 using lsof."
+        fi
+
+        # If lsof didn't work or took too long, fallback to ss
+        echo "Checking with ss..."
+        if sudo ss -tuln | grep ':3000'; then
+          echo "Found processes on port 3000. Killing them..."
+          sudo ss -tuln -p | grep ':3000' | awk '{print $NF}' | grep -o '[0-9]\+' | xargs sudo kill -9
+          sleep 2
+        else
+          echo "No existing processes found on port 3000 using ss."
         fi
 
     - name: Verify Port 3000 is Free
       run: |
+        echo "Verifying that port 3000 is free..."
         if sudo lsof -i :3000 &>/dev/null; then
           echo "Port 3000 is still in use after kill attempts!" && exit 1
         else
