@@ -38,7 +38,6 @@ jobs:
     - run: npm run build --if-present
     - name: Restart the App
       run: |
-        echo "Checking for existing processes using port 3000..."
 
         # Check if port 3000 is in use
         if sudo lsof -i :3000; then
