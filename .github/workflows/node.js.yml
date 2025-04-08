@@ -38,42 +38,39 @@ jobs:
     - run: npm run build --if-present
     - name: Restart the App
       run: |
-        # Debugging: Show current processes
-        echo "Current Node processes:"
-        timeout 5s ps aux | grep '[n]ode' || echo "ps timed out or no node processes found"
-
-        # Kill specific Next.js process
-        echo "Killing known Next.js PID 193617..."
-        timeout 5s sudo -n kill -9 193617 2>/dev/null || echo "PID 193617 not found or kill timed out"
-        sleep 2
-
-        # Broad kill of any Next.js processes
-        echo "Killing any lingering Next.js processes..."
-        timeout 5s sudo -n pkill -9 -f "node.*next" 2>/dev/null || echo "No next processes killed or pkill timed out"
-        sleep 2
-
-        # Start the app with a fallback port
-        PORT=3000
-        echo "Starting the app on port $PORT..."
-        timeout 30s npm run start -- -p $PORT &
-        APP_PID=$!
-        sleep 5
-
-        # Verify the app is running, fallback to 3001 if needed
-        if timeout 5s sudo -n lsof -i :$PORT; then
-          echo "App is running on port $PORT (PID: $APP_PID)"
+        # Stop any process using port 3000
+        echo "Checking for processes on port 3000..."
+        echo "Running lsof with sudo..."
+        if sudo lsof -i :3000; then
+          echo "Found processes, killing them..."
+          sudo lsof -i :3000 -t | xargs -r sudo kill -9
+          sleep 2
         else
-          echo "Failed on port 3000, trying port 3001..."
-          timeout 5s sudo -n kill -9 $APP_PID 2>/dev/null || echo "Failed to kill $APP_PID"
-          PORT=3001
-          timeout 30s npm run start -- -p $PORT &
-          APP_PID=$!
-          sleep 5
-          if timeout 5s sudo -n lsof -i :$PORT; then
-            echo "App is running on port $PORT (PID: $APP_PID)"
+          echo "No processes found with lsof, trying ss..."
+          if sudo ss -tuln | grep :3000; then
+            echo "Found processes with ss, killing them..."
+            sudo ss -tuln -p | grep :3000 | awk '{print $NF}' | grep -o '[0-9]\+' | xargs -r sudo kill -9
+            sleep 2
           else
-            echo "Failed to start app on port $PORT" && exit 1
+            echo "No processes found on port 3000 with ss"
           fi
+        fi
+        # Verify port is free
+        if sudo lsof -i :3000; then
+          echo "Port 3000 still in use after kill attempts!" && exit 1
+        else
+          echo "Port 3000 is free"
+        fi
+        # Start the app in the background
+        echo "Starting the app..."
+        npm run start &
+        # Wait for the app to initialize
+        sleep 5
+        # Verify the app is running
+        if sudo lsof -i :3000; then
+          echo "App is running on port 3000"
+        else
+          echo "Failed to start app on port 3000" && exit 1
         fi
       shell: /usr/bin/bash -e {0}
     - run: npm test
