@@ -117,7 +117,7 @@ export default function InteractiveAvatarInvestors() {
   const recognitionRef = useRef<MediaRecorder | null>(null);
   const transcriptRef = useRef<string>(''); 
   const [selectedModel, setSelectedModel] = useState<string>('');
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
+  const [timeLeft, setTimeLeft] = useState(450); // 5 minutes in seconds
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [callCount, setCallCount] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);

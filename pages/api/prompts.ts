@@ -566,7 +566,7 @@ export const aiChildrenPrompt = (storyBooksTitles:any, selectedStoryBook: any, t
     "tractionAwards": { 
       "score": 7, 
       "feedback": "Mentions a pilot, but no metrics. 2025 industry avg: 50 clients/pilot (Source: Deloitte). Suggest: ‘Show X% cost reduction, like Y Co.’s 2025 pilot.’"    }
-  }
+  \}
   Use only the following text as the pitch transcript, without adding or imagining content.
   Analyze this pitch transcript conversation chat history (which may or may not contain the main pitch and could be just qna) and provide your JSON output:
   ${chatHistory}
