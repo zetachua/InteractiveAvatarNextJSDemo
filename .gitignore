@@ -41,3 +41,7 @@ model/model.yaml
 model/model.onnx
 cache/w2v2-L-robust-12.6bc4a7fd-1.1.0.zip
 temp/audio.webm
+
+# Python virtual environments
+.venv/
+venv/
