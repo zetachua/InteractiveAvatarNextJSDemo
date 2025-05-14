@@ -14,6 +14,9 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^0.0.34",
+    "@ffmpeg/core": "^0.12.10",
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
     "@heygen/streaming-avatar": "github:HeyGen-Official/StreamingAvatarSDK#realtime-alpha",
     "@huggingface/inference": "^3.1.5",
     "@nextui-org/button": "^2.0.34",
@@ -24,7 +27,7 @@
     "@nextui-org/link": "^2.0.32",
     "@nextui-org/listbox": "^2.1.21",
     "@nextui-org/navbar": "^2.0.33",
-    "@nextui-org/react": "^2.4.2",
+    "@nextui-org/react": "^2.6.11",
     "@nextui-org/snippet": "^2.0.38",
     "@nextui-org/switch": "^2.0.31",
     "@nextui-org/system": "^2.2.1",
@@ -44,6 +47,7 @@
     "clsx": "2.1.1",
     "express": "^4.21.2",
     "ffmpeg": "^0.0.4",
+    "formidable": "^3.5.4",
     "framer-motion": "^11.5.6",
     "fs": "^0.0.1-security",
     "groq-sdk": "^0.13.0",
@@ -63,6 +67,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/formidable": "^3.4.5",
     "@types/jest": "^29.5.14",
     "@types/node": "20.5.7",
     "@types/react": "18.3.3",

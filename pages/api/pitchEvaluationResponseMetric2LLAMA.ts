@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { pitchEvaluationPromptMetric2} from './prompts';
 import {  metric2ResultInvestorFilter} from './completionFilterFunctions';
-import { ChatMessage, cleanResponse, getSonarChatCompletionForMetric, transformFeedback } from './pitchEvaluationResponseShared';
+import { ChatMessage, cleanResponse, getLocalChatCompletionForMetric, transformFeedback } from './pitchEvaluationResponseShared';
 
 const pitchEvaluationResponseMetric2 = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
@@ -40,8 +40,10 @@ const pitchEvaluationResponseMetric2 = async (req: NextApiRequest, res: NextApiR
 const getSharktankMetric2 = async (currentMarketStats:string,chatHistory: any) => {
   const chatHistoryFiltered=chatHistory.map((msg: ChatMessage) => `${msg.role}: ${msg.content}`).join('\n');
   const prompt = pitchEvaluationPromptMetric2(currentMarketStats,chatHistoryFiltered);
-  return await getSonarChatCompletionForMetric(chatHistory, prompt);
+  // return await getSonarChatCompletionForMetric(chatHistory, prompt);
+  return await getLocalChatCompletionForMetric(chatHistory, prompt);
 };
+
 
 const fetchMetric2 = async (currentMarketStats:string,chatHistory: any[]) => {
   try {

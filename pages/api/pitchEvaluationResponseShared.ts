@@ -1,5 +1,10 @@
 import Groq from 'groq-sdk';
 
+export type ChatMessage = {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+};
+
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 const sonar = {
@@ -28,7 +33,57 @@ const sonar = {
   }
 };
 
+const sharktankMetaLLM = {
+  chat: {
+    completions: {
+      create: async (params: any) => {
+        const { stream = false, ...restParams } = params;
 
+        const response = await fetch('http://localhost:11434/api/chat', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'sharktank-model', // Replace with your model name
+            messages: restParams.messages,
+            stream,
+          }),
+        });
+
+        if (stream) {
+          return response.body; // You'll need to handle the stream where this is used
+        }
+
+        const result = await response.json();
+        return result;
+      }
+    }
+  }
+};
+
+// Function to request a chat completion using the local LLM
+export const getLocalChatCompletionForMetric = async (chatHistory: any, prompt: string) => {
+  const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
+  console.log("metric whats going in", "chatHistory", chatHistory, "prompt", prompt);
+
+  const response = await sharktankMetaLLM.chat.completions.create({
+    messages: [
+      {
+        role: 'system',
+        content: prompt,
+      },
+      ...validChatHistory,
+      {
+        role: 'user',
+        content: 'Please evaluate the pitch transcript based on the provided instructions.',
+      },
+    ],
+    model: 'sharktank-model', // Optional for local API, but useful for logs
+  });
+
+  return response;
+};
 export const getSonarChatCompletionForMetric = async (chatHistory: any, prompt: string) => {
     const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
     console.log("metric whats going in ","chatHistory",chatHistory,"prompt",prompt)
@@ -72,7 +127,7 @@ export const getSonarChatCompletionForMetric = async (chatHistory: any, prompt: 
     if (!jsonMatch) {
       throw new Error("No valid JSON found in response");
     }
-    console.log(jsonMatch,"testFn1: cleanResponse successful")
+    console.log(jsonMatch,"testFn1: was there an extracted json from the completion")
     return jsonMatch[0];
   };
 

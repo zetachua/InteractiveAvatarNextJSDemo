@@ -12,6 +12,7 @@ import {
 } from "@nextui-org/react";
 import { useEffect, useRef, useState } from "react";
 import './TextArea.css';
+
 interface Pause {
   start: number;
   end: number;
@@ -166,8 +167,6 @@ export default function InteractiveInvestors() {
       const data = await response.json();
       if (data.chatHistory !== undefined) setChatHistory(data.chatHistory);
       if (data.questionResponse !== undefined) setDisplayText(data.questionResponse);
-      console.log(userInputValue,chatHistory,"im here userInput","chatHistory")
-
 
     } catch (error) {
       console.error("Error fetching LLM response:", error);
@@ -229,13 +228,12 @@ export default function InteractiveInvestors() {
       await startRecording(currentCallCount);
     }
   };
-  
   const startRecording = async (currentCallCount: number) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       let localChunks: Blob[] = []; // Use a local array instead of state for real-time updates
-
+      
       mediaRecorder.ondataavailable = (event: BlobEvent) => {
         if (event.data.size > 0) {
           localChunks.push(event.data);
@@ -252,8 +250,30 @@ export default function InteractiveInvestors() {
           setDebug('Error: Recorded audio is empty');
           return;
         }
-  
-        await transcribeAudio(audioBlob, currentCallCount);
+
+
+        try {
+          const formData = new FormData();
+          formData.append('file', audioBlob, 'audio.webm');
+
+          setDebug('Uploading audio...');
+          const response = await fetch('/api/convertWebmToWav', {
+            method: 'POST',
+            body: formData,
+          });
+
+          const result = await response.json();
+          if (response.ok) {
+            setDebug(`Conversion complete: ${result.outputFile}`);
+          } else {
+            setDebug(`Server error: ${result.error}`);
+          }
+        } catch (error) {
+          console.error('Upload error:', error);
+          setDebug('Error uploading audio');
+        }
+
+
         stream.getTracks().forEach((track) => track.stop());
         localChunks = []; // Reset local chunks
       };
@@ -415,23 +435,34 @@ async function endSession() {
     // setLoadingRubric3(true);
 
     try{
-    const [responseMetric1, responseMetric2] = await Promise.all([
-      fetch(`/api/pitchEvaluationResponseMetric1`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatHistory }),
-      }),
-      fetch(`/api/pitchEvaluationResponseMetric2`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chatHistory }),
-      }),
-      // fetch(`/api/pitchEvaluationResponseMetric3`, {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ chatHistory }),
-      // }),
-    ]);
+      const [ragSonar] = await Promise.all([
+        fetch(`/api/pitchEvaluationResponseRAG`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chatHistory }),
+        }),
+      ]);
+      const ragSonarJson = await ragSonar.json();
+      console.log(ragSonarJson, "what is the ragSonarJson and stats:",ragSonarJson.currentMarketStats);
+
+      const currentMarketStats=ragSonarJson.currentMarketStats;
+      const [responseMetric1, responseMetric2] = await Promise.all([
+        fetch(`/api/pitchEvaluationResponseMetric1`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({currentMarketStats, chatHistory }),
+        }),
+        fetch(`/api/pitchEvaluationResponseMetric2`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({currentMarketStats, chatHistory }),
+        }),
+        // fetch(`/api/pitchEvaluationResponseMetric3`, {
+        //   method: "POST",
+        //   headers: { "Content-Type": "application/json" },
+        //   body: JSON.stringify({ chatHistory }),
+        // }),
+      ]);
 
   
     // Parse all responses

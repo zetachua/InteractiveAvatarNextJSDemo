@@ -1,21 +1,17 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { pitchEvaluationPromptMetric1} from './prompts';
 import {metric1ResultInvestorFilter } from './completionFilterFunctions';
-import { cleanResponse, getSonarChatCompletionForMetric, transformFeedback } from './pitchEvaluationResponseShared';
+import { ChatMessage, cleanResponse, getLocalChatCompletionForMetric, transformFeedback } from './pitchEvaluationResponseShared';
 
 const pitchEvaluationResponseMetric1 = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
     try {
       const { currentMarketStats,chatHistory } = req.body;
-      let metric1Result,citations,metric1Results;
+      let metric1Result,metric1Results;
       
-        [metric1Results] = await Promise.all([
-          fetchMetric1(currentMarketStats,chatHistory),
-        ]);
+        metric1Results = await fetchMetric1(currentMarketStats,chatHistory);
 
-        metric1Result = metric1Results?.rubricData;
-        citations = metric1Results?.citations;
-  
+        metric1Result = metric1Results?.rubricData;  
   
         let rubricScore2, rubricSummary2, rubricMetrics2, rubricSpecificFeedback2;
         if (metric1Result?.rubricScore !== undefined) {
@@ -32,7 +28,6 @@ const pitchEvaluationResponseMetric1 = async (req: NextApiRequest, res: NextApiR
           rubricSummary2,
           rubricMetrics2,
           rubricSpecificFeedback2,
-          citations
         });
 
     } catch (error) {
@@ -43,8 +38,10 @@ const pitchEvaluationResponseMetric1 = async (req: NextApiRequest, res: NextApiR
 };
 
 const getSonarMetric1 = async (currentMarketStats:string,chatHistory: any) => {
-  const prompt = pitchEvaluationPromptMetric1(currentMarketStats,chatHistory);
-  return await getSonarChatCompletionForMetric(chatHistory, prompt);
+  const chatHistoryFiltered=chatHistory.map((msg: ChatMessage) => `${msg.role}: ${msg.content}`).join('\n');
+  const prompt = pitchEvaluationPromptMetric1(currentMarketStats,chatHistoryFiltered);
+  // return await getSonarChatCompletionForMetric(chatHistory, prompt);
+  return await getLocalChatCompletionForMetric(chatHistory, prompt);
 };
 
 const fetchMetric1 = async (currentMarketStats:string,chatHistory: any[]) => {
@@ -55,7 +52,6 @@ const fetchMetric1 = async (currentMarketStats:string,chatHistory: any[]) => {
       ]);
 
       console.log(metric1Result,"direct metric1 completion")
-      console.log("Metric 1 Sonar LLM Completion:", JSON.stringify(metric1Result, null, 2));
 
       rubricRatingCompletion = {
         choices: [
@@ -82,12 +78,13 @@ const fetchMetric1 = async (currentMarketStats:string,chatHistory: any[]) => {
       return null;
     }
 
-    const citations = metric1Result?.citations || [];
+    // const citations = metric1Result?.citations || [];
     
     const result = {
       rubricData: filteredResponse,
-      citations: citations,
-    }; 
+      // citations: citations,
+      citations: "",
+    };
     console.log('metric1 final result',result)
     return result;
 
@@ -104,9 +101,10 @@ const cleanSonarOutputMetric1 = (metric1:any): string => {
     if (!metric1 ) {
       throw new Error("One or more metrics have invalid JSON.");
     }
-    console.log("testFn metric1 begin")
+    const completionContent=metric1.message.content;
+    console.log(metric1,"testFn metric1 begin",completionContent);
 
-    const metric1Data = JSON.parse(cleanResponse(metric1.choices[0].message.content));
+    const metric1Data = JSON.parse(cleanResponse(completionContent));
     console.log(metric1Data,"testFn3 metric1: JSON.parse cleanResponse successful")
 
     const defaultMetric = {
