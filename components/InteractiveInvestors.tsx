@@ -228,8 +228,7 @@ export default function InteractiveInvestors() {
 
   const toggleSpeechToText = async () => {
     if (isRecording) {
-      const currentCallCount = callCount + 1;
-      setCallCount(currentCallCount);
+      setCallCount(prev => prev + 1);
       stopRecording();
     } else {
       await startRecording();
@@ -268,8 +267,7 @@ export default function InteractiveInvestors() {
 
   const analyzeRecording = async (audioBlob: Blob) => {
     const speechConfig = sdk.SpeechConfig.fromSubscription(
-      process.env.NEXT_PUBLIC_AZURE_SPEECH_KEY!,
-      process.env.NEXT_PUBLIC_AZURE_SPEECH_REGION!
+
     );
     speechConfig.speechRecognitionLanguage = "en-US";
 
@@ -282,6 +280,10 @@ export default function InteractiveInvestors() {
     const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
     speechRecognizer.current = new sdk.SpeechRecognizer(speechConfig, audioConfig);
 
+    speechRecognizer.current.sessionStarted = (_s, e) => {
+      console.log(`SESSION ID: ${e.sessionId}`);
+    };
+
     const pronunciationConfig = new sdk.PronunciationAssessmentConfig(
       "",
       sdk.PronunciationAssessmentGradingSystem.HundredMark,
@@ -290,23 +292,39 @@ export default function InteractiveInvestors() {
     );
     pronunciationConfig.applyTo(speechRecognizer.current);
 
-    speechRecognizer.current.recognized = (_, e) => {
-      if (e.result.reason === sdk.ResultReason.RecognizedSpeech) {
-        const assessment = sdk.PronunciationAssessmentResult.fromResult(e.result);
-        console.log(assessment)
-        // setAudioAnalytics(prev => ({
-        //   pronunciation: prev.pronunciation + assessment.accuracyScore,
-        //   intonation: prev.intonation + assessment.prosodyScore,
-        //   fluency: prev.fluency + assessment.fluencyScore,
-        //   grammar: prev.grammar + assessment.grammarScore,
-        //   vocabulary: prev.vocabulary + assessment.vocabularyScore
-        // }));
+    speechRecognizer.current.recognizing = (s, e) => {
+      console.log("(recognizing) Reason: " + sdk.ResultReason[e.result.reason] + " Text: " + e.result.text);
+    };
+
+    speechRecognizer.current.recognized = (s, e) => {
+      console.log("pronunciation assessment for: ", e.result.text);
+      const assessment = sdk.PronunciationAssessmentResult.fromResult(e.result);
+      console.log("assessment: ", assessment);
+      // setAudioAnalytics(prev => ({
+      //   pronunciation: prev.pronunciation + assessment.accuracyScore,
+      //   intonation: prev.intonation + assessment.prosodyScore,
+      //   fluency: prev.fluency + assessment.fluencyScore,
+      //   grammar: prev.grammar + assessment.grammarScore,
+      //   vocabulary: prev.vocabulary + assessment.vocabularyScore
+      // }));
+    };
+
+    speechRecognizer.current.canceled = (s, e) => {
+      if (e.reason === sdk.CancellationReason.Error) {
+        console.log("(cancel) Reason: " + sdk.CancellationReason[e.reason] + ": " + e.errorDetails);
+      }
+      if (speechRecognizer.current) {
+        speechRecognizer.current.stopContinuousRecognitionAsync();
       }
     };
 
-    speechRecognizer.current.sessionStopped = () => {
+    speechRecognizer.current.sessionStopped = (s, e) => {
+      if (speechRecognizer.current) {
+        speechRecognizer.current.stopContinuousRecognitionAsync();
+        speechRecognizer.current.close();
+      }
       setIsProcessing(false);
-    };
+    }
 
     speechRecognizer.current.startContinuousRecognitionAsync(
       () => console.log("Continuous recognition started"),
