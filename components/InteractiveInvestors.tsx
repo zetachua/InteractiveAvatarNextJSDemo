@@ -216,8 +216,10 @@ export default function InteractiveInvestors() {
   const toggleSpeechToText = async () => {
     if (isRecording) {
       setCallCount(prev => prev + 1);
+      setIsRecording(false);
       stopRecording();
     } else {
+      setIsRecording(true);
       startRecording();
     }
   };
@@ -278,7 +280,6 @@ export default function InteractiveInvestors() {
   const stopRecording = () => {
     if (speechRecognizer.current) {
       speechRecognizer.current.stopContinuousRecognitionAsync();
-      setIsRecording(false);
     }
   };
 
@@ -325,7 +326,7 @@ async function endSession() {
 
 }
 
-  console.log(rubricSummary,"rubricSummary",rubricJson,"rubricJson",rubricAllRatings,"rubricScore",rubricSpecificFeedback,"rubricSpecificFeedback")
+  // console.log(rubricSummary,"rubricSummary",rubricJson,"rubricJson",rubricAllRatings,"rubricScore",rubricSpecificFeedback,"rubricSpecificFeedback")
 
   const displayRubrics= ()=> {
     setDisplayRubricAnalytics(true);
