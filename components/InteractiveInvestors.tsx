@@ -19,7 +19,7 @@ interface Pause {
 }
 
 import { AudioAnalysisMetrics, ChatHistory,FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
-import { Square,Microphone} from "@phosphor-icons/react";
+import { Square,Microphone, SkipForward} from "@phosphor-icons/react";
 import {concretePitchRubrics, grantedPitchRubrics, lookupPitchRubrics, mediVRPitchRubrics, models} from '../pages/api/configConstants'
 import RubricInvestorPiechart2 from "./RubricInvestorPieChart2";
 import CountdownTimer from "./Countdown";
@@ -27,6 +27,7 @@ import SentimentInvestorPiechart from "./SentimentInvestorPieChart";
 import ChatHistoryDisplay from "./ChatHistoryDisplay";
 import RubricInvestorPiechartExample from "./RubricInvestorPieChartExample";
 import Introduction from "./Introduction";
+import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 
 export default function InteractiveInvestors() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -88,35 +89,47 @@ export default function InteractiveInvestors() {
     neutrality: "",
     engagement: "",
   });
-  const [audioAnalytics, setAudioAnalytics] = useState<AudioAnalysisMetrics>({
-    excitedness: 0,
-    control: 0,
-    pleasantness: 0
-  });
   const [sentimentScore, setSentimentScore] = useState<number>(0); 
   const [rubricJson, setRubricJson] = useState<RubricInvestorData | null>(null);
   const [rubricAllRatings, setRubricAllRatings] = useState<number>(0); 
   const [rubricJson2, setRubricJson2] = useState<Rubric2InvestorData | null>(null);
   const [rubricAllRatings2, setRubricAllRatings2] = useState<number>(0); 
-  const [isRecording, setIsRecording] = useState<boolean>(false);
-  // const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const recognitionRef = useRef<MediaRecorder | null>(null);
   const transcriptRef = useRef<string>(''); 
   const [selectedModel, setSelectedModel] = useState<string>('');
   const [timeLeft, setTimeLeft] = useState<number>(300); // 5 minutes in seconds
   const [isTimeUp, setIsTimeUp] = useState<boolean>(false);
   const [isBeginClock, setIsBeginClock] = useState<boolean>(false);
   const [callCount, setCallCount] = useState<number>(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [pauses, setPauses] = useState<any[]>([]);
+
+  // Recording and audio analysis states
+  const [isRecording, setIsRecording] = useState<boolean>(false);
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const mediaRecorder = useRef<MediaRecorder | null>(null);
+  const audioChunks = useRef<Blob[]>([]);
+  const speechRecognizer = useRef<sdk.SpeechRecognizer | null>(null);
+  const [audioAnalytics, setAudioAnalytics] = useState<AudioAnalysisMetrics>({
+    pronunciation: 0,
+    intonation: 0,
+    fluency: 0,
+    grammar: 0,
+    vocabulary: 0
+  });
+
+  // Cleanup recording resources
+  useEffect(() => {
+    return () => {
+      mediaRecorder.current?.stream?.getTracks().forEach(track => track.stop());
+      speechRecognizer.current?.close();
+    };
+  }, []);
 
   useEffect(() => {
     if (isBeginClock) {
       if (callCount == 2 || timeLeft <= 0) {
         setIsTimeUp(true);
-        if (recognitionRef.current) {
-          recognitionRef.current.stop();
+        if (mediaRecorder.current) {
+          mediaRecorder.current.stop();
           setIsRecording(false);
         }
         return;
@@ -211,153 +224,94 @@ export default function InteractiveInvestors() {
       pitchDeck: '',
       oralPresentation: ''
     });
-    setAudioAnalytics({
-      excitedness: 0,
-      control: 0,
-      pleasantness: 0
-    });
   }
 
   const toggleSpeechToText = async () => {
-    const currentCallCount = callCount + 1;
-    setCallCount(currentCallCount);
-
     if (isRecording) {
+      const currentCallCount = callCount + 1;
+      setCallCount(currentCallCount);
       stopRecording();
     } else {
-      await startRecording(currentCallCount);
+      await startRecording();
     }
   };
-  const startRecording = async (currentCallCount: number) => {
+  const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-      let localChunks: Blob[] = []; // Use a local array instead of state for real-time updates
-      
-      mediaRecorder.ondataavailable = (event: BlobEvent) => {
+      mediaRecorder.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorder.current.ondataavailable = (event: BlobEvent) => {
         if (event.data.size > 0) {
-          localChunks.push(event.data);
-          console.log(`Chunk received, size: ${event.data.size}`);
+          audioChunks.current.push(event.data);
         }
       };
-  
-      mediaRecorder.onstop = async () => {
-        console.log(`Total chunks: ${localChunks.length}`);
-        const audioBlob = new Blob(localChunks, { type: 'audio/webm' });
-        console.log(`Blob created, size: ${audioBlob.size}, type: ${audioBlob.type}`);
-  
-        if (audioBlob.size === 0) {
-          setDebug('Error: Recorded audio is empty');
-          return;
-        }
 
-
-        try {
-          const formData = new FormData();
-          formData.append('file', audioBlob, 'audio.webm');
-
-          setDebug('Uploading audio...');
-          const response = await fetch('/api/convertWebmToWav', {
-            method: 'POST',
-            body: formData,
-          });
-
-          const result = await response.json();
-          if (response.ok) {
-            setDebug(`Conversion complete: ${result.outputFile}`);
-          } else {
-            setDebug(`Server error: ${result.error}`);
-          }
-        } catch (error) {
-          console.error('Upload error:', error);
-          setDebug('Error uploading audio');
-        }
-
-
-        stream.getTracks().forEach((track) => track.stop());
-        localChunks = []; // Reset local chunks
+      mediaRecorder.current.onstop = async () => {
+        setIsProcessing(true);
+        const audioBlob = new Blob(audioChunks.current, { type: 'audio/webm' });
+        await analyzeRecording(audioBlob);
+        audioChunks.current = [];
       };
   
-      mediaRecorder.start(100); // Collect data every 100ms
-      recognitionRef.current = mediaRecorder;
+      mediaRecorder.current.start(1000);
       setIsRecording(true);
-      setDebug('Recording started...');
     } catch (error) {
       console.error('Error starting recording:', error);
-      setDebug('Error starting recording');
     }
   };
   
   const stopRecording = () => {
-    if (recognitionRef.current && recognitionRef.current.state !== 'inactive') {
-      recognitionRef.current.stop();
+    if (mediaRecorder.current) {
+      mediaRecorder.current.stop();
+      setIsRecording(false);
     }
-    setIsRecording(false);
-    setDebug('Recording stopped...');
   };
-  
-  const transcribeAudio = async (audioBlob: Blob, currentCallCount: number) => {
-    const formData = new FormData();
-    formData.append('audio', audioBlob, 'audio.webm');
-    console.log('Sending audio blob, type:', audioBlob.type);
-  
-    try {
-      const response = await fetch('http://localhost:8000/transcribe' , {
-        method: "POST",
-        body: formData,
-      });
-  
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Failed to transcribe audio: ${response.status} - ${text}`);
+
+  const analyzeRecording = async (audioBlob: Blob) => {
+    const speechConfig = sdk.SpeechConfig.fromSubscription(
+      process.env.NEXT_PUBLIC_AZURE_SPEECH_KEY!,
+      process.env.NEXT_PUBLIC_AZURE_SPEECH_REGION!
+    );
+    speechConfig.speechRecognitionLanguage = "en-US";
+
+    // Convert Blob to Azure-compatible stream
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    const pushStream = sdk.AudioInputStream.createPushStream();
+    pushStream.write(arrayBuffer);
+    pushStream.close();
+
+    const audioConfig = sdk.AudioConfig.fromStreamInput(pushStream);
+    speechRecognizer.current = new sdk.SpeechRecognizer(speechConfig, audioConfig);
+
+    const pronunciationConfig = new sdk.PronunciationAssessmentConfig(
+      "",
+      sdk.PronunciationAssessmentGradingSystem.HundredMark,
+      sdk.PronunciationAssessmentGranularity.Phoneme,
+      true
+    );
+    pronunciationConfig.applyTo(speechRecognizer.current);
+
+    speechRecognizer.current.recognized = (_, e) => {
+      if (e.result.reason === sdk.ResultReason.RecognizedSpeech) {
+        const assessment = sdk.PronunciationAssessmentResult.fromResult(e.result);
+        console.log(assessment)
+        // setAudioAnalytics(prev => ({
+        //   pronunciation: prev.pronunciation + assessment.accuracyScore,
+        //   intonation: prev.intonation + assessment.prosodyScore,
+        //   fluency: prev.fluency + assessment.fluencyScore,
+        //   grammar: prev.grammar + assessment.grammarScore,
+        //   vocabulary: prev.vocabulary + assessment.vocabularyScore
+        // }));
       }
-  
-      const data = await response.json();
-      console.log('Transcription:', data.text);
-      setUserInput(data.text);
-      setUserInputTextArea(data.text);
-      handleSpeak(data.text);
-      transcriptRef.current = data.text;
-      setDebug('Transcription successful!');
+    };
 
-      await analyzeAudio(audioBlob);
-      
-    } catch (error) {
-      console.error('Error during transcription:', error);
-      setDebug('Error during transcription');
-    }
-  };  
+    speechRecognizer.current.sessionStopped = () => {
+      setIsProcessing(false);
+    };
 
-  const analyzeAudio = async (audioBlob: Blob) => {
-    const formData = new FormData();
-    formData.append('audio', audioBlob, 'audio.webm');
-    console.log('Sending audio blob, type:', audioBlob.type);
-    
-    try {
-      const response = await fetch(`http://localhost:8000/audio_analysis`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Failed to analyze audio: ${response.status} - ${text}`);
-      }
-
-      const data = await response.json();
-      console.log("Analysis:", data);
-      const excitedness = data.excitedness * 100;
-      const control = data.control * 100;
-      const pleasantness = data.pleasantness * 100;
-      setAudioAnalytics({
-        excitedness: excitedness,
-        control: control,
-        pleasantness: pleasantness
-      });
-    } catch (error) {
-      console.error("Error during analysis:", error);
-      setDebug("Error during audio analysis");
-    }
+    speechRecognizer.current.startContinuousRecognitionAsync(
+      () => console.log("Continuous recognition started"),
+      (err) => console.error("Recognition error:", err)
+    );
   };
 
   function mergeJsons<T extends Record<string, number | string>>(obj1: T, obj2: T): T {
@@ -520,28 +474,6 @@ async function endSession() {
     }finally {
       setLoadingRubric(false); // Once the data is fetched, stop loading
     }
-  };
-
-  // Hardcoded senior's audio analytics
-  const lookUpAudioAnalytics = {
-    excitedness: 63.93736,
-    control: 68.145305,
-    pleasantness: 52.96149
-  };
-  const grantedAudioAnalytics = {
-    excitedness: 70.39725,
-    control: 73.31582,
-    pleasantness: 58.8054
-  };
-  const mediVRAudioAnalytics = {
-    excitedness: 65.83064,
-    control: 71.53572,
-    pleasantness: 64.74939
-  };
-  const concreteAIAudioAnalytics = {
-    excitedness: 67.238104,
-    control: 70.651746,
-    pleasantness: 67.704296
   };
 
   return (
