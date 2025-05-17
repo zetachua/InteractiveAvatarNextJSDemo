@@ -245,17 +245,15 @@ export default function InteractiveInvestors() {
         });
 
         if (!convertRes.ok) {
-          console.log('Converting audio failed');
+          throw new Error('Failed to convert audio');
         }
-
-        const convertData = await convertRes.json();
 
         const analysisRes = await fetch('/api/pitchAnalysis', {
           method: 'POST',
         });
 
         if (!analysisRes.ok) {
-          console.log('Analysis failed');
+          throw new Error('Pitch analysis failed');
         }
 
         const analysisData = await analysisRes.json();
