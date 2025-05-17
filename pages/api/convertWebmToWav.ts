@@ -29,7 +29,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const uploadedFile = Array.isArray(files.file) ? files.file[0] : files.file;
     const originalPath = uploadedFile.filepath;
 
-    // 👇 Choose your own input/output names
     const inputFilename = 'audio.webm';
     const outputFilename = 'output.wav';
 
@@ -37,10 +36,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const inputPath = path.join(tempDir, inputFilename);
     const outputPath = path.join(tempDir, outputFilename);
 
-    // 👇 Rename the uploaded file to our desired input name
     fs.renameSync(originalPath, inputPath);
 
-    const command = `ffmpeg -i "${inputPath}" -acodec pcm_s16le -ar 44100 -ac 2 "${outputPath}"`;
+    const command = `ffmpeg -y -i "${inputPath}" -acodec pcm_s16le -ar 44100 -ac 2 "${outputPath}"`;
 
     exec(command, (error, stdout, stderr) => {
       if (error) {

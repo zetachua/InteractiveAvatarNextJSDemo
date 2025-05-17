@@ -119,6 +119,9 @@ export default function InteractiveInvestors() {
       if (callCount == 2 || timeLeft <= 0) {
         setIsTimeUp(true);
         setIsRecording(false);
+        if (mediaRecorderRef.current) {
+          mediaRecorderRef.current.stop();
+        }
         return;
       }
 
@@ -213,13 +216,11 @@ export default function InteractiveInvestors() {
     });
   }
 
-  const toggleSpeechToText = async () => {
+  const toggleSpeechToText = () => {
     if (isRecording) {
       setCallCount(prev => prev + 1);
-      setIsRecording(false);
       stopRecording();
     } else {
-      setIsRecording(true);
       startRecording();
     }
   };
@@ -227,15 +228,19 @@ export default function InteractiveInvestors() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      audioChunksRef.current = [];
 
       mediaRecorderRef.current.ondataavailable = (e) => {
         if (e.data.size > 0) {
           audioChunksRef.current.push(e.data);
+          console.log(`Chunk received, size: ${e.data.size}`);
         }
       };
 
       mediaRecorderRef.current.onstop = async () => {
+        console.log(`Total chunks: ${audioChunksRef.current.length}`);
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        console.log(`Blob created, size: ${blob.size}, type: ${blob.type}`);
         const formData = new FormData();
         formData.append('file', blob, 'audio.webm');
 
@@ -247,6 +252,9 @@ export default function InteractiveInvestors() {
         if (!convertRes.ok) {
           throw new Error('Failed to convert audio');
         }
+
+        const convertData = await convertRes.json();
+        console.log(convertData);
 
         const analysisRes = await fetch('/api/pitchAnalysis', {
           method: 'POST',
@@ -272,7 +280,6 @@ export default function InteractiveInvestors() {
       mediaRecorderRef.current.stop();
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
     }
-    audioChunksRef.current = [];
     setIsRecording(false);
   };
 

@@ -48,7 +48,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       const audioConfig = AudioConfig.fromStreamInput(pushStream);
 
       const speechConfig = SpeechConfig.fromSubscription(
-
+        'u7jQam2thfkuiTpX65Dn8dyIVLRnN9LPKVLEXvaOuuKFovLUitEAJQQJ99BEACqBBLyXJ3w3AAAYACOGwpbk',
+        'southeastasia'
       );
       speechConfig.speechRecognitionLanguage = 'en-US';
 
