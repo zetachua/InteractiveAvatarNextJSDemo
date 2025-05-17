@@ -18,7 +18,7 @@ interface Pause {
   end: number;
 }
 
-import { AudioAnalysisMetrics, ChatHistory,FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
+import { PitchAnalysisMetrics, ChatHistory,FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
 import { Square,Microphone, SkipForward} from "@phosphor-icons/react";
 import {concretePitchRubrics, grantedPitchRubrics, lookupPitchRubrics, mediVRPitchRubrics, models} from '../pages/api/configConstants'
 import RubricInvestorPiechart2 from "./RubricInvestorPieChart2";
@@ -104,9 +104,9 @@ export default function InteractiveInvestors() {
 
   // Recording and audio analysis states
   const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [isProcessing, setIsProcessing] = useState<boolean>(false);
-  const speechRecognizer = useRef<sdk.SpeechRecognizer | null>(null);
-  const [audioAnalytics, setAudioAnalytics] = useState<AudioAnalysisMetrics>({
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const [pitchAnalytics, setPitchAnalytics] = useState<PitchAnalysisMetrics>({
     pronunciation: 0,
     intonation: 0,
     fluency: 0,
@@ -223,64 +223,59 @@ export default function InteractiveInvestors() {
       startRecording();
     }
   };
-  const startRecording = () => {
-    const speechConfig = sdk.SpeechConfig.fromSubscription(
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
 
-    );
-    speechConfig.speechRecognitionLanguage = "en-US";
+      mediaRecorderRef.current.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
 
-    const audioConfig = sdk.AudioConfig.fromDefaultMicrophoneInput();
-    speechRecognizer.current = new sdk.SpeechRecognizer(speechConfig, audioConfig);
+      mediaRecorderRef.current.onstop = async () => {
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const formData = new FormData();
+        formData.append('file', blob, 'audio.webm');
 
-    const pronunciationConfig = new sdk.PronunciationAssessmentConfig(
-      "",
-      sdk.PronunciationAssessmentGradingSystem.HundredMark,
-      sdk.PronunciationAssessmentGranularity.Phoneme,
-      true
-    );
-    pronunciationConfig.applyTo(speechRecognizer.current);
+        const convertRes = await fetch('/api/convertWebmToWav', {
+          method: 'POST',
+          body: formData,
+        });
 
-    speechRecognizer.current.sessionStarted = (_s, e) => {
-      console.log(`SESSION ID: ${e.sessionId}`);
-    };
+        if (!convertRes.ok) {
+          console.log('Converting audio failed');
+        }
 
-    speechRecognizer.current.recognizing = (s, e) => {
-      console.log("(recognizing) Reason: " + sdk.ResultReason[e.result.reason] + " Text: " + e.result.text);
-    };
+        const convertData = await convertRes.json();
 
-    speechRecognizer.current.recognized = (s, e) => {
-      console.log("pronunciation assessment for: ", e.result.text);
-      const assessment = sdk.PronunciationAssessmentResult.fromResult(e.result);
-      console.log("assessment: ", assessment);
-    };
+        const analysisRes = await fetch('/api/pitchAnalysis', {
+          method: 'POST',
+        });
 
-    speechRecognizer.current.canceled = (s, e) => {
-      if (e.reason === sdk.CancellationReason.Error) {
-        console.log("(cancel) Reason: " + sdk.CancellationReason[e.reason] + ": " + e.errorDetails);
-      }
-      if (speechRecognizer.current) {
-        speechRecognizer.current.stopContinuousRecognitionAsync();
-      }
-    };
+        if (!analysisRes.ok) {
+          console.log('Analysis failed');
+        }
 
-    speechRecognizer.current.sessionStopped = (s, e) => {
-      if (speechRecognizer.current) {
-        speechRecognizer.current.stopContinuousRecognitionAsync();
-        speechRecognizer.current.close();
-      }
-      setIsProcessing(false);
+        const analysisData = await analysisRes.json();
+        console.log(analysisData);
+      };
+
+      mediaRecorderRef.current.start(1000);
+      setIsRecording(true);
+    } catch (err: any) {
+      console.error(err);
     }
-
-    speechRecognizer.current.startContinuousRecognitionAsync(
-      () => console.log("Continuous recognition started"),
-      (err) => console.error("Recognition error:", err)
-    );
   };
   
   const stopRecording = () => {
-    if (speechRecognizer.current) {
-      speechRecognizer.current.stopContinuousRecognitionAsync();
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
     }
+    audioChunksRef.current = [];
+    setIsRecording(false);
   };
 
   function mergeJsons<T extends Record<string, number | string>>(obj1: T, obj2: T): T {

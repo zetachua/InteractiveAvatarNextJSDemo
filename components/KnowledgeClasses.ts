@@ -267,7 +267,7 @@ export interface ChatHistory {
   content: string;
 }
 
-export interface AudioAnalysisMetrics {
+export interface PitchAnalysisMetrics {
   pronunciation: number;
   intonation: number;
   fluency: number;
