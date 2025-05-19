@@ -116,12 +116,9 @@ export default function InteractiveInvestors() {
 
   useEffect(() => {
     if (isBeginClock) {
-      if (callCount == 2 || timeLeft <= 0) {
+      if (callCount == 1 || timeLeft <= 0) {
         setIsTimeUp(true);
-        setIsRecording(false);
-        if (mediaRecorderRef.current) {
-          mediaRecorderRef.current.stop();
-        }
+        stopRecording();
         return;
       }
 
@@ -180,6 +177,7 @@ export default function InteractiveInvestors() {
   }
 
   const resetAllStates=()=>{
+    setIsRecording(false);
     setTimeLeft(300);
     setIsTimeUp(false);
     setIsBeginClock(false);
@@ -233,14 +231,11 @@ export default function InteractiveInvestors() {
       mediaRecorderRef.current.ondataavailable = (e) => {
         if (e.data.size > 0) {
           audioChunksRef.current.push(e.data);
-          console.log(`Chunk received, size: ${e.data.size}`);
         }
       };
 
       mediaRecorderRef.current.onstop = async () => {
-        console.log(`Total chunks: ${audioChunksRef.current.length}`);
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        console.log(`Blob created, size: ${blob.size}, type: ${blob.type}`);
         const formData = new FormData();
         formData.append('file', blob, 'audio.webm');
 
@@ -254,9 +249,9 @@ export default function InteractiveInvestors() {
         }
 
         const convertData = await convertRes.json();
-        console.log(convertData);
+        const filename = convertData.outputFile;
 
-        const analysisRes = await fetch('/api/pitchAnalysis', {
+        const analysisRes = await fetch(`/api/pitchAnalysis?file=${encodeURIComponent(filename)}`, {
           method: 'POST',
         });
 
