@@ -3,14 +3,14 @@ import fs from 'fs';
 import {
   AudioConfig,
   AudioInputStream,
+  CancellationReason,
   PronunciationAssessmentConfig,
   PronunciationAssessmentGradingSystem,
   PronunciationAssessmentGranularity,
+  PropertyId,
   ResultReason,
   SpeechConfig,
-  SpeechRecognizer,
-  PronunciationAssessmentResult,
-  CancellationReason
+  SpeechRecognizer
 } from 'microsoft-cognitiveservices-speech-sdk';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
@@ -53,7 +53,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const assessmentConfig = new PronunciationAssessmentConfig(
       '',
       PronunciationAssessmentGradingSystem.HundredMark,
-      PronunciationAssessmentGranularity.FullText,
+      PronunciationAssessmentGranularity.Phoneme,
       true
     );
     assessmentConfig.enableProsodyAssessment = true;
@@ -72,12 +72,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
       recognizer.recognized = (s, e) => {
         if (e.result.reason === ResultReason.RecognizedSpeech && e.result.text) {
-          const score = PronunciationAssessmentResult.fromResult(e.result);
-          if (score) {
-            scores.pronunciation.push(score.pronunciationScore);
-            scores.fluency.push(score.fluencyScore);
-            scores.completeness.push(score.completenessScore);
-          }
+          const jsonResult = JSON.parse(
+            e.result.properties.getProperty(
+              PropertyId.SpeechServiceResponse_JsonResult
+            )
+          );
+          console.log(jsonResult.NBest[0].Words[0]);
         }
       };
 
