@@ -27,7 +27,6 @@ import SentimentInvestorPiechart from "./SentimentInvestorPieChart";
 import ChatHistoryDisplay from "./ChatHistoryDisplay";
 import RubricInvestorPiechartExample from "./RubricInvestorPieChartExample";
 import Introduction from "./Introduction";
-import * as sdk from "microsoft-cognitiveservices-speech-sdk";
 
 export default function InteractiveInvestors() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);

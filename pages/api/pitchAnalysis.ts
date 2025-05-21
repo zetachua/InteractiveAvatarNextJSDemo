@@ -94,7 +94,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           totalWords += nbest.Words.length;
           nbest.Words.forEach((w: any) => {
             const phonemes = w.Phonemes.map((p: any) => ({
-              phoneme: p.phoneme,
+              phoneme: p.Phoneme,
               score: p.PronunciationAssessment.AccuracyScore
             }));
             words.push({
