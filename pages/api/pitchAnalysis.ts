@@ -1,4 +1,4 @@
-import { IncomingForm } from 'formidable';
+import dotenv from 'dotenv';
 import fs from 'fs';
 import {
   AudioConfig,
@@ -20,6 +20,19 @@ export const config = {
     bodyParser: false,
   },
 };
+
+dotenv.config();
+
+interface Phoneme {
+  phoneme: string;
+  score: number;
+}
+
+interface Word {
+  text: string;
+  score: number;
+  phonemes: Phoneme[];
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -45,8 +58,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const audioConfig = AudioConfig.fromStreamInput(pushStream);
 
     const speechConfig = SpeechConfig.fromSubscription(
-      'u7jQam2thfkuiTpX65Dn8dyIVLRnN9LPKVLEXvaOuuKFovLUitEAJQQJ99BEACqBBLyXJ3w3AAAYACOGwpbk',
-      'southeastasia'
+      process.env.AZURE_SPEECH_KEY!,
+      process.env.AZURE_REGION!
     );
     speechConfig.speechRecognitionLanguage = 'en-US';
 
@@ -61,23 +74,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const recognizer = new SpeechRecognizer(speechConfig, audioConfig);
     assessmentConfig.applyTo(recognizer);
 
-    const scores: { pronunciation: number[]; fluency: number[]; completeness: number[] } = {
-      pronunciation: [],
-      fluency: [],
-      completeness: [],
-    };
+    let totalScore = 0;
+    let totalWords = 0;
+    const words: Word[] = [];
 
     await new Promise<void>((resolve) => {
       let responded = false;
 
       recognizer.recognized = (s, e) => {
         if (e.result.reason === ResultReason.RecognizedSpeech && e.result.text) {
-          const jsonResult = JSON.parse(
+          const res = JSON.parse(
             e.result.properties.getProperty(
               PropertyId.SpeechServiceResponse_JsonResult
             )
           );
-          console.log(jsonResult.NBest[0].Words[0]);
+
+          const nbest = res.NBest[0]
+          totalScore += nbest.PronunciationAssessment.PronScore * nbest.Words.length;
+          totalWords += nbest.Words.length;
+          nbest.Words.forEach((w: any) => {
+            const phonemes = w.Phonemes.map((p: any) => ({
+              phoneme: p.phoneme,
+              score: p.PronunciationAssessment.AccuracyScore
+            }));
+            words.push({
+              text: w.Word,
+              score: w.PronunciationAssessment.AccuracyScore,
+              phonemes: phonemes
+            });
+          });
         }
       };
 
@@ -86,12 +111,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
           if (responded) return;
           responded = true;
           recognizer.close();
-          const avg = (arr: number[]) => (arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0);
+
           resolve(
             res.status(200).json({
-              pronunciationScore: +avg(scores.pronunciation).toFixed(1),
-              fluencyScore: +avg(scores.fluency).toFixed(1),
-              completenessScore: +avg(scores.completeness).toFixed(1),
+              score: totalWords ? (totalScore / totalWords).toFixed(1) : 0,
+              words: words
             })
           );
         });
