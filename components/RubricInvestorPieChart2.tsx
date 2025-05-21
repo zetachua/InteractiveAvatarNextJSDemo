@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, Text } from 'recharts';
-import { ChatHistory, Rubric2InvestorMetricData, Rubric2InvestorSpecificData } from './KnowledgeClasses';
+import { Rubric2InvestorMetricData, Rubric2InvestorSpecificData } from './KnowledgeClasses';
 import { Button } from '@nextui-org/button';
 import Section from './Section';
 // Props for the component
 interface RubricInvestorPieChartProps2 {
-  chatHistory: ChatHistory[];
   resetAllStates: () => void;
   summary?: string;
   totalRounds: number;
@@ -18,7 +17,6 @@ interface RubricInvestorPieChartProps2 {
 const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
   data,
   citations,
-  chatHistory,
   overallScore,
   totalRounds,
   summary,
@@ -60,23 +58,6 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
 
   console.log(rubricSpecificFeedback, "all the metric feedback");
   const feedbackEntries = Object.entries(rubricSpecificFeedback || {});
-
-  const downloadTextFile = () => {
-    const chatText = chatHistory
-      .map((message) => `${message.role.toUpperCase()}: ${message.content}`)
-      .join("\n");
-  
-    const blob = new Blob([chatText], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-  
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "chatHistory.txt";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
 
   const chartData = Object.entries(rubricMetrics).map(([key, value]) => ({
     name: key.charAt(0).toUpperCase() + key.slice(1),
@@ -239,23 +220,6 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
         >
           Copy All
         </button> */}
-        <button
-         style={{
-          position: 'absolute',
-          right: '-3%',
-          top: '0',
-          padding: '0.5rem 1rem',
-          border: 'none',
-          background: 'rgba(255,255,255,0.4)',
-          borderRadius: '10px',
-          color: '#fff',
-          cursor: 'pointer',
-          fontSize: '16px',
-        }}
-          onClick={() => downloadTextFile()}
-        >
-          Download ChatHistory
-        </button>
         </div>
       </div>
     </div>
