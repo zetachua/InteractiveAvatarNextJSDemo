@@ -11,9 +11,8 @@ const Section: React.FC<SectionProps> = ({ title, feedback }) => {
   return (
     <div
       style={{
-        background: 'rgba(255, 255, 255, 0.1)',
+        background: '#444',
         padding: '1.5rem',
-        position: 'relative',
         borderRadius: '10px',
       }}
     >

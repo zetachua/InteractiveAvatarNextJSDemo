@@ -239,7 +239,8 @@ export default function InteractiveInvestors() {
         });
 
         if (!convertRes.ok) {
-          throw new Error('Failed to convert audio');
+          const errorBody = await convertRes.json();
+          throw new Error(errorBody.error);
         }
 
         const convertData = await convertRes.json();
@@ -250,7 +251,8 @@ export default function InteractiveInvestors() {
         });
 
         if (!analysisRes.ok) {
-          throw new Error('Pitch analysis failed');
+          const errorBody = await analysisRes.json();
+          throw new Error(errorBody.error);
         }
 
         const analysisData = await analysisRes.json();
@@ -657,14 +659,13 @@ async function endSession() {
               </button>
             </div>
 
-            <div style={{ display: 'flex' }}>
+            <div style={{ display: 'inline-flex' }}>
               <RubricInvestorPiechart2  citations={rubricCitations2} data={rubricJson2} overallScore={rubricAllRatings2} summary={rubricSummary2} specificFeedback={rubricSpecificFeedback2} resetAllStates={resetAllStates} totalRounds={0}></RubricInvestorPiechart2>
 
               {(!rubricCitations2 || loadingRubric1 || loadingRubric2 || loadingRubric)&& 
               <div style={{position:'absolute',width:'400px',zIndex:'2000',color:'black',display:'flex',gap:'1rem',flexDirection:'column',backgroundColor:'rgba(255,255,255)',borderRadius:'20px',padding:'1rem',whiteSpace:'pre-line',top:'50%',left:'50%',transform:'translate(-50%,-50%)',boxShadow:'2px 2px 0px 0px black'}}>
                 <div style={{display:'flex',gap:'1rem'}}>{(!rubricCitations2||loadingRubric||loadingRubric1)?<Spinner />:"! "}<span>{loadingRubric1? '[Loading Analysis]':'[Successfully Loaded]'} Elevation Pitch, Team, Market Opportunity</span></div>
-                <div style={{display:'flex',gap:'1rem'}}>{(!rubricCitations2||loadingRubric||loadingRubric2)?<Spinner />:"! "}<span>{loadingRubric2? '[Loading Analysis]':'[Successfully Loaded]'} Market Size, Solution Value Proposition, Competitive Position</span></div>
-                {/* <div style={{display:'flex',gap:'1rem'}}>{(!rubricCitations2||loadingRubric||loadingRubric3)?<Spinner />:"! "}<span>{loadingRubric3? '[Loading Analysis]':'[Successfully Loaded]'} Traction Awards, Revenue Model</span></div> */}
+                <div style={{display:'flex',gap:'1rem'}}>{(!rubricCitations2||loadingRubric||loadingRubric2)?<Spinner />:"! "}<span>{loadingRubric2? '[Loading Analysis]':'[Successfully Loaded]'} Market Size, Solution Value Proposition, Competitive Position</span></div> {/* <div style={{display:'flex',gap:'1rem'}}>{(!rubricCitations2||loadingRubric||loadingRubric3)?<Spinner />:"! "}<span>{loadingRubric3? '[Loading Analysis]':'[Successfully Loaded]'} Traction Awards, Revenue Model</span></div> */}
               </div>}
 
               { displayLookupPitch && <RubricInvestorPiechartExample title={'LookUp'} specificFeedback={lookupPitchRubrics()} />}

@@ -89,14 +89,13 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
   return (
     <div
       style={{
-        padding: '3rem',
+        padding: '2rem',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         flexWrap: 'wrap',
         position: 'relative',
         height: '100%',
-        width: '100%',
         zIndex: '1001',
       }}
     >

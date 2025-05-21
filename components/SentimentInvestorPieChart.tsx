@@ -15,6 +15,7 @@ import {
   FeedbackMetricData,
   PronunciationAssessment
 } from './KnowledgeClasses'; // Assuming you have these types
+import '../styles/SentimentInvestorPieChart.css';
 
 // Props for the component
 interface SentimentInvestorPieChartProps {
@@ -26,6 +27,8 @@ interface SentimentInvestorPieChartProps {
   feedbackSummary:string;
   specificFeedback:FeedbackSpecificMetrics;
 }
+
+const assessments = ['Pronunciation', 'Fluency', 'Prosody'];
 
 const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
   data,
@@ -44,7 +47,7 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
     depth,
     neutrality,
     engagement,
-     } = data;
+  } = data;
 
   // Combine metrics data for the chart
   const rubricMetrics: FeedbackMetricData = {
@@ -54,7 +57,6 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
     neutrality,
     engagement,
   };
-  console.log(overallScore,"overallScore")
 
   // Construct the chart data
   const barData = Object.entries(rubricMetrics).map(([key, value]) => ({
@@ -76,57 +78,38 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
       ? Math.ceil((overallScore + Number.EPSILON) * 10) / 10
       : 0;
 
+  const [selectedAssessment, setSelectedAssessment] = useState('Pronunciation');
+
   return (
-    <div
-      style={{
-        padding: '3rem',
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        height: '100%',
-        width: '100%',
-        minWidth:'700px'
-      }}
-    >
+    <div className='sentiment-analysis'>
 
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          flexDirection: 'column',
-        }}
-      >
-        <div
-          style={{
-            background: 'rgba(255,255,255,0.1)',
-            position: 'relative',
-            padding: '1rem',
-            borderRadius: '50px',
-            textAlign: 'center',
-            width: '90%',
-            justifyContent: 'center',
-          }}
-        >
-          <b style={{ fontSize: '24px' }}>Sentiment Overall</b>
-          <div style={{ padding: '0.5rem' ,fontSize:'18px'}}>{feedbackSummary}</div>
-        </div>
+      <div className='overall'>
+          <b>Sentiment Overall</b>
+          <div>{feedbackSummary}</div>
       </div>
 
-      <div
-        style={{
-          margin: '2rem 2rem 2rem 0',
-          fontWeight: 600,
-          fontSize: '24px',
-          borderRadius: '10px',
-          padding: '0rem 1.2rem 0rem 1.2rem',
-          color: '#000',
-          backgroundColor: '#fff',
-        }}
-      >
-        {roundedOverallScore}/5
+      <div className='select-assessment'>
+        {assessments.map((assessment) => (
+          <Button
+            key={assessment}
+            onPress={() => setSelectedAssessment(assessment)}
+            className={`text-xl px-6 py-7 border transition-all ${
+              selectedAssessment === assessment
+                ? 'bg-gray-500 text-white border-gray-500'
+                : 'bg-transparent text-gray-500 border-gray-500'
+            }`}
+            variant='flat'
+          >
+            {assessment}
+          </Button>
+        ))}
       </div>
+
+      <div className='assessment'>
+
+      </div>
+
+      <div className='average-score'>{roundedOverallScore}/5</div>
       <ResponsiveContainer width='90%' height={400}>
         <BarChart
           layout='vertical'
@@ -152,19 +135,10 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
           <Tooltip />
         </BarChart>
       </ResponsiveContainer>
-      <div style={{ padding: '1rem' }}>
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem',
-            width: '100%',
-          }}
-        >
-          {Object.entries(specificFeedback || {}).map(([metric, feedback]) => (
-            <Section key={metric} title={metric} feedback={feedback as string} />
-          ))}
-        </div>
+      <div className='metrics'>
+        {Object.entries(specificFeedback || {}).map(([metric, feedback]) => (
+          <Section key={metric} title={metric} feedback={feedback as string} />
+        ))}
       </div>
     </div>
   );

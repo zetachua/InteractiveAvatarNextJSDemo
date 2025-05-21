@@ -127,7 +127,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       recognizer.startContinuousRecognitionAsync();
     });
   } catch (err: any) {
-    return res.status(500).json({ error: 'Processing failed', details: err.message });
+    return res.status(500).json({ error: err.message });
   } finally {
     fs.unlink(audioPath, () => {});
   }
