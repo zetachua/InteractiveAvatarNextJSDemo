@@ -3,11 +3,6 @@ import {
   Bar,
   BarChart,
   Cell,
-  PolarAngleAxis,
-  PolarGrid,
-  PolarRadiusAxis,
-  Radar,
-  RadarChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -18,12 +13,12 @@ import Section from './Section';
 import {
   FeedbackSpecificMetrics,
   FeedbackMetricData,
-  AudioAnalysisMetrics
+  PronunciationAssessment
 } from './KnowledgeClasses'; // Assuming you have these types
 
 // Props for the component
 interface SentimentInvestorPieChartProps {
-  audioAnalytics: AudioAnalysisMetrics;
+  pronunciationAssessment: PronunciationAssessment;
   data: FeedbackMetricData; // Change from 'data' to 'feedbackData'
   overallScore:number;
   resetAllStates: () => void;
@@ -33,13 +28,13 @@ interface SentimentInvestorPieChartProps {
 }
 
 const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
-  audioAnalytics,
   data,
   totalRounds,
   overallScore,
   resetAllStates,
   feedbackSummary,
   specificFeedback,
+  pronunciationAssessment,
 }) => {
 
   // Destructure values from the feedbackData prop
@@ -66,20 +61,6 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
     name: key.charAt(0).toUpperCase() + key.slice(1),
     value: value as number,
   }));
-
-  const radarData = Object.entries(audioAnalytics).map(([key, value]) => ({
-    trait: key.charAt(0).toUpperCase() + key.slice(1),
-    value: value as number,
-  }));
-
-  // const roundToTwoSignificantFigures = (num:any) => {
-  //   if (num === 0) return 0;
-  //   const factor = Math.pow(10, 2 - Math.floor(Math.log10(Math.abs(num))));
-  //   return Math.round(num * factor) / factor;
-  // };
-  // const roundedArousal = roundToTwoSignificantFigures(arousal);
-  // const roundedDominance = roundToTwoSignificantFigures(dominance);
-  // const roundedValence = roundToTwoSignificantFigures(valence);
 
   // Colors for the bar chart
   const getBarColor = (value: number) => {
@@ -131,16 +112,6 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
           <b style={{ fontSize: '24px' }}>Sentiment Overall</b>
           <div style={{ padding: '0.5rem' ,fontSize:'18px'}}>{feedbackSummary}</div>
         </div>
-      </div>
-
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}>
-        <RadarChart cy="70%" outerRadius={160} width={600} height={350} data={radarData}>
-          <PolarGrid />
-          <PolarAngleAxis dataKey="trait" tick={{ dy: -20 }} />
-          <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 20, opacity: 0.8 }} />
-          <Radar name="Emotion Levels" dataKey="value" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.6} />
-          <Tooltip contentStyle={{ color: 'black' }} />
-        </RadarChart>
       </div>
 
       <div

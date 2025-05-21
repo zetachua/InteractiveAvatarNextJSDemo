@@ -14,6 +14,7 @@ import {
 } from 'microsoft-cognitiveservices-speech-sdk';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
+import { Word } from '../../components/KnowledgeClasses';
 
 export const config = {
   api: {
@@ -22,17 +23,6 @@ export const config = {
 };
 
 dotenv.config();
-
-interface Phoneme {
-  phoneme: string;
-  score: number;
-}
-
-interface Word {
-  text: string;
-  score: number;
-  phonemes: Phoneme[];
-}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {

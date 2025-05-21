@@ -18,7 +18,7 @@ interface Pause {
   end: number;
 }
 
-import { PitchAnalysisMetrics, ChatHistory,FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
+import { PronunciationAssessment, ChatHistory,FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
 import { Square,Microphone, SkipForward} from "@phosphor-icons/react";
 import {concretePitchRubrics, grantedPitchRubrics, lookupPitchRubrics, mediVRPitchRubrics, models} from '../pages/api/configConstants'
 import RubricInvestorPiechart2 from "./RubricInvestorPieChart2";
@@ -101,16 +101,13 @@ export default function InteractiveInvestors() {
   const [callCount, setCallCount] = useState<number>(0);
   const [pauses, setPauses] = useState<any[]>([]);
 
-  // Recording and audio analysis states
+  // Recording and pitch analysis states
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const [pitchAnalytics, setPitchAnalytics] = useState<PitchAnalysisMetrics>({
-    pronunciation: 0,
-    intonation: 0,
-    fluency: 0,
-    grammar: 0,
-    vocabulary: 0
+  const [pronunciationAssessment, setPronunciationAssessment] = useState<PronunciationAssessment>({
+    score: 0,
+    words: []
   });
 
   useEffect(() => {
@@ -319,8 +316,6 @@ async function endSession() {
   }
 
 }
-
-  // console.log(rubricSummary,"rubricSummary",rubricJson,"rubricJson",rubricAllRatings,"rubricScore",rubricSpecificFeedback,"rubricSpecificFeedback")
 
   const displayRubrics= ()=> {
     setDisplayRubricAnalytics(true);
@@ -632,19 +627,22 @@ async function endSession() {
               >
                 MediVR
               </Button>
-          </div>
+            </div>
+
             <RubricInvestorPiechart2  citations={rubricCitations2} data={rubricJson2} overallScore={rubricAllRatings2} summary={rubricSummary2} specificFeedback={rubricSpecificFeedback2} resetAllStates={resetAllStates} totalRounds={0} chatHistory={chatHistory}></RubricInvestorPiechart2>
+
             {(!rubricCitations2 || loadingRubric1 || loadingRubric2 || loadingRubric)&& 
             <div style={{position:'absolute',width:'400px',zIndex:'2000',color:'black',display:'flex',gap:'1rem',flexDirection:'column',backgroundColor:'rgba(255,255,255)',borderRadius:'20px',padding:'1rem',whiteSpace:'pre-line',top:'50%',left:'50%',transform:'translate(-50%,-50%)',boxShadow:'2px 2px 0px 0px black'}}>
               <div style={{display:'flex',gap:'1rem'}}>{(!rubricCitations2||loadingRubric||loadingRubric1)?<Spinner />:"! "}<span>{loadingRubric1? '[Loading Analysis]':'[Successfully Loaded]'} Elevation Pitch, Team, Market Opportunity</span></div>
               <div style={{display:'flex',gap:'1rem'}}>{(!rubricCitations2||loadingRubric||loadingRubric2)?<Spinner />:"! "}<span>{loadingRubric2? '[Loading Analysis]':'[Successfully Loaded]'} Market Size, Solution Value Proposition, Competitive Position</span></div>
               {/* <div style={{display:'flex',gap:'1rem'}}>{(!rubricCitations2||loadingRubric||loadingRubric3)?<Spinner />:"! "}<span>{loadingRubric3? '[Loading Analysis]':'[Successfully Loaded]'} Traction Awards, Revenue Model</span></div> */}
             </div>}
-            { displayLookupPitch && <RubricInvestorPiechartExample title={'LookUp'} specificFeedback={lookupPitchRubrics()} audioAnalytics={lookUpAudioAnalytics} />}
-            { displayGrantPitch && <RubricInvestorPiechartExample title={'Grant'} specificFeedback={grantedPitchRubrics()} audioAnalytics={grantedAudioAnalytics} />}
-            { displayMediVRPitch && <RubricInvestorPiechartExample title={'MediVR'} specificFeedback={mediVRPitchRubrics()} audioAnalytics={mediVRAudioAnalytics} />}
-            { displayConcretePitch && <RubricInvestorPiechartExample title={'Concrete'} specificFeedback={lookupPitchRubrics()} audioAnalytics={concreteAIAudioAnalytics} />}
-            <SentimentInvestorPiechart audioAnalytics={audioAnalytics} data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0}></SentimentInvestorPiechart>
+
+            { displayLookupPitch && <RubricInvestorPiechartExample title={'LookUp'} specificFeedback={lookupPitchRubrics()} />}
+            { displayGrantPitch && <RubricInvestorPiechartExample title={'Grant'} specificFeedback={grantedPitchRubrics()} />}
+            { displayMediVRPitch && <RubricInvestorPiechartExample title={'MediVR'} specificFeedback={mediVRPitchRubrics()} />}
+            { displayConcretePitch && <RubricInvestorPiechartExample title={'Concrete'} specificFeedback={lookupPitchRubrics()} />}
+            <SentimentInvestorPiechart pronunciationAssessment={pronunciationAssessment} data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0}></SentimentInvestorPiechart>
 
          </div>
          :

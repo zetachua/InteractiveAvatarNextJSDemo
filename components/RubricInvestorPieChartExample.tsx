@@ -11,20 +11,18 @@ import {
   Tooltip,
   Legend
 } from 'recharts';
-import { Rubric2InvestorSpecificDataExample, AudioAnalysisMetrics } from './KnowledgeClasses';
+import { Rubric2InvestorSpecificDataExample } from './KnowledgeClasses';
 import Section from './Section';
 
 // Props for the component
 interface RubricInvestorPieChartProps2 {
   specificFeedback?: Rubric2InvestorSpecificDataExample;
   title:string;
-  audioAnalytics: AudioAnalysisMetrics
 }
 
 const RubricInvestorPiechartExample: React.FC<RubricInvestorPieChartProps2> = ({
   specificFeedback,
   title,
-  audioAnalytics
 }) => {
   const rubricSpecificFeedback: Rubric2InvestorSpecificDataExample = specificFeedback ?? {} as Rubric2InvestorSpecificDataExample;
   const rubricOverallScore: number = specificFeedback?.score ?? 0;
@@ -64,11 +62,6 @@ const RubricInvestorPiechartExample: React.FC<RubricInvestorPieChartProps2> = ({
 
   const chartData = Object.entries(rubricMetrics).map(([key, value]) => ({
     name: key.charAt(0).toUpperCase() + key.slice(1),
-    value: value as number,
-  }));
-
-  const radarData = Object.entries(audioAnalytics).map(([key, value]) => ({
-    trait: key.charAt(0).toUpperCase() + key.slice(1),
     value: value as number,
   }));
 
@@ -127,16 +120,6 @@ const RubricInvestorPiechartExample: React.FC<RubricInvestorPieChartProps2> = ({
           }}
         >
           <b>{title} Startup LLM Analysis </b>
-        </div>
-
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", width: "100%", height: "100%" }}>
-          <RadarChart cy="70%" outerRadius={160} width={600} height={400} data={radarData}>
-            <PolarGrid />
-            <PolarAngleAxis dataKey="trait" tick={{ dy: -20 }} />
-            <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 20, opacity: 0.8 }} />
-            <Radar name="Emotion Levels" dataKey="value" stroke="#8884d8" fill="#8884d8" fillOpacity={0.6} />
-            <Tooltip contentStyle={{ color: 'black' }} />
-          </RadarChart>
         </div>
 
         <div

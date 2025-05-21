@@ -267,10 +267,18 @@ export interface ChatHistory {
   content: string;
 }
 
-export interface PitchAnalysisMetrics {
-  pronunciation: number;
-  intonation: number;
-  fluency: number;
-  grammar: number;
-  vocabulary: number;
+export interface Phoneme {
+  phoneme: string;
+  score: number;
+}
+
+export interface Word {
+  text: string;
+  score: number;
+  phonemes: Phoneme[];
+}
+
+export interface PronunciationAssessment {
+  score: number;
+  words: Word[];
 }
