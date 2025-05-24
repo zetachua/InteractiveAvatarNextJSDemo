@@ -9,10 +9,12 @@ import {
   YAxis
 } from 'recharts';
 import { Button } from '@nextui-org/button';
+import Assessment from './Assessment';
 import Section from './Section';
 import {
   FeedbackSpecificMetrics,
   FeedbackMetricData,
+  AssessmentType,
   PronunciationAssessment
 } from './KnowledgeClasses'; // Assuming you have these types
 import '../styles/SentimentInvestorPieChart.css';
@@ -28,7 +30,7 @@ interface SentimentInvestorPieChartProps {
   specificFeedback:FeedbackSpecificMetrics;
 }
 
-const assessments = ['Pronunciation', 'Fluency', 'Prosody'];
+const assessments: AssessmentType[] = ['Pronunciation', 'Intonation', 'Fluency'];
 
 const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
   data,
@@ -78,7 +80,7 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
       ? Math.ceil((overallScore + Number.EPSILON) * 10) / 10
       : 0;
 
-  const [selectedAssessment, setSelectedAssessment] = useState('Pronunciation');
+  const [selectedAssessment, setSelectedAssessment] = useState<AssessmentType>('Pronunciation');
 
   return (
     <div className='sentiment-analysis'>
@@ -105,9 +107,10 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
         ))}
       </div>
 
-      <div className='assessment'>
-
-      </div>
+      <Assessment
+        assessment={selectedAssessment}
+        pronunciationAssessment={pronunciationAssessment}
+      />
 
       <div className='average-score'>{roundedOverallScore}/5</div>
       <ResponsiveContainer width='90%' height={400}>

@@ -34,6 +34,60 @@
     width: 100%;
 }
 
+.sentiment-analysis .assessment .meter {
+    width: 90%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 40px;
+}
+
+.sentiment-analysis .assessment .meter .progress {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    background: conic-gradient(var(--clr) calc(var(--i) * 3.6deg), #444 0deg);
+}
+
+.sentiment-analysis .assessment .meter .progress h3 {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2rem;
+    z-index: 1;
+    font-weight: 400;
+}
+
+.sentiment-analysis .assessment .meter .progress h4 {
+    position: absolute;
+    font-size: 1.2rem;
+    top: 52%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1;
+    font-weight: 500;
+}
+
+.sentiment-analysis .assessment .meter .progress::before {
+    content: '';
+    display: block;
+    height: 100%;
+    margin-left: 50%;
+    transform-origin: left;
+    border-radius: 0 100% 100% 0/50%;
+}
+
+.sentiment-analysis .assessment .meter .progress::after {
+    content: '';
+    position: absolute;
+    inset: 10px;
+    border-radius: 50%;
+    background: #333;
+}
+
 .sentiment-analysis .average-score {
     margin: 1.5rem 0;
     font-weight: 600;

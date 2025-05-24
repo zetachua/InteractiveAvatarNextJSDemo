@@ -267,6 +267,8 @@ export interface ChatHistory {
   content: string;
 }
 
+export type AssessmentType = 'Pronunciation' | 'Intonation' | 'Fluency';
+
 export interface Phoneme {
   phoneme: string;
   score: number;
