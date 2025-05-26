@@ -1,10 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import Groq from 'groq-sdk';
-import { pitchEvaluationPrompt, pitchEvaluationPrompt2, pitchEvaluationPrompt3, pitchEvaluationPromptMetric1, pitchEvaluationPromptMetric2, pitchEvaluationPromptMetric3, sentimentPitchPrompt} from './prompts';
-import { feedbackFilter, rubricInvestorFilter, rubricInvestorFilter2 } from './completionFilterFunctions';
-import OpenAI from 'openai';
-
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+import {sentimentPitchPrompt} from './prompts';
+import { feedbackFilter } from './completionFilterFunctions';
+import { getGroqChatCompletionForMetric } from './pitchEvaluationResponseShared';
 
 const pitchSentimentResponse = async (req: NextApiRequest, res: NextApiResponse) => {
 
@@ -14,7 +11,7 @@ const pitchSentimentResponse = async (req: NextApiRequest, res: NextApiResponse)
       let sentimentResult;
 
       [sentimentResult] = await Promise.all([
-        fetchSentiment(userInput, chatHistory, "sentiment",selectedModel),
+        fetchSentiment(userInput, chatHistory),
         ]);
 
       let sentimentScore, sentimentSummary, sentimentMetrics,sentimentSpecifics;
@@ -42,32 +39,10 @@ const pitchSentimentResponse = async (req: NextApiRequest, res: NextApiResponse)
   }
 };
 
-// Function to fetch chat completion from Groq
-const getGroqChatCompletion = async (userInput: string, chatHistory: any, promptType:any,selectedModel:any) => {
-  const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
-
-  let selectedPrompt=sentimentPitchPrompt(userInput,chatHistory)
-
-  return groq.chat.completions.create({
-    messages: [
-      {
-        role: 'system',
-        content: selectedPrompt,
-      },
-      ...validChatHistory,
-      {
-        role: 'user',
-        content: userInput,
-      },
-    ],
-    model: selectedModel,
-    response_format: { type: "json_object" },
-  });
-};
-
-const fetchSentiment = async (userInput: string, chatHistory: any[], promptType: string, selectedModel:any) => {
+const fetchSentiment = async (userInput: string, chatHistory: any[]) => {
   try {
-    const sentimentRatingCompletion = await getGroqChatCompletion(userInput, chatHistory, promptType,selectedModel);
+    const prompt=sentimentPitchPrompt(userInput,chatHistory);
+    const sentimentRatingCompletion = await getGroqChatCompletionForMetric(chatHistory,prompt);
     let responseContent = sentimentRatingCompletion.choices[0].message.content;
 
     if (responseContent==undefined) {

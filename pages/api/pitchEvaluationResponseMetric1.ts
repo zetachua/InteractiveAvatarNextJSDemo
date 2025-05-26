@@ -7,22 +7,20 @@ const pitchEvaluationResponseMetric1 = async (req: NextApiRequest, res: NextApiR
   if (req.method === 'POST') {
     try {
       const { currentMarketStats,chatHistory } = req.body;
-      let metric1Result,citations,metric1Results;
+      let rubricResult,citations,rubricResult2;
       
-        [metric1Results] = await Promise.all([
-          fetchMetric1(currentMarketStats,chatHistory),
-        ]);
+        rubricResult = await fetchMetric1(currentMarketStats,chatHistory);
 
-        metric1Result = metric1Results?.rubricData;
-        citations = metric1Results?.citations;
+        rubricResult2 = rubricResult?.rubricData;
+        citations = rubricResult?.citations;
   
   
         let rubricScore2, rubricSummary2, rubricMetrics2, rubricSpecificFeedback2;
-        if (metric1Result?.rubricScore !== undefined) {
-          rubricScore2 = metric1Result.rubricScore;
-          rubricSummary2 = metric1Result.rubricSummary;
-          rubricMetrics2 = metric1Result.rubricMetrics;
-          rubricSpecificFeedback2 = metric1Result.rubricSpecificFeedback;
+        if (rubricResult2?.rubricScore !== undefined) {
+          rubricScore2 = rubricResult2.rubricScore;
+          rubricSummary2 = rubricResult2.rubricSummary;
+          rubricMetrics2 = rubricResult2.rubricMetrics;
+          rubricSpecificFeedback2 = rubricResult2.rubricSpecificFeedback;
         } else {
           console.log("Invalid rubric data, keeping previous values.");
         }
@@ -50,12 +48,9 @@ const getSonarMetric1 = async (currentMarketStats:string,chatHistory: any) => {
 const fetchMetric1 = async (currentMarketStats:string,chatHistory: any[]) => {
   try {
     let rubricRatingCompletion;
-      const [metric1Result] = await Promise.all([
-        getSonarMetric1(currentMarketStats,chatHistory),
-      ]);
 
+      const metric1Result = await getSonarMetric1(currentMarketStats,chatHistory);
       console.log(metric1Result,"direct metric1 completion")
-      console.log("Metric 1 Sonar LLM Completion:", JSON.stringify(metric1Result, null, 2));
 
       rubricRatingCompletion = {
         choices: [
@@ -203,7 +198,6 @@ const cleanSonarOutputMetric1 = (metric1:any): string => {
 
     console.log(combinedData,"testFn5: before returning json file")
     return JSON.stringify(combinedData);
-
   } catch (error) {
     console.error("Error merging Sonar outputs:", error);
     const defaultData = {

@@ -67,7 +67,6 @@ export default function InteractiveInvestors() {
       tractionAwards: '',
       revenueModel: '',
     });
-  const [displayRubricAnalytics,setDisplayRubricAnalytics]=useState(false);
   const [questionCount, setQuestionCount] = useState<number>(0);
   const [sentimentJson, setSentimentJson] = useState<FeedbackData | null>(null);
   const [sentimentMetrics, setSentimentMetrics] = useState<FeedbackMetricData>(
@@ -136,7 +135,6 @@ export default function InteractiveInvestors() {
     // setLoadingRubric3(false);
     
     setIsLoadingSession(true);
-    setDisplayRubricAnalytics(false);
     setStream(true);
     try {
       resetAllStates();
@@ -150,7 +148,6 @@ export default function InteractiveInvestors() {
   
   async function handleSpeak(userInputValue?:string) {
     setIsLoadingRepeat(true);
-    setDisplayRubricAnalytics(false);
     if(userInputValue){
       setUserInput(userInputValue);
     } 
@@ -160,7 +157,7 @@ export default function InteractiveInvestors() {
       const response = await fetch(`/api/qnaResponse`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userInput:userInputValue,chatHistory}),
+        body: JSON.stringify({ userInput:userInputValue,chatHistory,selectedModel}),
       });
       const data = await response.json();
       if (data.chatHistory !== undefined) setChatHistory(data.chatHistory);
@@ -407,8 +404,6 @@ async function endSession() {
 
     fetchAllMetrics();
 
-    displayRubrics();
-
   } catch (error) {
     console.error('Error fetching pitch sentiment and rubric response:', error);
   } finally {
@@ -419,11 +414,6 @@ async function endSession() {
 
   console.log(rubricSummary,"rubricSummary",rubricJson,"rubricJson",rubricAllRatings,"rubricScore",rubricSpecificFeedback,"rubricSpecificFeedback")
 
-  const displayRubrics= ()=> {
-    setDisplayRubricAnalytics(true);
-    console.log(displayRubricAnalytics,"im ended")
-  }
-
   const fetchSentiment = async () =>{
     const responseSentiment = await fetch(`/api/pitchSentimentResponse`, {
       method: "POST",
@@ -431,6 +421,7 @@ async function endSession() {
       body: JSON.stringify({ userInput, chatHistory,selectedModel}),
     });
     const dataSentiment = await responseSentiment.json();
+    console.log(dataSentiment,"was i in sentiment evaluation");
     if (dataSentiment?.sentimentSummary !== undefined) setFeedbackText(dataSentiment.sentimentSummary);
     if (dataSentiment?.sentimentSpecifics !== undefined) setSentimentSpecificFeedback(dataSentiment.sentimentSpecifics);
     if (dataSentiment?.sentimentMetrics!==undefined){
