@@ -80,8 +80,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             )
           );
 
-          console.dir(res, { depth: null });
-
           const nbest = res.NBest[0]
           totalScore += nbest.PronunciationAssessment.PronScore * nbest.Words.length;
           totalWords += nbest.Words.length;

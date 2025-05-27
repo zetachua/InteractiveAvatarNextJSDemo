@@ -144,6 +144,7 @@
     background-color: #fff;
     color: black;
     padding: 1.5rem;
+    overflow-y: auto;
 }
 
 .sentiment-analysis .assessment .content .word {
