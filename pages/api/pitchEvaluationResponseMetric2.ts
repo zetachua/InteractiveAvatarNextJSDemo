@@ -7,11 +7,12 @@ const pitchEvaluationResponseMetric2 = async (req: NextApiRequest, res: NextApiR
   if (req.method === 'POST') {
     try {
       const { currentMarketStats,chatHistory } = req.body;
-      let rubricResult,rubricResult2;
+      let rubricResult,citations,rubricResult2;
 
       rubricResult = await fetchMetric2(currentMarketStats, chatHistory);
 
       rubricResult2 = rubricResult?.rubricData;
+      citations = rubricResult?.citations;
 
       let rubricScore2, rubricSummary2, rubricMetrics2, rubricSpecificFeedback2;
       if (rubricResult2?.rubricScore !== undefined) {
@@ -28,6 +29,7 @@ const pitchEvaluationResponseMetric2 = async (req: NextApiRequest, res: NextApiR
         rubricSummary2,
         rubricMetrics2,
         rubricSpecificFeedback2,
+        citations,
       });
 
     } catch (error) {
@@ -38,8 +40,7 @@ const pitchEvaluationResponseMetric2 = async (req: NextApiRequest, res: NextApiR
 };
 
 const getSharktankMetric2 = async (currentMarketStats:string,chatHistory: any) => {
-  const chatHistoryFiltered=chatHistory.map((msg: ChatMessage) => `${msg.role}: ${msg.content}`).join('\n');
-  const prompt = pitchEvaluationPromptMetric2(currentMarketStats,chatHistoryFiltered);
+  const prompt = pitchEvaluationPromptMetric2(currentMarketStats,chatHistory);
   return await getSonarChatCompletionForMetric(chatHistory, prompt);
 };
 
@@ -47,9 +48,7 @@ const fetchMetric2 = async (currentMarketStats:string,chatHistory: any[]) => {
   try {
     let rubricRatingCompletion;
 
-      const [metric2Result] = await Promise.all([
-        getSharktankMetric2(currentMarketStats,chatHistory),
-      ]);
+      const metric2Result = await getSharktankMetric2(currentMarketStats,chatHistory);
       console.log(metric2Result,"direct metric2 completion")
 
       rubricRatingCompletion = {
@@ -74,9 +73,14 @@ const fetchMetric2 = async (currentMarketStats:string,chatHistory: any[]) => {
       console.log("Invalid rubric JSON format, returning null");
       return null;
     }    
+
+    const citations = metric2Result?.citations || [];
+
     const result = {
       rubricData: filteredResponse,
+      citations:citations
     };
+    console.log('metric2 final result',result)
     return result;
   
   } catch (error) {
@@ -94,12 +98,10 @@ const cleanSonarOutputMetric2 = (metric2:any): string => {
     if (!metric2 ) {
       throw new Error("One or more metrics have invalid JSON.");
     }
-    const completionContent=metric2.choices.message.content;
-    console.log("testFn metric2 begin",completionContent)
-    const cleanedResponse =cleanResponse(completionContent);
-    // console.log(cleanedResponse,"testFn2.5 metric2: cleanResponse successful")
-    const metric2Data = JSON.parse(cleanedResponse);
-    // console.log(metric2Data,"testFn3 metric2: JSON.parse cleanResponse successful")
+    console.log("testFn metric2 begin")
+
+    const metric2Data = JSON.parse(cleanResponse(metric2.choices[0].message.content));
+    console.log(metric2Data,"testFn3 metric2: JSON.parse cleanResponse successful")
 
     const defaultMetric = {
       score: 0,

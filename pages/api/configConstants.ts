@@ -17,8 +17,9 @@ export const baba_house= {
 };
 // Models
 export const models = [
+  "Sharktank",
   "Deepseek-R1-Distill-Llama-70b",
-  "llama3-8b-8192",
+  "llama3-8b-8192"
 ];
 
 // "sao10k/l3.1-euryale-70b",
