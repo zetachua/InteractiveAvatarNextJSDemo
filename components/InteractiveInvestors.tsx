@@ -101,6 +101,7 @@ export default function InteractiveInvestors() {
   const [pauses, setPauses] = useState<any[]>([]);
 
   // Recording and pitch analysis states
+  const [isPronunciationAnalyzed, setIsPronunciationAnalyzed] = useState<boolean>(false);
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -256,7 +257,9 @@ export default function InteractiveInvestors() {
         }
 
         const analysisData = await analysisRes.json();
-        console.log(analysisData);
+
+        setPronunciationAssessment(analysisData);
+        setIsPronunciationAnalyzed(true);
       };
 
       mediaRecorderRef.current.start(1000);
@@ -591,7 +594,7 @@ async function endSession() {
         </CardBody>
 
         {/* {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentScore} />} */}
-        {(sentimentJson && rubricJson2) ? 
+        {(sentimentJson && rubricJson2 && isPronunciationAnalyzed) ? 
           <div style={{fontSize: '1.3rem', position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-start' }}>
               <Button

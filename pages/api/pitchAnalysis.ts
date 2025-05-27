@@ -60,6 +60,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       true
     );
     assessmentConfig.enableProsodyAssessment = true;
+    assessmentConfig.phonemeAlphabet = 'IPA'
 
     const recognizer = new SpeechRecognizer(speechConfig, audioConfig);
     assessmentConfig.applyTo(recognizer);
@@ -78,6 +79,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               PropertyId.SpeechServiceResponse_JsonResult
             )
           );
+
+          console.dir(res, { depth: null });
 
           const nbest = res.NBest[0]
           totalScore += nbest.PronunciationAssessment.PronScore * nbest.Words.length;
