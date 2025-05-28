@@ -18,7 +18,7 @@ interface Pause {
   end: number;
 }
 
-import { PronunciationAssessment, ChatHistory,FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
+import { Word, PronunciationAssessment, ChatHistory,FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
 import { Square,Microphone, SkipForward} from "@phosphor-icons/react";
 import {concretePitchRubrics, grantedPitchRubrics, lookupPitchRubrics, mediVRPitchRubrics, models} from '../pages/api/configConstants'
 import RubricInvestorPiechart2 from "./RubricInvestorPieChart2";
@@ -215,6 +215,8 @@ export default function InteractiveInvestors() {
     }
   };
   const startRecording = async () => {
+    setIsPronunciationAnalyzed(false);
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
@@ -254,6 +256,9 @@ export default function InteractiveInvestors() {
         }
 
         const analysisData = await analysisRes.json();
+
+        const transcribed = analysisData.words.reduce((a: string, b: Word) => a + b.text + ' ', '');
+        handleSpeak(transcribed);
 
         setPronunciationAssessment(analysisData);
         setIsPronunciationAnalyzed(true);
