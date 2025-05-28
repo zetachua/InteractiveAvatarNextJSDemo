@@ -592,7 +592,7 @@ async function endSession() {
         </CardBody>
 
         {/* {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentScore} />} */}
-        {(sentimentJson && rubricJson2 && isPronunciationAnalyzed) ? 
+        {(isPronunciationAnalyzed) ? 
           <div style={{fontSize: '1.3rem', position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-start' }}>
               <Button
@@ -660,7 +660,7 @@ async function endSession() {
               </button>
             </div>
 
-            <div style={{ display: 'inline-flex' }}>
+            <div style={{ display: 'flex', alignItems: 'start' }}>
               <RubricInvestorPiechart2  citations={rubricCitations2} data={rubricJson2} overallScore={rubricAllRatings2} summary={rubricSummary2} specificFeedback={rubricSpecificFeedback2} resetAllStates={resetAllStates} totalRounds={0}></RubricInvestorPiechart2>
 
               {(!rubricCitations2 || loadingRubric1 || loadingRubric2 || loadingRubric)&& 

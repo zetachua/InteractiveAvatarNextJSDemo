@@ -126,6 +126,8 @@ const Assessment: React.FC<AssessmentProps> = ({
     "h": "For /h/, exhale sharply through an open mouth and throat, as in 'hat'.",
     "w": "For /w/, round your lips and raise the back of the tongue as in 'we'.",
     "oʊ": "For the /oʊ/ diphthong, start with your tongue in a mid-back position with rounded lips, similar to /o/, and glide toward a higher position, as in 'go' or 'no'. Keep your lips rounded and slightly move your tongue upward during the glide.",
+    "aɪ": "For the /aɪ/ diphthong, start with your mouth open and tongue low and centered (like /ɑ/), then glide your tongue forward and up toward /ɪ/, as in 'my', 'eye', or 'bite'.",
+    "ɡ": "For /ɡ/, raise the back of your tongue to the soft palate and release with vocal cord vibration, as in 'go' or 'give'. It's the voiced counterpart to /k/.",
   };
 
   useEffect(() => {

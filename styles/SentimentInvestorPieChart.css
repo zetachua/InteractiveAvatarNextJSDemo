@@ -3,8 +3,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    flex-wrap: wrap;
-    width: 700px;
+    flex-direction: column;
 }
 
 .sentiment-analysis .overall {
@@ -89,7 +88,8 @@
 }
 
 .sentiment-analysis .assessment .summary .description {
-    margin: 1.5rem;
+    margin-left: 2rem;
+    padding: 0.5rem;
 }
 
 .sentiment-analysis .assessment .summary .description h1 {
@@ -141,10 +141,8 @@
 .sentiment-analysis .assessment .content {
     height: 500px;
     border-radius: 10px;
-    background-color: #fff;
-    color: black;
+    background-color: #444;
     padding: 1.5rem;
-    overflow-y: auto;
 }
 
 .sentiment-analysis .assessment .content .word {
@@ -154,7 +152,7 @@
 }
 
 .sentiment-analysis .assessment .content .word .low-score {
-    color: red;
+    color: #E74C3C;
     text-decoration: underline;
     cursor: pointer;
 }
@@ -168,9 +166,9 @@
     width: 500px;
     border-radius: 10px;
     padding: 0.6rem 0.8rem;
-    border: 2px solid #f3f1ff;
+    border: 2px solid rgb(99, 102, 241);
     box-shadow: 0 19px 38px rgba(0, 0, 0, 0.3), 0 15px 12px rgba(0, 0, 0, 0.22);
-    background-color: white;
+    background-color: #444;
 }
 
 .sentiment-analysis .assessment .content .word .word-info .transcript {
@@ -192,6 +190,7 @@
 .sentiment-analysis .assessment .content .word .word-info .progress-container .score {
     font-weight: 600;
     font-size: 0.8rem;
+    color: black;
 }
 
 .sentiment-analysis .assessment .content .word .word-info .progress-container .progress-bar {
@@ -209,7 +208,7 @@
 .sentiment-analysis .assessment .content .word .word-info .table {
     max-height: 20rem;
     overflow-y: auto;
-    font-size: 0.8rem;
+    font-size: 1.1rem;
     font-weight: 600;
     display: block;
 }
