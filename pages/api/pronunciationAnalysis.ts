@@ -14,13 +14,7 @@ import {
 } from 'microsoft-cognitiveservices-speech-sdk';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import path from 'path';
-import { Word } from '../../components/KnowledgeClasses';
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+import { PronunciationWord } from '../../components/KnowledgeClasses';
 
 dotenv.config();
 
@@ -29,11 +23,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const file = req.query.file;
-  if (typeof file !== 'string') {
-    return res.status(400).json({ error: 'Missing or invalid file parameter' });
-  }
-
+  const { file, script } = req.body;
   const audioPath = path.join(process.cwd(), 'temp', file);
 
   try {
@@ -54,7 +44,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     speechConfig.speechRecognitionLanguage = 'en-US';
 
     const assessmentConfig = new PronunciationAssessmentConfig(
-      '',
+      script,
       PronunciationAssessmentGradingSystem.HundredMark,
       PronunciationAssessmentGranularity.Phoneme,
       true
@@ -67,7 +57,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     let totalScore = 0;
     let totalWords = 0;
-    const words: Word[] = [];
+    const words: PronunciationWord[] = [];
 
     await new Promise<void>((resolve) => {
       let responded = false;
@@ -105,7 +95,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
           resolve(
             res.status(200).json({
-              score: totalWords ? (totalScore / totalWords).toFixed(1) : 0,
+              score: totalWords ? Math.round(totalScore / totalWords) : 0,
               words: words
             })
           );
@@ -129,7 +119,5 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
-  } finally {
-    fs.unlink(audioPath, () => {});
   }
 };

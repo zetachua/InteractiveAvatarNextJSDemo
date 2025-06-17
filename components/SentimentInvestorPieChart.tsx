@@ -15,13 +15,17 @@ import {
   FeedbackSpecificMetrics,
   FeedbackMetricData,
   AssessmentType,
-  PronunciationAssessment
+  PronunciationAssessment,
+  IntonationAssessment,
+  FluencyAssessment,
 } from './KnowledgeClasses'; // Assuming you have these types
 import '../styles/SentimentInvestorPieChart.css';
 
 // Props for the component
 interface SentimentInvestorPieChartProps {
   pronunciationAssessment: PronunciationAssessment;
+  intonationAssessment: IntonationAssessment;
+  fluencyAssessment: FluencyAssessment;
   data: FeedbackMetricData; // Change from 'data' to 'feedbackData'
   overallScore:number;
   resetAllStates: () => void;
@@ -40,6 +44,8 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
   feedbackSummary,
   specificFeedback,
   pronunciationAssessment,
+  intonationAssessment,
+  fluencyAssessment,
 }) => {
 
   // Destructure values from the feedbackData prop
@@ -110,6 +116,8 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
       <Assessment
         assessment={selectedAssessment}
         pronunciationAssessment={pronunciationAssessment}
+        intonationAssessment={intonationAssessment}
+        fluencyAssessment={fluencyAssessment}
       />
 
       <div className='average-score'>{roundedOverallScore}/5</div>

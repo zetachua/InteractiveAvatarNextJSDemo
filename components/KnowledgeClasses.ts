@@ -274,7 +274,7 @@ export interface Phoneme {
   score: number;
 }
 
-export interface Word {
+export interface PronunciationWord {
   text: string;
   score: number;
   phonemes: Phoneme[];
@@ -282,5 +282,38 @@ export interface Word {
 
 export interface PronunciationAssessment {
   score: number;
-  words: Word[];
+  words: PronunciationWord[];
+}
+
+export interface Pitch {
+  time: number;
+  pitch: number;
+}
+
+export interface IntonationWord {
+  text: string;
+  expected: boolean;
+  actual: boolean;
+}
+
+export interface IntonationAssessment {
+  score: number;
+  words: IntonationWord[];
+  pitch: Pitch[];
+}
+
+export interface FluencyWord {
+  text: string;
+  filler?: boolean;
+  hesitation?: number;
+  gap?: number;
+  classification?: 'good' | 'bad';
+  reason?: string;
+}
+
+export interface FluencyAssessment {
+  score: number;
+  pause_score: number;
+  articulation_rate_wpm: number;
+  words: FluencyWord[];
 }

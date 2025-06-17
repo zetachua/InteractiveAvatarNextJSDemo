@@ -23,6 +23,22 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const inputPath = path.join(tempDir, inputFilename);
   const outputPath = path.join(tempDir, outputFilename);
 
+  fs.readdir(tempDir, (err, files) => {
+    if (err) {
+      console.error('Error reading temp directory:', err);
+      return;
+    }
+
+    // Cleanup old audio files
+    files.forEach(file => {
+      if (file.endsWith('.wav') || file.endsWith('.webm')) {
+        fs.unlink(path.join(tempDir, file), err => {
+          if (err) console.warn(`Failed to delete ${file}:`, err.message)
+        });
+      }
+    });
+  })
+
   await new Promise<void>((resolve) => {
     const form = new IncomingForm({
       uploadDir: tempDir,

@@ -18,7 +18,7 @@ interface Pause {
   end: number;
 }
 
-import { Word, PronunciationAssessment, ChatHistory,FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
+import { ChatHistory,FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
 import { Square,Microphone, SkipForward} from "@phosphor-icons/react";
 import {concretePitchRubrics, grantedPitchRubrics, lookupPitchRubrics, mediVRPitchRubrics, models} from '../pages/api/configConstants'
 import RubricInvestorPiechart2 from "./RubricInvestorPieChart2";
@@ -96,18 +96,22 @@ export default function InteractiveInvestors() {
   const [timeLeft, setTimeLeft] = useState<number>(300); // 5 minutes in seconds
   const [isTimeUp, setIsTimeUp] = useState<boolean>(false);
   const [isBeginClock, setIsBeginClock] = useState<boolean>(false);
-  const [callCount, setCallCount] = useState<number>(0);
+  const [isPitch, setIsPitch] = useState<boolean>(true);
   const [pauses, setPauses] = useState<any[]>([]);
 
   // Recording and pitch analysis states
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const [pronunciationAssessment, setPronunciationAssessment] = useState<PronunciationAssessment | null>(null);
+  const [assessment, setAssessment] = useState({
+    pronunciation: null,
+    intonation: null,
+    fluency: null
+  });
 
   useEffect(() => {
     if (isBeginClock) {
-      if (callCount == 1 || timeLeft <= 0) {
+      if (timeLeft <= 0) {
         setIsTimeUp(true);
         stopRecording();
         return;
@@ -119,7 +123,7 @@ export default function InteractiveInvestors() {
 
       return () => clearInterval(timer);
     }
-  }, [callCount, timeLeft, isBeginClock]);
+  }, [timeLeft, isBeginClock]);
 
   async function startSession() {
     setLoadingRubric(false);
@@ -141,6 +145,8 @@ export default function InteractiveInvestors() {
   
   async function handleSpeak(userInputValue?:string) {
     setIsLoadingRepeat(true);
+    setIsTimeUp(true);
+    setIsPitch(false);
     if(userInputValue){
       setUserInput(userInputValue);
     } 
@@ -169,7 +175,7 @@ export default function InteractiveInvestors() {
     setTimeLeft(300);
     setIsTimeUp(false);
     setIsBeginClock(false);
-    setCallCount(0);
+    setIsPitch(true);
     setFeedbackText('');
     setDisplayText('');
     setChatHistory([]);
@@ -204,7 +210,6 @@ export default function InteractiveInvestors() {
 
   const toggleSpeechToText = () => {
     if (isRecording) {
-      setCallCount(prev => prev + 1);
       stopRecording();
     } else {
       startRecording();
@@ -223,38 +228,83 @@ export default function InteractiveInvestors() {
       };
 
       mediaRecorderRef.current.onstop = async () => {
+        // Convert webm to wav
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         const formData = new FormData();
         formData.append('file', blob, 'audio.webm');
-
         const convertRes = await fetch('/api/convertWebmToWav', {
           method: 'POST',
           body: formData,
         });
 
+        const convertData = await convertRes.json();
         if (!convertRes.ok) {
-          const errorBody = await convertRes.json();
-          throw new Error(errorBody.error);
+          throw new Error(convertData.error);
         }
 
-        const convertData = await convertRes.json();
-        const filename = convertData.outputFile;
-
-        const analysisRes = await fetch(`/api/pitchAnalysis?file=${encodeURIComponent(filename)}`, {
+        // STT using Whisper
+        const transcribedRes = await fetch(`http://localhost:8000/transcribe?file=${encodeURIComponent(convertData.outputFile)}`, {
           method: 'POST',
         });
 
-        if (!analysisRes.ok) {
-          const errorBody = await analysisRes.json();
-          throw new Error(errorBody.error);
+        const transcribedData = await transcribedRes.json();
+        if (!transcribedRes.ok) {
+          throw new Error(transcribedData.error);
         }
+        handleSpeak(transcribedData.text);
 
-        const analysisData = await analysisRes.json();
+        if (isPitch) {
+          const [
+            pronunciationRes,
+            intonationRes,
+            fluencyRes
+          ] = await Promise.all([
+            fetch('/api/pronunciationAnalysis', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                file: convertData.outputFile,
+                script: transcribedData.text
+              })
+            }),
+            fetch('http://localhost:8000/intonationAnalysis', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                file: convertData.outputFile,
+                script: transcribedData.text,
+                segments: transcribedData.segments
+              })
+            }),
+            fetch('http://localhost:8000/fluencyAnalysis', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                segments: transcribedData.segments
+              })
+            })
+          ]);
 
-        const transcribed = analysisData.words.reduce((a: string, b: Word) => a + b.text + ' ', '');
-        handleSpeak(transcribed);
+          const [
+            pronunciationData,
+            intonationData,
+            fluencyData
+          ] = await Promise.all([
+            pronunciationRes.json(),
+            intonationRes.json(),
+            fluencyRes.json()
+          ]);
 
-        setPronunciationAssessment(analysisData);
+          if (!pronunciationRes.ok) throw new Error(pronunciationData.error);
+          if (!intonationRes.ok) throw new Error(intonationData.error);
+          if (!fluencyRes.ok) throw new Error(fluencyData.error);
+
+          setAssessment({
+            pronunciation: pronunciationData,
+            intonation: intonationData,
+            fluency: fluencyData
+          });
+        }
       };
 
       mediaRecorderRef.current.start(1000);
@@ -308,12 +358,6 @@ export default function InteractiveInvestors() {
   };
   
 async function endSession() {
-  // Set loading state to true before starting the fetch
-  setLoadingRubric(true);
-  setLoadingRubric1(true);
-  setLoadingRubric2(true);
-  // setLoadingRubric3(true);
-  
   setStream(false);
   setIsBeginClock(false);
 
@@ -329,8 +373,6 @@ async function endSession() {
   }
 
 }
-
-  console.log(rubricSummary,"rubricSummary",rubricJson,"rubricJson",rubricAllRatings,"rubricScore",rubricSpecificFeedback,"rubricSpecificFeedback")
 
   const fetchSentiment = async () =>{
     const responseSentiment = await fetch(`/api/pitchSentimentResponse`, {
@@ -585,7 +627,7 @@ async function endSession() {
         </CardBody>
 
         {/* {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentScore} />} */}
-        {(sentimentJson && rubricJson2 && pronunciationAssessment) ? 
+        {(sentimentJson && rubricJson2 && assessment.pronunciation && assessment.intonation && assessment.fluency) ? 
           <div style={{fontSize: '1.3rem', position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-start' }}>
               <Button
@@ -666,7 +708,7 @@ async function endSession() {
               { displayGrantPitch && <RubricInvestorPiechartExample title={'Grant'} specificFeedback={grantedPitchRubrics()} />}
               { displayMediVRPitch && <RubricInvestorPiechartExample title={'MediVR'} specificFeedback={mediVRPitchRubrics()} />}
               { displayConcretePitch && <RubricInvestorPiechartExample title={'Concrete'} specificFeedback={lookupPitchRubrics()} />}
-              <SentimentInvestorPiechart pronunciationAssessment={pronunciationAssessment} data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0}></SentimentInvestorPiechart>
+              <SentimentInvestorPiechart pronunciationAssessment={assessment.pronunciation} intonationAssessment={assessment.intonation} fluencyAssessment={assessment.fluency} data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0}></SentimentInvestorPiechart>
             </div>
           </div>
          :
