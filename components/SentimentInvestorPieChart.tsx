@@ -101,7 +101,7 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
           <Button
             key={assessment}
             onPress={() => setSelectedAssessment(assessment)}
-            className={`text-xl px-6 py-7 border transition-all ${
+            className={`text-sm px-4 py-4 border transition-all ${
               selectedAssessment === assessment
                 ? 'bg-gray-500 text-white border-gray-500'
                 : 'bg-transparent text-gray-500 border-gray-500'
@@ -121,7 +121,7 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
       />
 
       <div className='average-score'>{roundedOverallScore}/5</div>
-      <ResponsiveContainer width='90%' height={400}>
+      <ResponsiveContainer height={300}>
         <BarChart
           layout='vertical'
           data={barData}
@@ -131,7 +131,7 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
             ticks={[1, 2, 3, 4, 5]}
             scale='linear'
           />
-          <YAxis type='category' dataKey='name' width={130} />
+          <YAxis type='category' dataKey='name' width={80} />
           <Bar
             dataKey='value'
             label={false}

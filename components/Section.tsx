@@ -12,7 +12,7 @@ const Section: React.FC<SectionProps> = ({ title, feedback }) => {
     <div
       style={{
         background: '#444',
-        padding: '1.5rem',
+        padding: '0.9rem',
         borderRadius: '10px',
       }}
     >

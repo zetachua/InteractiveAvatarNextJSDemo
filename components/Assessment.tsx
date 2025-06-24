@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   CartesianGrid,
   Label,
@@ -253,6 +254,10 @@ const Assessment: React.FC<AssessmentProps> = ({
 
   const [activeIndex, setActiveIndex] = useState<number>(-1);
   const wordInfoRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [infoPosition, setInfoPosition] = useState<{ top: number; left: number; }>({
+    top: 0,
+    left: 0,
+  });
   const selectActiveIndex = (index: number) => {
     setActiveIndex(prev => (prev === index ? -1 : index));
   };
@@ -261,29 +266,28 @@ const Assessment: React.FC<AssessmentProps> = ({
   useEffect(() => {
     if (activeIndex < 0) return;
 
-    const wordInfo = wordInfoRefs.current[activeIndex];
-    if (!wordInfo) return;
+    const wordEl = wordInfoRefs.current[activeIndex];
+    const containerEl = document.getElementById('evaluation')
+    if (!wordEl || !containerEl) return;
 
-    const rect = wordInfo.getBoundingClientRect();
+    const wordRect = wordEl.getBoundingClientRect();
+    const containerRect = containerEl.getBoundingClientRect();
+
+    const estimatedWidth = 350;
+    const estimatedHeight = 400;
     const padding = 8;
 
-    // Reset position first
-    wordInfo.style.left = "50%";
-    wordInfo.style.transform = "translateX(-50%)";
+    let left = wordRect.left - containerRect.left + wordRect.width / 2 - estimatedWidth / 2 + containerEl.scrollLeft;
+    let top = wordRect.bottom - containerRect.top + padding + containerEl.scrollTop;
 
-    // Shift left if overflowing right
-    if (rect.right > window.innerWidth - padding) {
-      wordInfo.style.left = "auto";
-      wordInfo.style.right = "0";
-      wordInfo.style.transform = "translateX(0)";
+    // Adjust horizontally
+    if (left + estimatedWidth + padding - containerEl.scrollLeft > containerEl.clientWidth) {
+      left = containerEl.clientWidth + containerEl.scrollLeft - estimatedWidth - padding;
+    } else if (left - containerEl.scrollLeft < padding) {
+      left = padding + containerEl.scrollLeft;
     }
 
-    // Shift right if overflowing left
-    if (rect.left < padding) {
-      wordInfo.style.left = "0";
-      wordInfo.style.right = "auto";
-      wordInfo.style.transform = "translateX(0)";
-    }
+    setInfoPosition({ top, left });
   }, [activeIndex]);
 
   return (
@@ -301,13 +305,13 @@ const Assessment: React.FC<AssessmentProps> = ({
         </div>
 
         <div className='description'>
-          <h1>
-            {assessment} Score
+          <div className='metric'>
+            <h1>{assessment} Score</h1>
             <span className='tooltip-container'>
               <img src='/question.png' alt='description' />
               <span className='tooltip-text'>{audioSummary.tooltip}</span>
             </span>
-          </h1>
+          </div>
           <h2>Your {assessment} is <strong>{audioSummary.grade}</strong>.</h2>
           <p>{audioSummary.description}</p>
         </div>
@@ -321,8 +325,8 @@ const Assessment: React.FC<AssessmentProps> = ({
             <ResponsiveContainer>
               <LineChart data={intonationAssessment.pitch}>
                 <CartesianGrid strokeDasharray='3 3' />
-                <XAxis dataKey='time' tickFormatter={(t) => t.toFixed(1)} tick={{ fontSize: '1rem' }} />
-                <YAxis domain={['auto', 'auto']} tickFormatter={(v) => v.toFixed(0)} tick={{ fontSize: '1rem'}}>
+                <XAxis dataKey='time' tickFormatter={(t) => t.toFixed(1)} tick={{ fontSize: '0.8rem' }} />
+                <YAxis domain={['auto', 'auto']} tickFormatter={(v) => v.toFixed(0)} tick={{ fontSize: '0.8rem'}}>
                   <Label value='Pitch (Hz)' angle={-90} position='insideLeft' />
                 </YAxis>
                 <Tooltip />
@@ -383,25 +387,37 @@ const Assessment: React.FC<AssessmentProps> = ({
                         <div
                           className='red'
                           onClick={() => selectActiveIndex(i)}
+                          ref={el => { wordInfoRefs.current[i] = el }}
                         >
                           {word.text}
                         </div>
-                        {activeIndex === i && (
+                        {activeIndex === i && createPortal(
                           <div
                             className='word-info'
-                            ref={el => {wordInfoRefs.current[i] = el}}
+                            style={{
+                              top: `${infoPosition.top}px`,
+                              left: `${infoPosition.left}px`
+                            }}
                           >
-                            <div className='transcript'>
-                              <div>{word.text}</div>
-                              <div className='phonemes'>
-                                /
-                                {word.phonemes.map((phoneme, j) => (
-                                  <span key={j}>
-                                    {phoneme.phoneme}
-                                  </span>
-                                ))}
-                                /
+                            <div className='header'>
+                              <div className='transcript'>
+                                <div>{word.text}</div>
+                                <div className='phonemes'>
+                                  /
+                                  {word.phonemes.map((phoneme, j) => (
+                                    <span key={j}>
+                                      {phoneme.phoneme}
+                                    </span>
+                                  ))}
+                                  /
+                                </div>
                               </div>
+                              <img
+                                className='close'
+                                src='/close.png'
+                                alt='close'
+                                onClick={() => selectActiveIndex(i)}
+                              />
                             </div>
                             <div className='progress-container'>
                               <span className='score'>{word.score}</span>
@@ -435,7 +451,8 @@ const Assessment: React.FC<AssessmentProps> = ({
                                 </div>
                               ))}
                             </div>
-                          </div>
+                          </div>,
+                          document.getElementById('evaluation')!
                         )}
                       </>
                     ) : (
@@ -459,20 +476,31 @@ const Assessment: React.FC<AssessmentProps> = ({
                         <div
                           className='red'
                           onClick={() => selectActiveIndex(i)}
+                          ref={el => { wordInfoRefs.current[i] = el }}
                         >
                           {word.text}
                         </div>
-                        {activeIndex === i && (
+                        {activeIndex === i && createPortal(
                           <div
                             className='word-info'
-                            ref={el => {wordInfoRefs.current[i] = el}}
+                            style={{
+                              top: `${infoPosition.top}px`,
+                              left: `${infoPosition.left}px`
+                            }}
                           >
-                            {word.expected ? (
-                              <>Make sure you say this word with more energy. It was too soft!</>
-                            ) : (
-                              <>You incorrectly emphasized this word. Say it softly next time!</>
-                            )}
-                          </div>
+                            <div className='header'>
+                              <div>
+                                {word.expected ? 'Make sure you say this word with more energy. It was too soft!' : 'You incorrectly emphasized this word. Say it softly next time!'}
+                              </div>
+                              <img
+                                className='close'
+                                src='/close.png'
+                                alt='close'
+                                onClick={() => selectActiveIndex(i)}
+                              />
+                            </div>
+                          </div>,
+                          document.getElementById('evaluation')!
                         )}
                       </>
                     ) : (
@@ -496,16 +524,29 @@ const Assessment: React.FC<AssessmentProps> = ({
                         <div
                           className='red'
                           onClick={() => selectActiveIndex(i)}
+                          ref={el => { wordInfoRefs.current[i] = el }}
                         >
                           {word.text}
                         </div>
-                        {activeIndex === i && (
+                        {activeIndex === i && createPortal(
                           <div
                             className='word-info'
-                            ref={el => {wordInfoRefs.current[i] = el}}
+                            style={{
+                              top: `${infoPosition.top}px`,
+                              left: `${infoPosition.left}px`
+                            }}
                           >
-                            Filler words can make your speech sound uncertain. Try pausing briefly instead. It helps you sound more confident and deliberate.
-                          </div>
+                            <div className='header'>
+                              <div>Filler words can make your speech sound uncertain. Try pausing briefly instead. It helps you sound more confident and deliberate.</div>
+                              <img
+                                className='close'
+                                src='/close.png'
+                                alt='close'
+                                onClick={() => selectActiveIndex(i)}
+                              />
+                            </div>
+                          </div>,
+                          document.getElementById('evaluation')!
                         )}
                       </>
                     ) : word.hesitation ? (
@@ -513,16 +554,29 @@ const Assessment: React.FC<AssessmentProps> = ({
                         <div
                           className='blue'
                           onClick={() => selectActiveIndex(i)}
+                          ref={el => {wordInfoRefs.current[i] = el}}
                         >
                           {word.text}
                         </div>
-                        {activeIndex === i && (
+                        {activeIndex === i && createPortal(
                           <div
                             className='word-info'
-                            ref={el => {wordInfoRefs.current[i] = el}}
+                            style={{
+                              top: `${infoPosition.top}px`,
+                              left: `${infoPosition.left}px`
+                            }}
                           >
-                            You hesitated on this word! Hesitations often happen when you're unsure of the next word. Practice slowing down and using short pauses instead of dragging words.
-                          </div>
+                            <div className='header'>
+                              <div>You hesitated on this word! Hesitations often happen when you're unsure of the next word. Practice slowing down and using short pauses instead of dragging words.</div>
+                              <img
+                                className='close'
+                                src='/close.png'
+                                alt='close'
+                                onClick={() => selectActiveIndex(i)}
+                              />
+                            </div>
+                          </div>,
+                          document.getElementById('evaluation')!
                         )}
                       </>
                     ) : word.gap ? (
@@ -534,14 +588,27 @@ const Assessment: React.FC<AssessmentProps> = ({
                               src='/green_pause.png'
                               alt='good pause'
                               onClick={() => selectActiveIndex(i)}
+                              ref={el => {wordInfoRefs.current[i] = el}}
                             />
-                            {activeIndex === i && (
+                            {activeIndex === i && createPortal(
                               <div
                                 className='word-info'
-                                ref={el => {wordInfoRefs.current[i] = el}}
+                                style={{
+                                  top: `${infoPosition.top}px`,
+                                  left: `${infoPosition.left}px`
+                                }}
                               >
-                                This is a good pause - {word.reason}
-                              </div>
+                                <div className='header'>
+                                  <div>This is a good pause - {word.reason}</div>
+                                  <img
+                                    className='close'
+                                    src='/close.png'
+                                    alt='close'
+                                    onClick={() => selectActiveIndex(i)}
+                                  />
+                                </div>
+                              </div>,
+                              document.getElementById('evaluation')!
                             )}
                           </>
                         ) : word.classification === 'bad' ? (
@@ -551,14 +618,27 @@ const Assessment: React.FC<AssessmentProps> = ({
                               src='/red_pause.png'
                               alt='bad pause'
                               onClick={() => selectActiveIndex(i)}
+                              ref={el => {wordInfoRefs.current[i] = el}}
                             />
-                            {activeIndex === i && (
+                            {activeIndex === i && createPortal(
                               <div
                                 className='word-info'
-                                ref={el => {wordInfoRefs.current[i] = el}}
+                                style={{
+                                  top: `${infoPosition.top}px`,
+                                  left: `${infoPosition.left}px`
+                                }}
                               >
-                                This is a bad pause - {word.reason}
-                              </div>
+                                <div className='header'>
+                                  <div>This is a bad pause - {word.reason}</div>
+                                  <img
+                                    className='close'
+                                    src='/close.png'
+                                    alt='close'
+                                    onClick={() => selectActiveIndex(i)}
+                                  />
+                                </div>
+                              </div>,
+                              document.getElementById('evaluation')!
                             )}
                           </>
                         ) : (
@@ -568,14 +648,27 @@ const Assessment: React.FC<AssessmentProps> = ({
                               src='gray_pause.png'
                               alt='pause'
                               onClick={() => selectActiveIndex(i)}
+                              ref={el => {wordInfoRefs.current[i] = el}}
                             />
-                            {activeIndex === i && (
+                            {activeIndex === i && createPortal(
                               <div
                                 className='word-info'
-                                ref={el => {wordInfoRefs.current[i] = el}}
+                                style={{
+                                  top: `${infoPosition.top}px`,
+                                  left: `${infoPosition.left}px`
+                                }}
                               >
-                                You paused here for {word.gap} seconds.
-                              </div>
+                                <div className='header'>
+                                  <div>You paused here for {word.gap} seconds.</div>
+                                  <img
+                                    className='close'
+                                    src='/close.png'
+                                    alt='close'
+                                    onClick={() => selectActiveIndex(i)}
+                                  />
+                                </div>
+                              </div>,
+                              document.getElementById('evaluation')!
                             )}
                           </>
                         )}

@@ -89,7 +89,7 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
   return (
     <div
       style={{
-        padding: '2rem',
+        padding: '1.5rem',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
@@ -133,18 +133,17 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
             padding: '1rem',
             borderRadius: '50px',
             textAlign: 'center',
-            width: '95%',
-            fontSize: '24px',
-            marginBottom: '-2rem'
+            width: '100%',
+            fontSize: '1.3rem',
           }}
         >
           <b>Perplexity LLM Analysis Overall</b>
-          <div style={{ fontSize: '18px', padding: '0.5rem', textAlign: 'left', whiteSpace: 'pre-line' }}>
+          <div style={{ fontSize: '0.8rem', padding: '0.3rem', textAlign: 'left', whiteSpace: 'pre-line' }}>
             {formattedSummary} <br/>
             <span> </span>
             <b>Reference Citations:</b>
           </div>
-          <div style={{ display: 'flex', maxHeight: '200px', marginTop: '1rem', overflow: 'scroll', flexDirection: 'column', gap: '1rem', fontSize: '16px', maxWidth: '90%', padding: '0.5rem', textAlign: 'left', whiteSpace: 'pre-line' }}>
+          <div style={{ display: 'flex', maxHeight: '200px', marginTop: '0.5rem', overflow: 'auto', flexDirection: 'column', gap: '0.3rem', fontSize: '0.7rem', padding: '0.5rem', textAlign: 'left', whiteSpace: 'pre-line' }}>
             {citationList?.map((citation, index) => (
               <div key={index}>
                 {index + 1}.
@@ -158,8 +157,8 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
         <div
           style={{
             fontWeight: 600,
-            fontSize: '24px',
-            padding: '0rem 1.2rem 0rem 1.2rem',
+            fontSize: '1rem',
+            padding: '0rem 1rem',
             borderRadius: '10px',
             zIndex: '1000',
             position: 'absolute',
@@ -172,14 +171,14 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
         >
           {roundedOverallScore}/10
         </div>
-        <PieChart width={450} height={600}>
+        <PieChart width={450} height={350} style={{marginTop: '2rem' }}>
           <Pie
             data={chartData}
             dataKey="value"
             nameKey="name"
             cx="50%"
             cy="50%"
-            outerRadius={150}
+            outerRadius={100}
             label
           >
             {chartData.map((entry, index) => (

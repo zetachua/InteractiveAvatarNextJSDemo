@@ -147,7 +147,6 @@ export default function InteractiveInvestors() {
   async function handleSpeak(userInputValue?:string) {
     setIsLoadingRepeat(true);
     setIsTimeUp(true);
-    setIsPitch(false);
     if(userInputValue){
       setUserInput(userInputValue);
     } 
@@ -211,8 +210,9 @@ export default function InteractiveInvestors() {
 
   const toggleSpeechToText = () => {
     if (isRecording) {
-      stopRecording();
+      setIsTimeUp(true);
       setAudioTranscribing(true);
+      stopRecording();
     } else {
       startRecording();
     }
@@ -257,6 +257,8 @@ export default function InteractiveInvestors() {
         handleSpeak(transcribedData.text);
 
         if (isPitch) {
+          setIsPitch(false);
+
           const [
             pronunciationRes,
             intonationRes,
@@ -569,7 +571,9 @@ async function endSession() {
                       >
                       </textarea>
                       <Button
-                        onClick={()=>{
+                        onPress={()=>{
+                          setIsTimeUp(true);
+                          setIsPitch(false);
                           handleSpeak(userInput);
                           setUserInput('');
                         }}
@@ -627,8 +631,8 @@ async function endSession() {
 
         {/* {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentScore} />} */}
         {(sentimentJson && rubricJson2 && assessment.pronunciation && assessment.intonation && assessment.fluency) ? 
-          <div style={{fontSize: '1.3rem', position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%) scale(0.65)',padding:'2rem',width:'100%',maxHeight:'1100px',overflowY:'scroll'}}>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-start' }}>
+          <div id='evaluation' style={{fontSize: '0.8rem', position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%)',padding:'2rem',width:'80%',maxHeight:'900px', minWidth: '600px', overflowY:'scroll'}}>
+            <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'flex-start' }}>
               <Button
                 onClick={() => setDisplayLookupPitch(!displayLookupPitch)}
                 className={`text-white ${
@@ -636,7 +640,7 @@ async function endSession() {
                     ? 'bg-transparent border border-indigo-500'
                     : 'bg-gradient-to-tr from-indigo-500 to-indigo-300'
                 }`}
-                size="md"
+                size="sm"
                 variant="shadow"
               >
                 LookUp
@@ -648,7 +652,7 @@ async function endSession() {
                     ? 'bg-transparent border border-indigo-500'
                     : 'bg-gradient-to-tr from-indigo-500 to-indigo-300'
                 }`}
-                size="md"
+                size="sm"
                 variant="shadow"
               >
                 Grant
@@ -660,7 +664,7 @@ async function endSession() {
                     ? 'bg-transparent border border-indigo-500'
                     : 'bg-gradient-to-tr from-indigo-500 to-indigo-300'
                 }`}
-                size="md"
+                size="sm"
                 variant="shadow"
               >
                 Concrete AI
@@ -672,7 +676,7 @@ async function endSession() {
                     ? 'bg-transparent border border-indigo-500'
                     : 'bg-gradient-to-tr from-indigo-500 to-indigo-300'
                 }`}
-                size="md"
+                size="sm"
                 variant="shadow"
               >
                 MediVR
@@ -683,10 +687,11 @@ async function endSession() {
                   borderRadius: '10px',
                   background: 'rgba(255,255,255,0.4)',
                   color: '#fff',
-                  fontSize: '16px',
+                  fontSize: '0.8rem',
+                  fontWeight: '500',
                   display: 'inline-block',
                   whiteSpace: 'nowrap',
-                  padding: '0 17px'
+                  padding: '0 15px'
                 }}
                 onClick={() => downloadTextFile()}
               >

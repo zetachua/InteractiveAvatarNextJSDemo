@@ -88,7 +88,7 @@ const RubricInvestorPiechartExample: React.FC<RubricInvestorPieChartProps2> = ({
   return (
     <div
       style={{
-        padding: '3rem',
+        padding: '1.5rem',
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
@@ -114,9 +114,8 @@ const RubricInvestorPiechartExample: React.FC<RubricInvestorPieChartProps2> = ({
             padding: '1rem',
             borderRadius: '50px',
             textAlign: 'center',
-            width: '90%',
-            fontSize: '24px',
-            marginBottom: '-2rem'
+            width: '80%',
+            fontSize: '1.3rem',
           }}
         >
           <b>{title} Startup LLM Analysis </b>
@@ -125,23 +124,24 @@ const RubricInvestorPiechartExample: React.FC<RubricInvestorPieChartProps2> = ({
         <div
           style={{
             fontWeight: 600,
-            fontSize: '24px',
-            padding: '0rem 1.2rem 0rem 1.2rem',
+            fontSize: '1rem',
+            padding: '0rem 1rem',
             borderRadius: '10px',
             color: '#000',
             backgroundColor: '#fff',
+            margin: '1rem',
           }}
         >
           {roundedOverallScore}/10
         </div>
-        <PieChart width={450} height={600}>
+        <PieChart width={450} height={350} >
           <Pie
             data={chartData}
             dataKey="value"
             nameKey="name"
             cx="50%"
             cy="50%"
-            outerRadius={150}
+            outerRadius={100}
             label
           >
             {chartData.map((entry, index) => (
