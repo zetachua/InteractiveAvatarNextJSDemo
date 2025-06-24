@@ -387,10 +387,6 @@ export const metric2ResultInvestorFilter = (responseContent: string) => {
       };
     }
 
-    if (rubricDataJson.competitivePosition==undefined) {
-      console.log(rubricDataJson.competitivePosition," competitivePosition is not there")
-      return;
-    };
     return {
       rubricScore: (rubricDataJson.marketSize.score+rubricDataJson.solutionValueProposition.score+rubricDataJson.competitivePosition.score)/3,
       rubricSummary: rubricDataJson.summary,

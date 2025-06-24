@@ -46,6 +46,7 @@ export default function InteractiveInvestors() {
   const mediaStream = useRef<HTMLVideoElement>(null);
   const [chatHistory, setChatHistory] = useState<ChatHistory[]>([]);
   const [feedbackText,setFeedbackText]=useState('');
+  const [audioTranscribing,setAudioTranscribing]=useState(false);
   const [rubricSummary,setRubricSummary]=useState('');
   const [rubricSpecificFeedback,setRubricSpecificFeedback]=useState<RubricInvestorSpecificData>(
   {
@@ -211,6 +212,7 @@ export default function InteractiveInvestors() {
   const toggleSpeechToText = () => {
     if (isRecording) {
       stopRecording();
+      setAudioTranscribing(true);
     } else {
       startRecording();
     }
@@ -251,6 +253,7 @@ export default function InteractiveInvestors() {
         if (!transcribedRes.ok) {
           throw new Error(transcribedData.error);
         }
+        setAudioTranscribing(false);
         handleSpeak(transcribedData.text);
 
         if (isPitch) {
@@ -381,7 +384,6 @@ async function endSession() {
       body: JSON.stringify({ userInput, chatHistory,selectedModel}),
     });
     const dataSentiment = await responseSentiment.json();
-    console.log(dataSentiment,"was i in sentiment evaluation");
     if (dataSentiment?.sentimentSummary !== undefined) setFeedbackText(dataSentiment.sentimentSummary);
     if (dataSentiment?.sentimentSpecifics !== undefined) setSentimentSpecificFeedback(dataSentiment.sentimentSpecifics);
     if (dataSentiment?.sentimentMetrics!==undefined){
@@ -480,8 +482,6 @@ async function endSession() {
     if (aggregatedScores) setRubricAllRatings2(aggregatedScores);
     if (aggregatedFeedback) setRubricSpecificFeedback2(aggregatedFeedback);
     if (aggregatedCitations) setRubricCitations2(aggregatedCitations);
-
-    console.log(dataMetric1.rubricScore2 , aggregatedMetrics ,"the scores")
     }finally {
       setLoadingRubric(false); // Once the data is fetched, stop loading
     }
@@ -544,7 +544,7 @@ async function endSession() {
                     <>
                       <textarea
                         placeholder="Type your message..."
-                        value={userInput}
+                        value={audioTranscribing? "Transcribing Your Audio...": userInput}
                         onChange={(e) =>{
                           setUserInput(e.target.value)
                         }}
@@ -555,6 +555,7 @@ async function endSession() {
                           padding: "0.5rem 0.5rem 0.5rem 1rem",
                           width: "470px",
                           fontSize:'14px',
+                          color:audioTranscribing?'#cdcdcd':'#fff',
                           justifyContent:'center',
                           alignContent:'center',
                           maxHeight: "70px!important",
@@ -599,9 +600,7 @@ async function endSession() {
                     value={selectedModel}
                     onChange={(e) => {
                       const selectedValue = Number(e.target.value);
-                      console.log("Selected model:", models[selectedValue]);
                       setSelectedModel(models[selectedValue]);
-
                     }}
                   >
                   {models.map((model, index) => (

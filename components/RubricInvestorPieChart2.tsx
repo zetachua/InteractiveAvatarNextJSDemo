@@ -133,7 +133,7 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
             padding: '1rem',
             borderRadius: '50px',
             textAlign: 'center',
-            width: '90%',
+            width: '95%',
             fontSize: '24px',
             marginBottom: '-2rem'
           }}

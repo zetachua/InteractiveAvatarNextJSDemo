@@ -96,7 +96,6 @@ const sharktankMetaLLM2 = {
 // Function to request a chat completion using the local LLM
 export const getLocalChatCompletion = async (chatHistory:any[], prompt: string, model:string) => {
   const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
-  console.log("metric whats going in", "chatHistory", chatHistory, "prompt", prompt);
 
   let response;
   if (model==="sharktank-model"){
@@ -138,7 +137,6 @@ export const getLocalChatCompletion = async (chatHistory:any[], prompt: string, 
 
 export const getSonarChatCompletionForMetric = async (chatHistory: any, prompt: string) => {
     const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
-    console.log("metric whats going in sonar","chatHistory",chatHistory,"prompt",prompt)
     return sonar.chat.completions.create({
       messages: [
         {
@@ -159,7 +157,6 @@ export const getSonarChatCompletionForMetric = async (chatHistory: any, prompt: 
 
 export const getGroqChatCompletionForMetric = async (chatHistory: any, prompt: string) => {
     const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
-    console.log("metric whats going in ","chatHistory",chatHistory,"prompt",prompt)
     return groq.chat.completions.create({
         messages: [
           {
@@ -186,7 +183,6 @@ export const getGroqChatCompletionForMetric = async (chatHistory: any, prompt: s
     if (!jsonMatch) {
       throw new Error("No valid JSON found in response");
     }
-    console.log(jsonMatch,"testFn1: was there an extracted json from the completion")
     return jsonMatch[0];
   };
 

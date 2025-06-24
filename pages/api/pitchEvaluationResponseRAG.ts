@@ -11,7 +11,6 @@ const pitchEvaluationResponseRAG = async (req: NextApiRequest, res: NextApiRespo
         results = await fetchCurrentMarketStats(chatHistory);
         const currentMarketStats=results?.responseContent;
         const citations=results?.citations;
-        console.log(currentMarketStats,"RAG return api",citations);
         res.status(200).json({
           currentMarketStats,
           citations
@@ -37,7 +36,6 @@ const fetchCurrentMarketStats = async (chatHistory: any[]) => {
     let responseContent = rubricRatingCompletion?.choices[0].message.content;
     const citations = rubricRatingCompletion?.citations || [];
     const cleanedResponse=cleanResponse(responseContent);
-    console.log("direct RAG completion LALALA",citations,"citations LALALA",cleanedResponse)
 
     if (!responseContent) {
       throw new Error("Empty rubric response");

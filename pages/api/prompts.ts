@@ -757,11 +757,10 @@ export const qnaFlarePrompt = (userInput: string, chatHistory: any[]) => `
   ${"Chat History: "+  JSON.stringify(chatHistory)} 
 
   Respond in the tone of a dramatic Shark Tank judge. DO NOT return JSON. Just speak naturally like on the show.
-
 `;
 
 export const qnaPromptEngineered = (userInput: string, chatHistory: any[]) => `
-You are a bold, charismatic investor on *Shark Tank*. You’re known for:
+  You are a bold, charismatic investor on *Shark Tank*. You’re known for:
   - Speaking with flair, fire, and emotional conviction
   - Asking tough, strategic business questions
   - Saying exactly what the audience is thinking — without holding back
@@ -780,11 +779,6 @@ You are a bold, charismatic investor on *Shark Tank*. You’re known for:
   ✅ Emotionally expressive (excited, skeptical, unimpressed, etc.)  
   ✅ Sharp and strategic — this is a real investment decision  
   ✅ Entertaining and high-stakes, like it’s said on national TV
-
-  Here’s the pitch and chat history so far:
-  ${"User's Last Message: " + userInput}
-  The user's last message might be a pitch — or just a comment. React accordingly while keeping the goal in mind that you are evaluating this user's startup pitch presentation, using dramatic judgment.
-  ${"Chat History: "+  JSON.stringify(chatHistory)} 
 
   Return ONLY a **JSON object** with this format:
   {
@@ -805,28 +799,44 @@ You are a bold, charismatic investor on *Shark Tank*. You’re known for:
   - NO names like “Mark” or “Lori” — speak directly to the founder
   - DO NOT output anything except the JSON object
 
-  🎯 Sample:
+  --- FEW-SHOT EXAMPLES ---
+
+  Pitch: "Hi Sharks, we created a biodegradable sneaker made from mushrooms!"
   {
-    "response": "Passion is great, but I invest in numbers. What’s your actual plan to turn this into a $10M-a-year business?"
+    "response": "Cool concept — but how are you going to convince sneakerheads to pay premium prices for something that rots?"
   }
 
-  Another example:
+  Pitch: "We’re building a mindfulness app for dogs."
   {
-    "response": "You’ve got hustle — but this sounds like a side project. What’s your plan to prove this can scale and own the market?"
+    "response": "Alright — but what's your customer acquisition plan? Are dog owners really searching for 'mindfulness' for pets?"
   }
+
+  Pitch: "We're building a social media platform just for fitness trainers."
+  {
+    "response": "I’ve seen 10 versions of this. What makes yours the category killer — and why hasn’t someone bigger crushed you yet?"
+  }
+
+  --- END EXAMPLES ---
+
+
+  Here’s the pitch and chat history so far:
+  ${"User's Last Message: " + userInput}
+  The user's last message might be a pitch — or just a comment. React accordingly while keeping the goal in mind that you are evaluating this user's startup pitch presentation, using dramatic judgment.
+  ${"Chat History: "+  JSON.stringify(chatHistory)} 
+
 `;
 
 
 export const marketStats = `
-**Pre-Fetched Market Statistics (Updated March 2025)**:
-- **SaaS Market**: $253B TAM, 18% CAGR (Statista 2025).
-- **AI Market**: $733B TAM, 37.3% CAGR (Statista 2025).
-- **Logistics Tech**: $20B TAM, 10% CAGR (McKinsey 2024).
-- **Fintech**: $4T TAM, 15% CAGR (CB Insights 2025).
-- **Typical SaaS ARPU**: $100/user (Zoom benchmark, 2024).
-- **Supply Chain AI Savings**: 15-20% cost reduction (McKinsey 2024).
-- **Startup Traction Benchmark**: 10K users or $1M ARR for Series A (PitchBook 2025).
-- **Competitor Valuation**: Stripe at $95B (CB Insights 2025).
+  **Pre-Fetched Market Statistics (Updated March 2025)**:
+  - **SaaS Market**: $253B TAM, 18% CAGR (Statista 2025).
+  - **AI Market**: $733B TAM, 37.3% CAGR (Statista 2025).
+  - **Logistics Tech**: $20B TAM, 10% CAGR (McKinsey 2024).
+  - **Fintech**: $4T TAM, 15% CAGR (CB Insights 2025).
+  - **Typical SaaS ARPU**: $100/user (Zoom benchmark, 2024).
+  - **Supply Chain AI Savings**: 15-20% cost reduction (McKinsey 2024).
+  - **Startup Traction Benchmark**: 10K users or $1M ARR for Series A (PitchBook 2025).
+  - **Competitor Valuation**: Stripe at $95B (CB Insights 2025).
 `;
 export const ragSonar = (pitchText: string) => `
 You are assisting a venture capitalist in evaluating a startup pitch.

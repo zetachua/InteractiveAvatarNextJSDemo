@@ -12,8 +12,6 @@ const qnaResponse = async (req: NextApiRequest, res: NextApiResponse) => {
 if (req.method === 'POST') {
   try {
     const { userInput,chatHistory, selectedModel} = req.body;
-    console.log('Request Body QnaResponse:',chatHistory);
-
     const questionResponse = await fetchQna(userInput, chatHistory,selectedModel);
 
 
@@ -40,7 +38,11 @@ try {
   console.log(chatHistory,userInput,"what is the chathistory")
 
   if (selectedModel==="Sharktank" ){
-    //  responseContent=await finetunedSharktank(userInput,chatHistory); //enable this if u have the finetuned model
+
+    // Fine tuned model version
+    //  responseContent=await finetunedSharktank(userInput,chatHistory); 
+
+    // Prompt engineering model version
      responseContent= await promptEngineeringSharktank(userInput, chatHistory);
   }
   else{
