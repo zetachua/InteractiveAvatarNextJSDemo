@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Bar,
   BarChart,
@@ -11,6 +11,7 @@ import {
 import { Button } from '@nextui-org/button';
 import Assessment from './Assessment';
 import Section from './Section';
+import Transcript from './Transcript';
 import {
   FeedbackSpecificMetrics,
   FeedbackMetricData,
@@ -28,8 +29,6 @@ interface SentimentInvestorPieChartProps {
   fluencyAssessment: FluencyAssessment;
   data: FeedbackMetricData; // Change from 'data' to 'feedbackData'
   overallScore:number;
-  resetAllStates: () => void;
-  totalRounds: number;
   feedbackSummary:string;
   specificFeedback:FeedbackSpecificMetrics;
 }
@@ -38,9 +37,7 @@ const assessments: AssessmentType[] = ['Pronunciation', 'Intonation', 'Fluency']
 
 const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
   data,
-  totalRounds,
   overallScore,
-  resetAllStates,
   feedbackSummary,
   specificFeedback,
   pronunciationAssessment,
@@ -96,6 +93,12 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
           <div>{feedbackSummary}</div>
       </div>
 
+      <Assessment
+        pronunciationAssessment={pronunciationAssessment}
+        intonationAssessment={intonationAssessment}
+        fluencyAssessment={fluencyAssessment}
+      />
+
       <div className='select-assessment'>
         {assessments.map((assessment) => (
           <Button
@@ -113,7 +116,7 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
         ))}
       </div>
 
-      <Assessment
+      <Transcript
         assessment={selectedAssessment}
         pronunciationAssessment={pronunciationAssessment}
         intonationAssessment={intonationAssessment}

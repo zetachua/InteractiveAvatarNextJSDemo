@@ -712,7 +712,7 @@ async function endSession() {
               { displayGrantPitch && <RubricInvestorPiechartExample title={'Grant'} specificFeedback={grantedPitchRubrics()} />}
               { displayMediVRPitch && <RubricInvestorPiechartExample title={'MediVR'} specificFeedback={mediVRPitchRubrics()} />}
               { displayConcretePitch && <RubricInvestorPiechartExample title={'Concrete'} specificFeedback={lookupPitchRubrics()} />}
-              <SentimentInvestorPiechart pronunciationAssessment={assessment.pronunciation} intonationAssessment={assessment.intonation} fluencyAssessment={assessment.fluency} data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback} resetAllStates={resetAllStates} totalRounds={0}></SentimentInvestorPiechart>
+              <SentimentInvestorPiechart pronunciationAssessment={assessment.pronunciation} intonationAssessment={assessment.intonation} fluencyAssessment={assessment.fluency} data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback}></SentimentInvestorPiechart>
             </div>
           </div>
          :

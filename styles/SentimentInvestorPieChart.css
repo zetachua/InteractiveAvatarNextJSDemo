@@ -1,4 +1,4 @@
-.word-info {
+#evaluation .word-info {
     position: absolute;
     z-index: 1002;
     width: 350px;
@@ -9,23 +9,23 @@
     background-color: #444;
 }
 
-.word-info .header {
+#evaluation .word-info .header {
     display: flex;
     justify-content: space-between;
 }
 
-.word-info .header .close {
+#evaluation .word-info .header .close {
     width: 0.9rem;
     height: 0.9rem;
     cursor: pointer;
 }
 
-.word-info .header .transcript {
+#evaluation .word-info .header .transcript {
     font-weight: 600;
     margin-bottom: 0.5rem;
 }
 
-.word-info .progress-container {
+#evaluation .word-info .progress-container {
     display: flex;
     align-items: center;
     background-color: #F5EEF8;
@@ -36,25 +36,25 @@
     margin-bottom: 0.5rem;
 }
 
-.word-info .progress-container .score {
+#evaluation .word-info .progress-container .score {
     font-weight: 600;
     font-size: 0.6rem;
     color: black;
 }
 
-.word-info .progress-container .progress-bar {
+#evaluation .word-info .progress-container .progress-bar {
     flex: 1;
     height: 6px;
     background-color: #B292BF;
     border-radius: 2rem;
 }
 
-.word-info .progress-container .progress-bar .progress-fill {
+#evaluation .word-info .progress-container .progress-bar .progress-fill {
     height: 100%;
     border-radius: 2rem;
 }
 
-.word-info .table {
+#evaluation .word-info .table {
     max-height: 300px;
     overflow-y: auto;
     font-size: 0.7rem;
@@ -62,20 +62,20 @@
     display: block;
 }
 
-.word-info .table .title {
+#evaluation .word-info .table .title {
     display: flex;
     color: gray;
 }
 
-.word-info .table .title .sound-title {
+#evaluation .word-info .table .title .sound-title {
     flex: 1;
 }
 
-.word-info .table .title .said-title {
+#evaluation .word-info .table .title .said-title {
     flex: 3;
 }
 
-.word-info .table .row {
+#evaluation .word-info .table .row {
     display: flex;
     align-items: center;
     margin-top: 0.3em;
@@ -83,19 +83,19 @@
     border-top: 1px solid #777;
 }
 
-.word-info .table .row .sound-result {
+#evaluation .word-info .table .row .sound-result {
     flex: 1;
 }
 
-.word-info .table .row .said-result {
+#evaluation .word-info .table .row .said-result {
     flex: 3;
 }
 
-.word-info .table .row .said-result .correct {
+#evaluation .word-info .table .row .said-result .correct {
     color: #52BE80;
 }
 
-.word-info .table .row .said-result .incorrect {
+#evaluation .word-info .table .row .said-result .incorrect {
     color: #DC7633;
 }
 
@@ -105,6 +105,7 @@
     justify-content: center;
     align-items: center;
     flex-direction: column;
+    min-width: 500px;
 }
 
 .sentiment-analysis .overall {
@@ -131,10 +132,11 @@
 
 .sentiment-analysis .assessment .summary {
     display: flex;
+    margin: 1rem;
 }
 
 .sentiment-analysis .assessment .summary .meter {
-    padding-top: 1.5rem;
+    padding-top: 0.7rem;
     display: flex;
     justify-content: center;
     flex-wrap: wrap;
@@ -220,8 +222,7 @@
     text-align: left;
     padding: 0.5rem;
     position: absolute;
-    z-index: 1;
-    bottom: 125%;
+    z-index: 4;
     right: 50%;
     opacity: 0;
     transition: opacity 0.3s;
@@ -238,11 +239,35 @@
     margin-bottom: 0.3rem;
 }
 
+.sentiment-analysis .assessment .more-info {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.sentiment-analysis .assessment .more-info button {
+    font-weight: 600;
+    color: #777;
+    transition: color 0.3s ease;
+    margin-bottom: 0.5rem;
+}
+
+.sentiment-analysis .assessment .more-info button:hover {
+    color: #999;
+}
+
 .sentiment-analysis .assessment .charts {
-    margin: 0.4rem;
     display: flex;
     align-items: center;
     gap: 0.8rem;
+    border-bottom: solid 1px #777;
+    margin: 0 1.5rem;
+    transition: max-height 0.3s ease-in-out;
+    overflow: hidden;
+    max-height: 0;
+}
+
+.sentiment-analysis .assessment .charts.expanded {
+    max-height: 275px;
 }
 
 .sentiment-analysis .assessment .charts .pace {
@@ -324,6 +349,7 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
+    margin: 0.8rem 0;
 }
 
 .sentiment-analysis .assessment .charts .pause .meter {
@@ -345,7 +371,7 @@
     border-radius: 10px;
 }
 
-.sentiment-analysis .assessment .content {
+.sentiment-analysis .transcript {
     height: 400px;
     border-radius: 10px;
     background-color: #444;
@@ -353,29 +379,29 @@
     overflow-y: auto;
 }
 
-.sentiment-analysis .assessment .content .word {
+.sentiment-analysis .transcript .word {
     display: inline-block;
     position: relative;
     margin-right: 0.25rem;
 }
 
-.sentiment-analysis .assessment .content .word .red {
+.sentiment-analysis .transcript .word .red {
     color: #E74C3C;
     text-decoration: underline;
     cursor: pointer;
 }
 
-.sentiment-analysis .assessment .content .word .blue {
+.sentiment-analysis .transcript .word .blue {
     color: #6890ff;
     cursor: pointer;
 }
 
-.sentiment-analysis .assessment .content .word .gray {
+.sentiment-analysis .transcript .word .gray {
     color: #444;
     cursor: pointer;
 }
 
-.sentiment-analysis .assessment .content .word img.pause {
+.sentiment-analysis .transcript .word img.pause {
     width: 30px;
     cursor: pointer;
 }
