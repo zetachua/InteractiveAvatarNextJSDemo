@@ -25,13 +25,10 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
 }) => {
   const rubricMetrics: Rubric2InvestorMetricData = data ?? {} as Rubric2InvestorMetricData;
   const rubricSummary: string = summary ?? '';
-  const formattedSummary = rubricSummary
-    .split(/[.!?]\s+/)
-    .filter(sentence => sentence.trim().length > 0)
-    .map(sentence => `- ${sentence.trim()}`)
-    .join('\n');
   const rubricSpecificFeedback: Rubric2InvestorSpecificData = specificFeedback ?? {} as Rubric2InvestorSpecificData;
   const rubricOverallScore: number = overallScore ?? 0;
+  const [showFullSummary, setShowFullSummary] = useState(false);
+  const [showCitations, setShowCitations] = useState(false);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard
@@ -84,7 +81,12 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
       ? Math.ceil((rubricOverallScore + Number.EPSILON) * 10) / 10
       : 0;
 
-  const citationList = citations?.split(',');
+  const citationList = citations?.split(',').filter(Boolean) || [];
+  const summaryPoints = rubricSummary
+    .split(/[.!?]\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const visibleSummaryPoints = showFullSummary ? summaryPoints : summaryPoints.slice(0, 4);
 
   return (
     <div
@@ -97,6 +99,8 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
         position: 'relative',
         height: '100%',
         zIndex: '1001',
+        fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif',
+        fontSize: '0.95rem',
       }}
     >
       {/* <Button
@@ -131,63 +135,85 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
             background: 'rgba(255,255,255,0.1)',
             position: 'relative',
             padding: '1rem',
-            borderRadius: '50px',
+            borderRadius: '20px',
             textAlign: 'center',
             width: '100%',
-            fontSize: '1.3rem',
+            fontSize: '1rem',
           }}
         >
           <b>Perplexity LLM Analysis Overall</b>
-          <div style={{ fontSize: '0.8rem', padding: '0.3rem', textAlign: 'left', whiteSpace: 'pre-line' }}>
-            {formattedSummary} <br/>
-            <span> </span>
-            <b>Reference Citations:</b>
+          <div style={{ fontSize: '0.9rem', lineHeight: 1.45, padding: '0.3rem', textAlign: 'left' }}>
+            <ul style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '12px', padding: '0.75rem 0.95rem', margin: 0, textAlign: 'left' }}>
+              {visibleSummaryPoints.map((point, index) => (
+                <li key={`${point}-${index}`} style={{ marginBottom: '0.55rem' }}>
+                  {point}{point.endsWith('.') ? '' : '.'}
+                </li>
+              ))}
+            </ul>
+            {summaryPoints.length > 4 && (
+              <button
+                onClick={() => setShowFullSummary(!showFullSummary)}
+                style={{ marginTop: '0.45rem', border: 'none', background: 'transparent', color: '#9bb5ff', fontSize: '0.82rem', cursor: 'pointer' }}
+              >
+                {showFullSummary ? 'Show less' : 'Show more'}
+              </button>
+            )}
           </div>
-          <div style={{ display: 'flex', maxHeight: '200px', marginTop: '0.5rem', overflow: 'auto', flexDirection: 'column', gap: '0.3rem', fontSize: '0.7rem', padding: '0.5rem', textAlign: 'left', whiteSpace: 'pre-line' }}>
-            {citationList?.map((citation, index) => (
-              <div key={index}>
-                {index + 1}.
-                <u><a href={citation} target="_blank" rel="noopener noreferrer">
-                  {citation}
-                </a></u>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div
-          style={{
-            fontWeight: 600,
-            fontSize: '1rem',
-            padding: '0rem 1rem',
-            borderRadius: '10px',
-            zIndex: '1000',
-            position: 'absolute',
-            top: '25%',
-            left: '50%',
-            transform: 'translate(-50%,-50%)',
-            color: '#000',
-            backgroundColor: '#fff',
-          }}
-        >
-          {roundedOverallScore}/10
-        </div>
-        <PieChart width={450} height={350} style={{marginTop: '2rem' }}>
-          <Pie
-            data={chartData}
-            dataKey="value"
-            nameKey="name"
-            cx="50%"
-            cy="50%"
-            outerRadius={100}
-            label
+          <button
+            onClick={() => setShowCitations(!showCitations)}
+            style={{ marginTop: '0.25rem', border: 'none', background: 'transparent', color: '#9bb5ff', fontSize: '0.82rem', cursor: 'pointer' }}
           >
-            {chartData.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={getColor(entry.value)} />
-            ))}
-          </Pie>
-          <Tooltip />
-          <Legend />
-        </PieChart>
+            {showCitations ? 'Hide citations' : `Show citations (${citationList.length})`}
+          </button>
+          {showCitations && (
+            <div style={{ display: 'flex', maxHeight: '200px', marginTop: '0.5rem', overflow: 'auto', flexDirection: 'column', gap: '0.3rem', fontSize: '0.85rem', padding: '0.5rem', textAlign: 'left', whiteSpace: 'pre-line', background: 'rgba(255,255,255,0.06)', borderRadius: '12px' }}>
+              <b>Reference Citations:</b>
+              {citationList.map((citation, index) => (
+                <div key={index}>
+                  {index + 1}.{" "}
+                  <u><a href={citation} target="_blank" rel="noopener noreferrer">
+                    {citation}
+                  </a></u>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        <div style={{ position: 'relative', marginTop: '2rem' }}>
+          <div
+            style={{
+              fontWeight: 700,
+              fontSize: '0.95rem',
+              padding: '0.2rem 0.8rem',
+              borderRadius: '12px',
+              color: '#000',
+              backgroundColor: '#fff',
+              position: 'absolute',
+              top: '8px',
+              left: '14px',
+              zIndex: 2,
+            }}
+          >
+            {roundedOverallScore}/10
+          </div>
+          <PieChart width={450} height={350}>
+            <Pie
+              data={chartData}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              outerRadius={100}
+              label
+            >
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={getColor(entry.value)} />
+              ))}
+            </Pie>
+            <Tooltip />
+            <Legend />
+          </PieChart>
+        </div>
       </div>
       <div style={{ padding: '1rem' }}>
         <div

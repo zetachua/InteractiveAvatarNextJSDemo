@@ -84,13 +84,28 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
       : 0;
 
   const [selectedAssessment, setSelectedAssessment] = useState<AssessmentType>('Pronunciation');
+  const [showFullSummary, setShowFullSummary] = useState(false);
+  const summaryPoints = feedbackSummary
+    .split(/[.!?]\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const visibleSummaryPoints = showFullSummary ? summaryPoints : summaryPoints.slice(0, 3);
 
   return (
     <div className='sentiment-analysis'>
 
       <div className='overall'>
           <b>Sentiment Overall</b>
-          <div>{feedbackSummary}</div>
+          <ul className='overall-summary-points'>
+            {visibleSummaryPoints.map((point, index) => (
+              <li key={`${point}-${index}`}>{point}{point.endsWith('.') ? '' : '.'}</li>
+            ))}
+          </ul>
+          {summaryPoints.length > 3 && (
+            <button className='summary-toggle' onClick={() => setShowFullSummary(!showFullSummary)}>
+              {showFullSummary ? 'Show less' : 'Show more'}
+            </button>
+          )}
       </div>
 
       <Assessment
@@ -123,36 +138,51 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
         fluencyAssessment={fluencyAssessment}
       />
 
-      <div className='average-score'>{roundedOverallScore}/5</div>
-      <ResponsiveContainer height={300}>
-        <BarChart
-          layout='vertical'
-          data={barData}
-        >
-          <XAxis
-            type='number'
-            ticks={[1, 2, 3, 4, 5]}
-            scale='linear'
-          />
-          <YAxis type='category' dataKey='name' width={80} />
-          <Bar
-            dataKey='value'
-            label={false}
+      <div className='chart-feedback-card'>
+        <div className='chart-feedback-header'>
+          <span>Sentiment Breakdown</span>
+          <div className='average-score'>{roundedOverallScore}/5</div>
+        </div>
+        <ResponsiveContainer height={280}>
+          <BarChart
+            layout='vertical'
+            data={barData}
           >
-            {barData.map((entry, index) => (
-              <Cell
-                key={`bar-${index}`}
-                fill={getBarColor(entry.value)}
-              />
-            ))}
-          </Bar>
-          <Tooltip />
-        </BarChart>
-      </ResponsiveContainer>
-      <div className='metrics'>
-        {Object.entries(specificFeedback || {}).map(([metric, feedback]) => (
-          <Section key={metric} title={metric} feedback={feedback as string} />
-        ))}
+            <XAxis
+              type='number'
+              ticks={[1, 2, 3, 4, 5]}
+              scale='linear'
+            />
+            <YAxis type='category' dataKey='name' width={90} />
+            <Bar
+              dataKey='value'
+              label={false}
+            >
+              {barData.map((entry, index) => (
+                <Cell
+                  key={`bar-${index}`}
+                  fill={getBarColor(entry.value)}
+                />
+              ))}
+            </Bar>
+            <Tooltip
+              cursor={{ fill: 'rgba(20, 24, 32, 0.35)' }}
+              contentStyle={{
+                background: 'rgba(18, 20, 26, 0.95)',
+                border: '1px solid rgba(255,255,255,0.22)',
+                borderRadius: '10px',
+                color: '#fff',
+              }}
+              labelStyle={{ color: '#fff' }}
+              itemStyle={{ color: '#fff' }}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+        <div className='metrics'>
+          {Object.entries(specificFeedback || {}).map(([metric, feedback]) => (
+            <Section key={metric} title={metric} feedback={feedback as string} />
+          ))}
+        </div>
       </div>
     </div>
   );

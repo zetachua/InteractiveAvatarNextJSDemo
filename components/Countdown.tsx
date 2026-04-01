@@ -12,16 +12,32 @@ interface CountdownTimerProps {
   
     return (
       <div
-        className="flex flex-col items-center justify-center p-4 border rounded-lg shadow-lg bg-white w-100"
-        style={{ position: "absolute", top: "1rem", right: "1rem" }}
+        style={{
+          position: "absolute",
+          top: "1rem",
+          right: "1rem",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "0.8rem 1rem",
+          border: "1px solid rgba(255,255,255,0.2)",
+          borderRadius: "18px",
+          background: "rgba(22, 23, 26, 0.45)",
+          color: "white",
+          minWidth: "190px",
+          fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif',
+          boxShadow: "0 8px 20px rgba(0,0,0,0.25)",
+          zIndex: 1000,
+        }}
       >
-        <h2 className="text-lg font-semibold text-black text-center p-2">
+        <h2 style={{ fontSize: "0.92rem", fontWeight: 700, textAlign: "center", marginBottom: "0.2rem" }}>
           Pitch Countdown Timer
         </h2>
         {isTimeUp ? (
-          <p className="text-2xl font-bold mt-2 text-green-500">Q&A Time!</p>
+          <p style={{ fontSize: "1.15rem", fontWeight: 700, marginTop: "0.2rem", color: "#5cf7a0" }}>Q&A Time!</p>
         ) : (
-          <p className="text-2xl font-bold mt-2 text-red-500">
+          <p style={{ fontSize: "1.15rem", fontWeight: 700, marginTop: "0.2rem", color: "#ff8b8b" }}>
             {formatTime(timeLeft)}
           </p>
         )}

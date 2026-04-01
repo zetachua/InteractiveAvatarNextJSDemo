@@ -106,6 +106,8 @@ export default function InteractiveInvestors() {
   const [pitchUnderstandingScore, setPitchUnderstandingScore] = useState<number>(0);
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [feedbackSubmitMessage, setFeedbackSubmitMessage] = useState("");
+  const [showChatHistoryModal, setShowChatHistoryModal] = useState(false);
+  const audioUploadRef = useRef<HTMLInputElement | null>(null);
   const [avatarApiKey, setAvatarApiKey] = useState("");
   const [avatarStream, setAvatarStream] = useState<MediaStream>();
   const avatarVideoRef = useRef<HTMLVideoElement>(null);
@@ -120,6 +122,8 @@ export default function InteractiveInvestors() {
     intonation: null,
     fluency: null
   });
+  const isAnyComparisonOpen =
+    displayLookupPitch || displayGrantPitch || displayConcretePitch || displayMediVRPitch;
 
   useEffect(() => {
     if (isBeginClock) {
@@ -341,79 +345,119 @@ export default function InteractiveInvestors() {
         if (!convertRes.ok) {
           throw new Error(convertData.error);
         }
-
-        // STT using Whisper
-        const transcribedRes = await fetch(`http://localhost:8000/transcribe?file=${encodeURIComponent(convertData.outputFile)}`, {
-          method: 'POST',
-        });
-
-        const transcribedData = await transcribedRes.json();
-        if (!transcribedRes.ok) {
-          throw new Error(transcribedData.error);
-        }
-        setAudioTranscribing(false);
-        handleSpeak(transcribedData.text);
-
-        if (isPitch) {
-          setIsPitch(false);
-
-          const [
-            pronunciationRes,
-            intonationRes,
-            fluencyRes
-          ] = await Promise.all([
-            fetch('/api/pronunciationAnalysis', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                file: convertData.outputFile,
-                script: transcribedData.text
-              })
-            }),
-            fetch('http://localhost:8000/intonationAnalysis', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                file: convertData.outputFile,
-                script: transcribedData.text,
-                segments: transcribedData.segments
-              })
-            }),
-            fetch('http://localhost:8000/fluencyAnalysis', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                segments: transcribedData.segments
-              })
-            })
-          ]);
-
-          const [
-            pronunciationData,
-            intonationData,
-            fluencyData
-          ] = await Promise.all([
-            pronunciationRes.json(),
-            intonationRes.json(),
-            fluencyRes.json()
-          ]);
-
-          if (!pronunciationRes.ok) throw new Error(pronunciationData.error);
-          if (!intonationRes.ok) throw new Error(intonationData.error);
-          if (!fluencyRes.ok) throw new Error(fluencyData.error);
-
-          setAssessment({
-            pronunciation: pronunciationData,
-            intonation: intonationData,
-            fluency: fluencyData
-          });
-        }
+        await processConvertedAudio(convertData.outputFile);
       };
 
       mediaRecorderRef.current.start(1000);
       setIsRecording(true);
     } catch (err: any) {
       console.error(err);
+    }
+  };
+
+  const runPitchAudioAssessment = async (outputFile: string, transcribedData: any) => {
+    if (!isPitch) return;
+    setIsPitch(false);
+
+    const [
+      pronunciationRes,
+      intonationRes,
+      fluencyRes
+    ] = await Promise.all([
+      fetch('/api/pronunciationAnalysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file: outputFile,
+          script: transcribedData.text
+        })
+      }),
+      fetch('http://localhost:8000/intonationAnalysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file: outputFile,
+          script: transcribedData.text,
+          segments: transcribedData.segments
+        })
+      }),
+      fetch('http://localhost:8000/fluencyAnalysis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          segments: transcribedData.segments
+        })
+      })
+    ]);
+
+    const [
+      pronunciationData,
+      intonationData,
+      fluencyData
+    ] = await Promise.all([
+      pronunciationRes.json(),
+      intonationRes.json(),
+      fluencyRes.json()
+    ]);
+
+    if (!pronunciationRes.ok) throw new Error(pronunciationData.error);
+    if (!intonationRes.ok) throw new Error(intonationData.error);
+    if (!fluencyRes.ok) throw new Error(fluencyData.error);
+
+    setAssessment({
+      pronunciation: pronunciationData,
+      intonation: intonationData,
+      fluency: fluencyData
+    });
+  };
+
+  const processConvertedAudio = async (outputFile: string, runAssessmentInBackground = false) => {
+    const transcribedRes = await fetch(`http://localhost:8000/transcribe?file=${encodeURIComponent(outputFile)}`, {
+      method: 'POST',
+    });
+    const transcribedData = await transcribedRes.json();
+    if (!transcribedRes.ok) {
+      throw new Error(transcribedData.error || "Transcription failed");
+    }
+
+    setAudioTranscribing(false);
+    handleSpeak(transcribedData.text);
+
+    if (runAssessmentInBackground) {
+      void runPitchAudioAssessment(outputFile, transcribedData).catch((error) => {
+        console.error("Background audio assessment failed:", error);
+      });
+    } else {
+      await runPitchAudioAssessment(outputFile, transcribedData);
+    }
+  };
+
+  const handleAudioFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setAudioTranscribing(true);
+      setDebug("Uploading and processing audio file...");
+
+      const formData = new FormData();
+      formData.append('file', file, file.name);
+      const convertRes = await fetch('/api/convertWebmToWav', {
+        method: 'POST',
+        body: formData,
+      });
+      const convertData = await convertRes.json();
+      if (!convertRes.ok) {
+        throw new Error(convertData.error || "Audio conversion failed");
+      }
+
+      await processConvertedAudio(convertData.outputFile, true);
+      setDebug("Audio file processed successfully.");
+    } catch (error) {
+      setAudioTranscribing(false);
+      setDebug(error instanceof Error ? error.message : "Failed to process audio file");
+    } finally {
+      if (audioUploadRef.current) audioUploadRef.current.value = "";
     }
   };
   
@@ -443,23 +487,6 @@ export default function InteractiveInvestors() {
     return mergedObj;
   }
 
-  const downloadTextFile = () => {
-    const chatText = chatHistory
-      .map((message) => `${message.role.toUpperCase()}: ${message.content}`)
-      .join("\n");
-  
-    const blob = new Blob([chatText], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-  
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "chatHistory.txt";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-  
 async function endSession() {
   setStream(false);
   setIsBeginClock(false);
@@ -782,6 +809,19 @@ const submitSessionFeedback = async () => {
                       >
                         {isRecording ? <div className={`wave`} />: <>Talk <Microphone size={14} /></>}
                       </Button>
+                      <Button
+                        onClick={() => audioUploadRef.current?.click()}
+                        style={{ background:'rgba(255,255,255,0.1)',margin: '0.5rem', borderRadius:'100px'}}
+                      >
+                        Upload Audio
+                      </Button>
+                      <input
+                        ref={audioUploadRef}
+                        type="file"
+                        accept="audio/*"
+                        onChange={handleAudioFileUpload}
+                        style={{ display: "none" }}
+                      />
                     </>
                   ) : (
                     <Introduction setIsBeginClock={setIsBeginClock} />
@@ -835,8 +875,34 @@ const submitSessionFeedback = async () => {
 
         {/* {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentScore} />} */}
         {(sentimentJson && rubricJson2 && !showFeedbackModal) ? 
-          <div id='evaluation' style={{fontSize: '0.8rem', position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%)',padding:'2rem',width:'80%',maxHeight:'900px', minWidth: '600px', overflowY:'scroll'}}>
-            <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'flex-start' }}>
+          <div id='evaluation' style={{fontSize: '0.8rem', position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%)',padding:'2rem',width:'80%',maxHeight:'900px', minWidth: '600px', overflowY:'scroll',scrollbarWidth: 'none'}}>
+            <button
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                border: 'none',
+                borderRadius: '10px',
+                background: 'rgba(255,255,255,0.4)',
+                color: '#fff',
+                fontSize: '0.8rem',
+                fontWeight: '500',
+                display: 'inline-block',
+                whiteSpace: 'nowrap',
+                padding: '0.45rem 0.8rem',
+                zIndex: 1200,
+              }}
+              onClick={() => setShowChatHistoryModal(true)}
+            >
+              View ChatHistory
+            </button>
+            <div style={{ marginBottom: '0.8rem', color: 'white' }}>
+              <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>Benchmark Comparison</div>
+              <div style={{ fontSize: '0.8rem', opacity: 0.9 }}>
+                Toggle startup examples below to compare your analysis against reference pitches.
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'flex-start', flexWrap: 'wrap' }}>
               <Button
                 onClick={() => setDisplayLookupPitch(!displayLookupPitch)}
                 className={`text-white ${
@@ -885,22 +951,6 @@ const submitSessionFeedback = async () => {
               >
                 MediVR
               </Button>
-              <button
-                style={{
-                  border: 'none',
-                  borderRadius: '10px',
-                  background: 'rgba(255,255,255,0.4)',
-                  color: '#fff',
-                  fontSize: '0.8rem',
-                  fontWeight: '500',
-                  display: 'inline-block',
-                  whiteSpace: 'nowrap',
-                  padding: '0 15px'
-                }}
-                onClick={() => downloadTextFile()}
-              >
-                Download ChatHistory
-              </button>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'start' }}>
@@ -916,24 +966,26 @@ const submitSessionFeedback = async () => {
               { displayGrantPitch && <RubricInvestorPiechartExample title={'Grant'} specificFeedback={grantedPitchRubrics()} />}
               { displayMediVRPitch && <RubricInvestorPiechartExample title={'MediVR'} specificFeedback={mediVRPitchRubrics()} />}
               { displayConcretePitch && <RubricInvestorPiechartExample title={'Concrete'} specificFeedback={lookupPitchRubrics()} />}
-              {(assessment.pronunciation && assessment.intonation && assessment.fluency) ? (
-                <SentimentInvestorPiechart
-                  pronunciationAssessment={assessment.pronunciation}
-                  intonationAssessment={assessment.intonation}
-                  fluencyAssessment={assessment.fluency}
-                  data={sentimentMetrics}
-                  overallScore={sentimentScore}
-                  feedbackSummary={feedbackText}
-                  specificFeedback={sentimentSpecificFeedback}
-                />
-              ) : (
-                <div style={{color: 'white', padding: '1rem', maxWidth: '420px'}}>
-                  <b>Sentiment Analysis Loaded</b>
-                  <p style={{marginTop: '0.5rem'}}>
-                    Voice-specific assessment is unavailable for this run.
-                    The pitch sentiment and rubric analysis are still shown.
-                  </p>
-                </div>
+              {!isAnyComparisonOpen && (
+                (assessment.pronunciation && assessment.intonation && assessment.fluency) ? (
+                  <SentimentInvestorPiechart
+                    pronunciationAssessment={assessment.pronunciation}
+                    intonationAssessment={assessment.intonation}
+                    fluencyAssessment={assessment.fluency}
+                    data={sentimentMetrics}
+                    overallScore={sentimentScore}
+                    feedbackSummary={feedbackText}
+                    specificFeedback={sentimentSpecificFeedback}
+                  />
+                ) : (
+                  <div style={{color: 'white', padding: '1rem', maxWidth: '420px'}}>
+                    <b>Sentiment Analysis Loaded</b>
+                    <p style={{marginTop: '0.5rem'}}>
+                      Voice-specific assessment is unavailable for this run.
+                      The pitch sentiment and rubric analysis are still shown.
+                    </p>
+                  </div>
+                )
               )}
             </div>
           </div>
@@ -1102,6 +1154,59 @@ const submitSessionFeedback = async () => {
               >
                 {isSubmittingFeedback ? <Spinner size="sm" color="white" /> : "Submit"}
               </Button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showChatHistoryModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 3000,
+          }}
+        >
+          <div
+            style={{
+              width: "90%",
+              maxWidth: "760px",
+              maxHeight: "80vh",
+              overflowY: "auto",
+              background: "#1f1f1f",
+              borderRadius: "16px",
+              padding: "1rem",
+              color: "white",
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.7rem" }}>
+              <h3 style={{ fontWeight: 700 }}>Chat History</h3>
+              <Button size="sm" variant="flat" onClick={() => setShowChatHistoryModal(false)}>
+                Close
+              </Button>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+              {chatHistory.length === 0 ? (
+                <p style={{ opacity: 0.8 }}>No chat history available yet.</p>
+              ) : (
+                chatHistory.map((message, index) => (
+                  <div
+                    key={`${message.role}-${index}`}
+                    style={{
+                      background: "rgba(255,255,255,0.08)",
+                      borderRadius: "10px",
+                      padding: "0.7rem",
+                      fontSize: "0.9rem",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    <b style={{ textTransform: "capitalize" }}>{message.role}:</b> {message.content}
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

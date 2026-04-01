@@ -7,6 +7,27 @@ Feel free to play around with the existing code and please leave any feedback fo
 
 ## Getting Started FAQ
 
+## Run This Project
+
+Use two terminals:
+
+1. **Terminal 1 (Next.js app)**
+   - `npm install`
+   - `npm run dev`
+
+2. **Terminal 2 (Audio analysis server for transcription + fluency/intonation)**
+   - `press the run/play button for the file /page/audioAnalysis.py`
+
+When both are running:
+- Open `http://localhost:3000`
+- Start your session and click the **Talk** / record button
+- The app calls the audio server at `http://127.0.0.1:8000` for:
+  - `/transcribe`
+  - `/intonationAnalysis`
+  - `/fluencyAnalysis`
+
+If you see `ModuleNotFoundError` for Python packages, activate `.venv` again and re-run `pip install -r requirements.txt`.
+
 ### Setting up the demo
 
 1. Clone this repo
