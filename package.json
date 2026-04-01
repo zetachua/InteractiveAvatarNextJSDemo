@@ -17,6 +17,7 @@
     "@ffmpeg/core": "^0.12.10",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@ffmpeg/util": "^0.12.2",
+    "@heygen/liveavatar-web-sdk": "^0.0.12",
     "@heygen/streaming-avatar": "github:HeyGen-Official/StreamingAvatarSDK#realtime-alpha",
     "@huggingface/inference": "^3.1.5",
     "@nextui-org/button": "^2.0.34",
