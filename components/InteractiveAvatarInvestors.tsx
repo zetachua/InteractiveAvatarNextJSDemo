@@ -151,13 +151,26 @@ console.log(chatHistory,"chatHistory")
           "x-api-key": apiKey, // Include the API key in the request header
         },
       });
-      const token = await response.text();
+      const raw = await response.text();
+      let token = "";
 
-      console.log("Access Token:", token); // Log the token to verify
+      try {
+        const parsed = JSON.parse(raw);
+        token = parsed?.token || "";
+      } catch {
+        token = raw;
+      }
+
+      if (!response.ok || !token) {
+        const errMsg = `Failed to get HeyGen access token (${response.status}). ${raw || "Empty response"}`;
+        setDebug(errMsg);
+        throw new Error(errMsg);
+      }
 
       return token;
     } catch (error) {
       console.error("Error fetching access token:", error);
+      setDebug(`Error fetching access token: ${error instanceof Error ? error.message : "Unknown error"}`);
     }
 
     return "";
@@ -168,6 +181,10 @@ console.log(chatHistory,"chatHistory")
     setIsLoadingSession(true);
     setDisplayRubricAnalytics(false);
     const newToken = await fetchAccessToken();
+    if (!newToken) {
+      setIsLoadingSession(false);
+      return;
+    }
 
     avatar.current = new StreamingAvatar({
       token: newToken,
@@ -210,9 +227,11 @@ console.log(chatHistory,"chatHistory")
       });
       setChatMode("voice_mode");
       resetAllStates();
+      setDebug("Avatar session started successfully.");
       console.log("i did run")
     } catch (error) {
       console.error("Error starting avatar session:", error);
+      setDebug(`Error starting avatar session: ${error instanceof Error ? error.message : "Unknown error"}`);
     } finally {
       setIsLoadingSession(false);
     }
@@ -680,6 +699,26 @@ async function endSession() {
   return (
     <div className="flex flex-col "style={{display:'flex',justifyContent:'center',alignItems:'center'}} >
       <Card className="w-screen h-screen overflow-hidden border-none rounded-none" style={{background: 'linear-gradient(to top, #987B8C, #F0C7C2)'}}>
+        {!!debug && (
+          <div
+            style={{
+              position: "absolute",
+              top: "12px",
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 3000,
+              background: "rgba(0,0,0,0.75)",
+              color: "#fff",
+              borderRadius: "10px",
+              padding: "0.5rem 0.8rem",
+              maxWidth: "85%",
+              fontSize: "0.82rem",
+              whiteSpace: "pre-wrap",
+            }}
+          >
+            {debug}
+          </div>
+        )}
         <CardBody className="flex flex-col justify-center items-center">
           {stream ? (
             <div className="w-full justify-center items-center flex overflow-hidden" style={{flexDirection:'column'}}>

@@ -1,3 +1,4 @@
+import StreamingAvatar, { AvatarQuality, StreamingEvents } from "@heygen/streaming-avatar";
 import {
   Button,
   Card,
@@ -43,7 +44,6 @@ export default function InteractiveInvestors() {
   const [displayMediVRPitch,setDisplayMediVRPitch]=useState(false);
   const [displayConcretePitch,setDisplayConcretePitch]=useState(false);
   const [userInput, setUserInput] = useState<string>("");
-  const mediaStream = useRef<HTMLVideoElement>(null);
   const [chatHistory, setChatHistory] = useState<ChatHistory[]>([]);
   const [feedbackText,setFeedbackText]=useState('');
   const [audioTranscribing,setAudioTranscribing]=useState(false);
@@ -99,6 +99,17 @@ export default function InteractiveInvestors() {
   const [isBeginClock, setIsBeginClock] = useState<boolean>(false);
   const [isPitch, setIsPitch] = useState<boolean>(true);
   const [pauses, setPauses] = useState<any[]>([]);
+  const [isAvatarMode, setIsAvatarMode] = useState<boolean>(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [emojiSatisfaction, setEmojiSatisfaction] = useState<"satisfied" | "neutral" | "dissatisfied" | "">("");
+  const [feedbackReason, setFeedbackReason] = useState("");
+  const [pitchUnderstandingScore, setPitchUnderstandingScore] = useState<number>(0);
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  const [feedbackSubmitMessage, setFeedbackSubmitMessage] = useState("");
+  const [avatarApiKey, setAvatarApiKey] = useState("");
+  const [avatarStream, setAvatarStream] = useState<MediaStream>();
+  const avatarVideoRef = useRef<HTMLVideoElement>(null);
+  const avatarRef = useRef<StreamingAvatar | null>(null);
 
   // Recording and pitch analysis states
   const [isRecording, setIsRecording] = useState<boolean>(false);
@@ -126,6 +137,91 @@ export default function InteractiveInvestors() {
     }
   }, [timeLeft, isBeginClock]);
 
+  useEffect(() => {
+    if (avatarStream && avatarVideoRef.current) {
+      avatarVideoRef.current.srcObject = avatarStream;
+      avatarVideoRef.current.onloadedmetadata = () => {
+        avatarVideoRef.current?.play().catch(() => {
+          setDebug("Unable to autoplay avatar stream.");
+        });
+      };
+    }
+  }, [avatarStream]);
+
+  async function fetchAvatarAccessToken() {
+    try {
+      const response = await fetch("/api/get-access-token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": avatarApiKey,
+        },
+      });
+      const raw = await response.text();
+      if (!response.ok) {
+        throw new Error(raw || `Access token request failed (${response.status})`);
+      }
+      return raw;
+    } catch (error) {
+      setDebug(`Avatar token error: ${error instanceof Error ? error.message : "Unknown error"}`);
+      return "";
+    }
+  }
+
+  async function startAvatarSession() {
+    setIsLoadingSession(true);
+    const token = await fetchAvatarAccessToken();
+    if (!token) {
+      setIsLoadingSession(false);
+      return;
+    }
+
+    try {
+      avatarRef.current = new StreamingAvatar({
+        token,
+        basePath: "https://api.heygen.com",
+      });
+      avatarRef.current.on(StreamingEvents.STREAM_READY, (event) => {
+        setAvatarStream(event.detail);
+      });
+      avatarRef.current.on(StreamingEvents.STREAM_DISCONNECTED, () => {
+        setAvatarStream(undefined);
+      });
+
+      await avatarRef.current.createStartAvatar({
+        quality: AvatarQuality.High,
+        avatarName: "Anna_public_3_20240108",
+        disableIdleTimeout: true,
+      });
+      setDebug("Avatar session started.");
+    } catch (error) {
+      const errObj = error as any;
+      const extra =
+        errObj?.response?.data ||
+        errObj?.data ||
+        errObj?.body ||
+        errObj?.message ||
+        "Unknown error";
+      const extraText =
+        typeof extra === "string" ? extra : JSON.stringify(extra);
+      setDebug(`Error starting avatar session: ${extraText}`);
+    } finally {
+      setIsLoadingSession(false);
+    }
+  }
+
+  async function endAvatarSession() {
+    try {
+      await avatarRef.current?.stopAvatar();
+    } catch (error) {
+      setDebug(`Error ending avatar session: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setAvatarStream(undefined);
+      avatarRef.current = null;
+      setIsAvatarMode(false);
+    }
+  }
+
   async function startSession() {
     setLoadingRubric(false);
     setLoadingRubric1(false);
@@ -133,12 +229,13 @@ export default function InteractiveInvestors() {
     // setLoadingRubric3(false);
     
     setIsLoadingSession(true);
-    setStream(true);
     try {
+      setStream(true);
       resetAllStates();
 
     } catch (error) {
-      console.error("Error starting avatar session:", error);
+      console.error("Error starting session:", error);
+      setStream(false);
     } finally {
       setIsLoadingSession(false);
     }
@@ -206,6 +303,7 @@ export default function InteractiveInvestors() {
       pitchDeck: '',
       oralPresentation: ''
     });
+    setDebug("");
   }
 
   const toggleSpeechToText = () => {
@@ -365,6 +463,7 @@ export default function InteractiveInvestors() {
 async function endSession() {
   setStream(false);
   setIsBeginClock(false);
+  setShowFeedbackModal(true);
 
   try{
     fetchSentiment();
@@ -378,6 +477,50 @@ async function endSession() {
   }
 
 }
+
+const submitSessionFeedback = async () => {
+  if (!emojiSatisfaction || pitchUnderstandingScore < 1 || pitchUnderstandingScore > 5) {
+    setFeedbackSubmitMessage("Please select emoji satisfaction and a score from 1 to 5.");
+    return;
+  }
+
+  try {
+    setIsSubmittingFeedback(true);
+    setFeedbackSubmitMessage("");
+
+    const response = await fetch("/api/investorFeedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        emojiSatisfaction,
+        reason: feedbackReason,
+        pitchUnderstandingScore,
+        selectedModel,
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data?.error || data?.details?.message || "Failed to submit feedback");
+    }
+
+    setFeedbackSubmitMessage("Thanks! Feedback submitted.");
+    setTimeout(() => {
+      setShowFeedbackModal(false);
+      setEmojiSatisfaction("");
+      setFeedbackReason("");
+      setPitchUnderstandingScore(0);
+      setFeedbackSubmitMessage("");
+    }, 800);
+  } catch (error) {
+    console.error("Feedback submission error:", error);
+    setFeedbackSubmitMessage(error instanceof Error ? error.message : "Could not submit feedback. Please try again.");
+  } finally {
+    setIsSubmittingFeedback(false);
+  }
+};
+
+
 
   const fetchSentiment = async () =>{
     const responseSentiment = await fetch(`/api/pitchSentimentResponse`, {
@@ -489,9 +632,74 @@ async function endSession() {
     }
   };
 
+  if (isAvatarMode) {
+    return (
+      <div style={{ position: "relative" }}>
+        <Card className="w-screen h-screen overflow-hidden border-none rounded-none" style={{background: 'linear-gradient(to top, #987B8C, #F0C7C2)'}}>
+          {!!debug && (
+            <div style={{position:'absolute', top:'14px', left:'50%', transform:'translateX(-50%)', zIndex: 2000, background:'rgba(0,0,0,0.65)', color:'white', padding:'0.5rem 0.8rem', borderRadius:'10px', fontSize:'0.8rem'}}>
+              {debug}
+            </div>
+          )}
+          <CardBody className="flex flex-col justify-center items-center">
+            {avatarStream ? (
+              <>
+                <Button
+                  className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
+                  size="sm"
+                  variant="shadow"
+                  onClick={endAvatarSession}
+                  style={{ position: "absolute", top: "16px", right: "16px", zIndex: 50 }}
+                >
+                  Exit Avatar Mode
+                </Button>
+                <video
+                  ref={avatarVideoRef}
+                  autoPlay
+                  playsInline
+                  style={{ width: "90%", height: "80%", objectFit: "contain", borderRadius: "8px" }}
+                >
+                  <track kind="captions" />
+                </video>
+              </>
+            ) : (
+              <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center" style={{backgroundColor:'rgba(255,255,255,0.2)',borderRadius:'50px',padding:'2rem',maxHeight:'40%'}}>
+                <Input
+                  placeholder="Paste HeyGen API Key"
+                  value={avatarApiKey}
+                  onChange={(e) => setAvatarApiKey(e.target.value)}
+                />
+                <Button
+                  className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-full text-white"
+                  size="md"
+                  variant="shadow"
+                  onClick={startAvatarSession}
+                  isDisabled={!avatarApiKey || isLoadingSession}
+                >
+                  {isLoadingSession ? <Spinner size="sm" color="white" /> : "Start Avatar Session"}
+                </Button>
+                <Button
+                  variant="flat"
+                  onClick={() => setIsAvatarMode(false)}
+                >
+                  Back to Standard Mode
+                </Button>
+              </div>
+            )}
+          </CardBody>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col "style={{display:'flex',justifyContent:'center',alignItems:'center'}} >
       <Card className="w-screen h-screen overflow-hidden border-none rounded-none" style={{background: 'linear-gradient(to top, #987B8C, #F0C7C2)'}}>
+        {!!debug && (
+          <div style={{position:'absolute', top:'14px', left:'50%', transform:'translateX(-50%)', zIndex: 2000, background:'rgba(0,0,0,0.65)', color:'white', padding:'0.5rem 0.8rem', borderRadius:'10px', fontSize:'0.8rem'}}>
+            {debug}
+          </div>
+        )}
         <CardBody className="flex flex-col justify-center items-center">
           {stream ? (
             <>
@@ -508,20 +716,6 @@ async function endSession() {
               <CountdownTimer isTimeUp={isTimeUp} timeLeft={timeLeft} />
 
               <div className="w-full justify-center items-center flex overflow-hidden" style={{flexDirection:'column', marginTop: '50px'}}>
-                {/* <video
-                  ref={mediaStream}
-                  autoPlay
-                  playsInline
-                  style={{
-                    width: "90%",
-                    height: "80%",
-                    marginBottom:'4rem',
-                    objectFit: "contain",
-                    borderRadius:'5px',
-                  }}
-                >
-                  <track kind="captions" />
-                </video> */}
                 <ChatHistoryDisplay chatHistory={chatHistory}></ChatHistoryDisplay>
                 <div className="flex flex-col items-center" style={{flexDirection:'row'}}>
                   {/* Input field to capture user input */}
@@ -597,7 +791,17 @@ async function endSession() {
             </>
           ) : !isLoadingSession ? (
             <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center"style={{backgroundColor:'rgba(255,255,255,0.2)',borderRadius:'50px',padding:'2rem',maxHeight:'30%'}}>
+                <Button
+                  className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white w-full"
+                  size="md"
+                  variant="shadow"
+                  onClick={() => setIsAvatarMode(true)}
+                >
+                  Start Session with Avatar
+                </Button>
               <div className="flex flex-col gap-2 w-full" style={{position:'relative'}} >
+                <div style={{fontSize:'0.9rem', textAlign:'center', fontWeight:'500', color:'white',}}>Or</div>
+
                  <Select
                     placeholder="Select an AI Model"
                     size="md"
@@ -613,9 +817,7 @@ async function endSession() {
                     </SelectItem>
                   ))}
                 </Select>
-                
-              </div>
-              <Button
+                <Button
                 className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-full text-white"
                 size="md"
                 variant="shadow"
@@ -623,6 +825,8 @@ async function endSession() {
               >
                 Start session
               </Button>
+              </div>
+             
             </div>
           ) : (
             <Spinner color="default" size="lg" />
@@ -630,7 +834,7 @@ async function endSession() {
         </CardBody>
 
         {/* {sentimentJson && <FeedbackPieChart data={sentimentJson} overallScore={sentimentScore} />} */}
-        {(sentimentJson && rubricJson2 && assessment.pronunciation && assessment.intonation && assessment.fluency) ? 
+        {(sentimentJson && rubricJson2 && !showFeedbackModal) ? 
           <div id='evaluation' style={{fontSize: '0.8rem', position:'absolute',top:'50%',left:'50%', backgroundColor:'rgba(50,51,52)',borderRadius:'50px',transform:'translate(-50%,-50%)',padding:'2rem',width:'80%',maxHeight:'900px', minWidth: '600px', overflowY:'scroll'}}>
             <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'flex-start' }}>
               <Button
@@ -712,7 +916,25 @@ async function endSession() {
               { displayGrantPitch && <RubricInvestorPiechartExample title={'Grant'} specificFeedback={grantedPitchRubrics()} />}
               { displayMediVRPitch && <RubricInvestorPiechartExample title={'MediVR'} specificFeedback={mediVRPitchRubrics()} />}
               { displayConcretePitch && <RubricInvestorPiechartExample title={'Concrete'} specificFeedback={lookupPitchRubrics()} />}
-              <SentimentInvestorPiechart pronunciationAssessment={assessment.pronunciation} intonationAssessment={assessment.intonation} fluencyAssessment={assessment.fluency} data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback}></SentimentInvestorPiechart>
+              {(assessment.pronunciation && assessment.intonation && assessment.fluency) ? (
+                <SentimentInvestorPiechart
+                  pronunciationAssessment={assessment.pronunciation}
+                  intonationAssessment={assessment.intonation}
+                  fluencyAssessment={assessment.fluency}
+                  data={sentimentMetrics}
+                  overallScore={sentimentScore}
+                  feedbackSummary={feedbackText}
+                  specificFeedback={sentimentSpecificFeedback}
+                />
+              ) : (
+                <div style={{color: 'white', padding: '1rem', maxWidth: '420px'}}>
+                  <b>Sentiment Analysis Loaded</b>
+                  <p style={{marginTop: '0.5rem'}}>
+                    Voice-specific assessment is unavailable for this run.
+                    The pitch sentiment and rubric analysis are still shown.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
          :
@@ -776,6 +998,114 @@ async function endSession() {
            )} 
         </CardFooter>>*/}
       </Card>
+      {showFeedbackModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 3000,
+          }}
+        >
+          <div
+            style={{
+              width: "90%",
+              maxWidth: "520px",
+              background: "#1f1f1f",
+              borderRadius: "16px",
+              padding: "1.2rem",
+              color: "white",
+            }}
+          >
+            <h3 style={{ fontWeight: 700, marginBottom: "0.7rem" }}>Session Feedback</h3>
+            <p style={{ fontSize: "0.9rem", marginBottom: "0.7rem" }}>
+              1) Emoji satisfaction
+            </p>
+            <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.9rem" }}>
+              <Button
+                size="sm"
+                onClick={() => setEmojiSatisfaction("satisfied")}
+                className={emojiSatisfaction === "satisfied" ? "bg-green-500 text-white" : ""}
+              >
+                Satisfied
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setEmojiSatisfaction("neutral")}
+                className={emojiSatisfaction === "neutral" ? "bg-yellow-500 text-black" : ""}
+              >
+                Neutral
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => setEmojiSatisfaction("dissatisfied")}
+                className={emojiSatisfaction === "dissatisfied" ? "bg-red-500 text-white" : ""}
+              >
+                Dissatisfied
+              </Button>
+            </div>
+
+            <p style={{ fontSize: "0.9rem", marginBottom: "0.4rem" }}>
+              2) Short reason
+            </p>
+            <textarea
+              value={feedbackReason}
+              onChange={(e) => setFeedbackReason(e.target.value)}
+              placeholder="Tell us briefly why you selected that emoji..."
+              style={{
+                width: "100%",
+                minHeight: "80px",
+                borderRadius: "10px",
+                background: "#2f2f2f",
+                color: "white",
+                border: "1px solid #555",
+                padding: "0.6rem",
+                marginBottom: "0.9rem",
+              }}
+            />
+
+            <p style={{ fontSize: "0.9rem", marginBottom: "0.4rem" }}>
+              3) Improvement in business pitch understanding (1-5)
+            </p>
+            <div style={{ display: "flex", gap: "0.4rem", marginBottom: "1rem", flexWrap: "wrap" }}>
+              {[1, 2, 3, 4, 5].map((score) => (
+                <Button
+                  key={score}
+                  size="sm"
+                  onClick={() => setPitchUnderstandingScore(score)}
+                  className={pitchUnderstandingScore === score ? "bg-indigo-500 text-white" : ""}
+                >
+                  {score}
+                </Button>
+              ))}
+            </div>
+
+            {!!feedbackSubmitMessage && (
+              <p style={{ fontSize: "0.85rem", marginBottom: "0.6rem" }}>{feedbackSubmitMessage}</p>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.5rem" }}>
+              <Button
+                variant="flat"
+                onClick={() => setShowFeedbackModal(false)}
+                isDisabled={isSubmittingFeedback}
+              >
+                Skip
+              </Button>
+              <Button
+                className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white"
+                onClick={submitSessionFeedback}
+                isDisabled={isSubmittingFeedback}
+              >
+                {isSubmittingFeedback ? <Spinner size="sm" color="white" /> : "Submit"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
        {/* <p className="font-mono text-right">
         <span className="font-bold">Console:</span>
         <br />

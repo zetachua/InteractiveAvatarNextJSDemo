@@ -19,7 +19,7 @@ const sonar = {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'sonar-reasoning', // Updated to match the template
+            model: 'sonar', // Updated to match the template
             ...restParams
           })
         });
@@ -149,7 +149,7 @@ export const getSonarChatCompletionForMetric = async (chatHistory: any, prompt: 
             content: 'Please evaluate the pitch transcript based on the provided instructions.',
         },
       ],
-      model: 'sonar-reasoning'
+      model: 'sonar'
     });
   };
 
@@ -169,7 +169,7 @@ export const getGroqChatCompletionForMetric = async (chatHistory: any, prompt: s
             content: 'Please evaluate the pitch transcript based on the provided instructions.',
           },
         ],
-        model:'Deepseek-R1-Distill-Llama-70b', 
+        model:'openai/gpt-oss-120b', 
       });
   };
 

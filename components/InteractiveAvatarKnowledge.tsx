@@ -50,7 +50,7 @@ export default function InteractiveAvatarKnowledge() {
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const transcriptRef = useRef<string>(''); 
-  const [selectedModel, setSelectedModel] = useState<string>("Deepseek-R1-Distill-Llama-70b");
+  const [selectedModel, setSelectedModel] = useState<string>("openai/gpt-oss-120b");
 
   async function fetchAccessToken() {
     try {

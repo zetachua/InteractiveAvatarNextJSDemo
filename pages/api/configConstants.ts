@@ -18,15 +18,13 @@ export const baba_house= {
 // Models
 export const models = [
   "Sharktank",
-  "Deepseek-R1-Distill-Llama-70b",
-  "llama3-8b-8192"
+  "openai/gpt-oss-120b"
 ];
 
 // "sao10k/l3.1-euryale-70b",
 
 // export const groqModels = [
-//   'Deepseek-R1-Distill-Llama-70b',
-//   'llama3-8b-8192',
+//   'openai/gpt-oss-120b',
 // ];
 
 export const concretePitch=

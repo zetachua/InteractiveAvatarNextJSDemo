@@ -1,15 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Switch } from "@nextui-org/react"; // Added Switch from NextUI
-import InteractiveAvatar from "@/components/InteractiveAvatar";
-import InteractiveAvatarKnowledge from "@/components/InteractiveAvatarKnowledge";
-import InteractiveAvatarInvestors from "@/components/InteractiveAvatarInvestors";
+// import InteractiveAvatar from "@/components/InteractiveAvatar";
+// import InteractiveAvatarKnowledge from "@/components/InteractiveAvatarKnowledge";
+// import InteractiveAvatarInvestors from "@/components/InteractiveAvatarInvestors";
 import InteractiveInvestors from "@/components/InteractiveInvestors";
 
 export default function App() {
-  const [activeView, setActiveView] = useState("investors");
-  const [withAvatar, setWithAvatar] = useState(false); // State for toggle
 
   return (
     <div className="w-screen h-screen relative">
@@ -72,11 +69,7 @@ export default function App() {
         )}
       </div> */}
        <div className="w-full h-full">
-       { withAvatar ? (
-          <InteractiveAvatarInvestors />
-        ) : (
           <InteractiveInvestors />
-        )}
       </div>
     </div>
   );
