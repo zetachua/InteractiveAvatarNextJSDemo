@@ -1,10 +1,14 @@
 import { ChatHistory } from './../../components/KnowledgeClasses';
 import { NextApiRequest, NextApiResponse } from 'next';
 import { qnaFilter } from './completionFilterFunctions';
-// import { models } from './configConstants';
+import { models } from './configConstants';
 import Groq from 'groq-sdk';
 import { qnaFlarePrompt, qnaPrompt, qnaPromptEngineered } from './prompts';
-import { getSonarChatCompletionForMetric, getLocalChatCompletion } from './pitchEvaluationResponseShared';
+import {
+  getSonarChatCompletionForMetric,
+  getLocalChatCompletion,
+  truncateChatMessagesForLlm,
+} from './pitchEvaluationResponseShared';
 
 const groq = new Groq ({ apiKey: process.env.GROQ_API_KEY });
 
@@ -38,12 +42,8 @@ try {
   console.log(chatHistory,userInput,"what is the chathistory")
 
   if (selectedModel==="Sharktank" ){
-
-    // Fine tuned model version
-    //  responseContent=await finetunedSharktank(userInput,chatHistory); 
-
-    // Prompt engineering model version
-     responseContent= await promptEngineeringSharktank(userInput, chatHistory);
+    // Local fine-tuned model (flare) → Perplexity Sonar (grounded follow-up JSON)
+    responseContent = await finetunedSharktank(userInput, chatHistory);
   }
   else{
 
@@ -75,9 +75,9 @@ try {
 
 // Function to fetch chat completion from Groq
 const getGroqChatCompletion = async (userInput: string, chatHistory: any, selectedModel:any) => {
-  const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
+  const validChatHistory = truncateChatMessagesForLlm(chatHistory);
 
-  let selectedPrompt= qnaPrompt("",userInput,chatHistory);
+  let selectedPrompt= qnaPrompt("",userInput,validChatHistory);
 
   console.log("selected prompt qna response",selectedPrompt)
 
@@ -95,22 +95,23 @@ const getGroqChatCompletion = async (userInput: string, chatHistory: any, select
       ],
       response_format: { type: "json_object" },
       model: selectedModel,
+      max_tokens: 400,
     });
   
 };
 
 const finetunedSharktank =async (userInput:string,chatHistory:any[]) => {
-
-      const prompt=qnaFlarePrompt(userInput,chatHistory);
+      const h = truncateChatMessagesForLlm(chatHistory);
+      const prompt=qnaFlarePrompt(userInput,h);
 
       const [completion1] = await Promise.all([
-        getLocalChatCompletion(chatHistory, prompt,"sharktank-model"), //sharktank-model is the first version
+        getLocalChatCompletion(h, prompt,"sharktank-model"), //sharktank-model is the first version
       ]);
 
       const responseContent1 = completion1.message.content;
 
-      const promptForFlare=qnaPrompt(responseContent1,userInput,chatHistory);
-      const completion3 = await getSonarChatCompletionForMetric(chatHistory,promptForFlare);
+      const promptForFlare=qnaPrompt(responseContent1,userInput,h);
+      const completion3 = await getSonarChatCompletionForMetric(h, promptForFlare);
       return completion3.choices[0].message.content;
 }
 

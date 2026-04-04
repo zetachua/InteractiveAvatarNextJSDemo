@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { pitchEvaluationPromptMetric1} from './prompts';
 import {metric1ResultInvestorFilter } from './completionFilterFunctions';
-import { cleanResponse, getSonarChatCompletionForMetric, transformFeedback } from './pitchEvaluationResponseShared';
+import { buildCitationItemsFromSonarResponse, cleanResponse, getSonarChatCompletionForMetric, transformFeedback } from './pitchEvaluationResponseShared';
 
 const pitchEvaluationResponseMetric1 = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
@@ -30,7 +30,8 @@ const pitchEvaluationResponseMetric1 = async (req: NextApiRequest, res: NextApiR
           rubricSummary2,
           rubricMetrics2,
           rubricSpecificFeedback2,
-          citations
+          citations,
+          citationItems: rubricResult?.citationItems ?? [],
         });
 
     } catch (error) {
@@ -78,11 +79,13 @@ const fetchMetric1 = async (currentMarketStats:string,chatHistory: any[]) => {
     }
 
     const citations = metric1Result?.citations || [];
-    
+    const citationItems = buildCitationItemsFromSonarResponse(metric1Result);
+
     const result = {
       rubricData: filteredResponse,
-      citations: citations,
-    }; 
+      citations,
+      citationItems,
+    };
     console.log('metric1 final result',result)
     return result;
 

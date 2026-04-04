@@ -1,9 +1,11 @@
 interface CountdownTimerProps {
     timeLeft: number;
     isTimeUp: boolean;
+    /** Shown under the timer (e.g. rotating status while the AI reply loads). */
+    statusHint?: string;
   }
   
-  const CountdownTimer = ({ timeLeft, isTimeUp }: CountdownTimerProps) => {
+  const CountdownTimer = ({ timeLeft, isTimeUp, statusHint }: CountdownTimerProps) => {
     const formatTime = (seconds: number) => {
       const minutes = Math.floor(seconds / 60);
       const secs = seconds % 60;
@@ -31,6 +33,22 @@ interface CountdownTimerProps {
           zIndex: 1000,
         }}
       >
+        {statusHint ? (
+          <p
+            style={{
+              fontSize: "0.72rem",
+              fontWeight: 500,
+              marginTop: "1rem",
+              marginBottom:"1.5rem",
+              textAlign: "center",
+              lineHeight: 1.35,
+              color: "rgba(255,255,255,0.88)",
+              maxWidth: "200px",
+            }}
+          >
+            {statusHint}
+          </p>
+        ) : null}
         <h2 style={{ fontSize: "0.92rem", fontWeight: 700, textAlign: "center", marginBottom: "0.2rem" }}>
           Pitch Countdown Timer
         </h2>
@@ -41,6 +59,7 @@ interface CountdownTimerProps {
             {formatTime(timeLeft)}
           </p>
         )}
+        
       </div>
     );
   };

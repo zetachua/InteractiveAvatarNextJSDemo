@@ -1,4 +1,4 @@
-import { LiveAvatarSession, SessionEvent } from "@heygen/liveavatar-web-sdk";
+import { CommandEventsEnum, LiveAvatarSession, SessionEvent } from "@heygen/liveavatar-web-sdk";
 import {
   Button,
   Card,
@@ -16,15 +16,89 @@ interface Pause {
   end: number;
 }
 
-import { ChatHistory, FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
+import { ChatHistory, FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricCitationItem, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
 import { Microphone } from "@phosphor-icons/react";
-import { concretePitchRubrics, grantedPitchRubrics, lookupPitchRubrics, mediVRPitchRubrics, models } from '../pages/api/configConstants'
+import {
+  ANALYTICS_LOADING_ROTATING_MESSAGES,
+  CHAT_WAITING_ROTATING_MESSAGES,
+  concretePitchRubrics,
+  grantedPitchRubrics,
+  lookupPitchRubrics,
+  mediVRPitchRubrics,
+  models,
+} from '../pages/api/configConstants';
 import RubricInvestorPiechart2 from "./RubricInvestorPieChart2";
 import CountdownTimer from "./Countdown";
 import SentimentInvestorPiechart from "./SentimentInvestorPieChart";
 import ChatHistoryDisplay from "./ChatHistoryDisplay";
 import RubricInvestorPiechartExample from "./RubricInvestorPieChartExample";
 import Introduction from "./Introduction";
+import {
+  buildAnalyticsReportHtml,
+  downloadHtmlFile,
+  mergeRubricSummaries,
+  splitSessionAndFrameworkCitations,
+} from "../utils/analyticsExport";
+
+type MetricsSessionPayload = {
+  rubricSummary2: string;
+  rubricJson2: Rubric2InvestorData | null;
+  rubricAllRatings2: number;
+  rubricSpecificFeedback2: Rubric2InvestorSpecificData;
+  competitorCounterplay2: string;
+};
+
+/** Same topic the SDK uses for LiveKit agent commands (see @heygen/liveavatar-web-sdk `LIVEKIT_COMMAND_CHANNEL_TOPIC`). */
+const LIVEKIT_AGENT_CONTROL_TOPIC = "agent-control";
+
+type LiveAvatarInternalRoom = {
+  state: string;
+  localParticipant: {
+    publishData: (data: Uint8Array, opts: { reliable: boolean; topic: string }) => Promise<void>;
+  };
+};
+
+/**
+ * Makes the LiveAvatar speak `text`. Uses LiveKit `publishData` so it works when the session
+ * uses a control WebSocket (the SDK's `repeat()` path does not forward speak_text over WS).
+ */
+function sendAvatarSpeakText(session: LiveAvatarSession, rawText: unknown) {
+  const text = String(rawText ?? "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return;
+  const maxLen = 3500;
+  const payload = text.length > maxLen ? `${text.slice(0, maxLen)}…` : text;
+
+  try {
+    session.interrupt();
+  } catch {
+    /* ignore — no utterance in progress or session edge case */
+  }
+
+  const room = (session as unknown as { room?: LiveAvatarInternalRoom }).room;
+  if (room?.state === "connected") {
+    const commandEvent = {
+      event_id: crypto.randomUUID(),
+      event_type: CommandEventsEnum.AVATAR_SPEAK_TEXT,
+      text: payload,
+    };
+    const encoded = new TextEncoder().encode(JSON.stringify(commandEvent));
+    void room.localParticipant
+      .publishData(encoded, {
+        reliable: true,
+        topic: LIVEKIT_AGENT_CONTROL_TOPIC,
+      })
+      .catch((err) => console.warn("LiveAvatar speak_text publishData failed:", err));
+    return;
+  }
+
+  try {
+    session.repeat(payload);
+  } catch (e) {
+    console.warn("Avatar speak (repeat) failed:", e);
+  }
+}
 
 export default function InteractiveInvestors() {
   const [isLoadingSession, setIsLoadingSession] = useState(false);
@@ -50,7 +124,10 @@ export default function InteractiveInvestors() {
     oralPresentation: ''
   });
   const [rubricSummary2, setRubricSummary2] = useState('');
-  const [rubricCitations2, setRubricCitations2] = useState('');
+  const [competitorCounterplay2, setCompetitorCounterplay2] = useState('');
+  const [investorVerdict, setInvestorVerdict] = useState('');
+  const [investorVerdictLoading, setInvestorVerdictLoading] = useState(false);
+  const [rubricCitations2, setRubricCitations2] = useState<RubricCitationItem[] | null>(null);
   const [rubricSpecificFeedback2, setRubricSpecificFeedback2] = useState<Rubric2InvestorSpecificData>({
     elevatorPitch: '',
     team: '',
@@ -83,8 +160,8 @@ export default function InteractiveInvestors() {
   const [rubricJson2, setRubricJson2] = useState<Rubric2InvestorData | null>(null);
   const [rubricAllRatings2, setRubricAllRatings2] = useState<number>(0);
   const transcriptRef = useRef<string>('');
-  const [selectedModel, setSelectedModel] = useState<string>('');
-  const [timeLeft, setTimeLeft] = useState<number>(300);
+  const [selectedModel, setSelectedModel] = useState<string>('Sharktank');
+  const [timeLeft, setTimeLeft] = useState<number>(500);
   const [isTimeUp, setIsTimeUp] = useState<boolean>(false);
   const [isBeginClock, setIsBeginClock] = useState<boolean>(false);
   const [isPitch, setIsPitch] = useState<boolean>(true);
@@ -97,8 +174,13 @@ export default function InteractiveInvestors() {
   const [isAvatarLoading, setIsAvatarLoading] = useState(false);
   const avatarVideoRef = useRef<HTMLVideoElement>(null);
   const avatarRef = useRef<LiveAvatarSession | null>(null);
+  const isAvatarModeRef = useRef(false);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  /** After End session: wait until analytics are ready, then 30s before session feedback modal. */
+  const [awaitingFeedbackAfterAnalytics, setAwaitingFeedbackAfterAnalytics] = useState(false);
+  const [chatWaitTipIndex, setChatWaitTipIndex] = useState(0);
+  const [analyticsLoadTipIndex, setAnalyticsLoadTipIndex] = useState(0);
   const [emojiSatisfaction, setEmojiSatisfaction] = useState<"satisfied" | "neutral" | "dissatisfied" | "">("");
   const [feedbackReason, setFeedbackReason] = useState("");
   const [pitchUnderstandingScore, setPitchUnderstandingScore] = useState<number>(0);
@@ -120,6 +202,66 @@ export default function InteractiveInvestors() {
     displayLookupPitch || displayGrantPitch || displayConcretePitch || displayMediVRPitch;
 
   useEffect(() => {
+    isAvatarModeRef.current = isAvatarMode;
+  }, [isAvatarMode]);
+
+  useEffect(() => {
+    if (!isLoadingRepeat) return;
+    const id = window.setInterval(() => {
+      setChatWaitTipIndex((i) => (i + 1) % CHAT_WAITING_ROTATING_MESSAGES.length);
+    }, 3200);
+    return () => clearInterval(id);
+  }, [isLoadingRepeat]);
+
+  const analyticsLoadingAfterEndSession =
+    awaitingFeedbackAfterAnalytics &&
+    (!sentimentJson || !rubricJson2 || rubricCitations2 === null || loadingRubric);
+
+  useEffect(() => {
+    if (!analyticsLoadingAfterEndSession) return;
+    const id = window.setInterval(() => {
+      setAnalyticsLoadTipIndex((i) => (i + 1) % ANALYTICS_LOADING_ROTATING_MESSAGES.length);
+    }, 3200);
+    return () => clearInterval(id);
+  }, [analyticsLoadingAfterEndSession]);
+
+  useEffect(() => {
+    if (!awaitingFeedbackAfterAnalytics) return;
+    if (!sentimentJson || !rubricJson2) return;
+    if (rubricCitations2 === null || loadingRubric) return;
+    const t = window.setTimeout(() => {
+      setShowFeedbackModal(true);
+      setAwaitingFeedbackAfterAnalytics(false);
+    }, 30000);
+    return () => clearTimeout(t);
+  }, [awaitingFeedbackAfterAnalytics, sentimentJson, rubricJson2, rubricCitations2, loadingRubric]);
+
+  /** Extend session past the ~5min idle window (HTTP + LITE WebSocket keep_alive per LiveAvatar docs). */
+  useEffect(() => {
+    if (!isAvatarConnected || !avatarRef.current) return;
+    const session = avatarRef.current;
+    const ping = () => {
+      void session.keepAlive().catch((err) => console.warn("LiveAvatar keepAlive:", err));
+      const ws = (session as unknown as { _sessionEventSocket?: WebSocket })._sessionEventSocket;
+      if (ws?.readyState === WebSocket.OPEN) {
+        try {
+          ws.send(
+            JSON.stringify({
+              type: "session.keep_alive",
+              event_id: crypto.randomUUID(),
+            }),
+          );
+        } catch {
+          /* ignore */
+        }
+      }
+    };
+    ping();
+    const id = setInterval(ping, 2 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [isAvatarConnected]);
+
+  useEffect(() => {
     if (isBeginClock) {
       if (timeLeft <= 0) {
         setIsTimeUp(true);
@@ -133,12 +275,17 @@ export default function InteractiveInvestors() {
     }
   }, [timeLeft, isBeginClock]);
 
-  // Attach avatar stream to video element once both are ready
+  // Attach stream once LiveKit has tracks AND the session UI has mounted the <video> (stream === true).
+  // If we only listened to isAvatarConnected, attach would run on the setup screen where there is no video node.
   useEffect(() => {
-    if (isAvatarConnected && avatarVideoRef.current && avatarRef.current) {
-      avatarRef.current.attach(avatarVideoRef.current);
+    if (!stream || !isAvatarMode || !isAvatarConnected || !avatarRef.current || !avatarVideoRef.current) {
+      return;
     }
-  }, [isAvatarConnected]);
+    avatarRef.current.attach(avatarVideoRef.current);
+    void avatarVideoRef.current.play().catch(() => {
+      /* autoplay policies; attach still binds tracks */
+    });
+  }, [stream, isAvatarMode, isAvatarConnected]);
 
   async function fetchAvatarAccessToken() {
     try {
@@ -233,7 +380,15 @@ export default function InteractiveInvestors() {
       });
       const data = await response.json();
       if (data.chatHistory !== undefined) setChatHistory(data.chatHistory);
-      if (data.questionResponse !== undefined) setDisplayText(data.questionResponse);
+      if (data.questionResponse != null && data.questionResponse !== "") {
+        setDisplayText(data.questionResponse);
+        // Ref + microtask: fresh mode flag after await, and run after the current task so the room stays stable.
+        const session = avatarRef.current;
+        const reply = data.questionResponse;
+        if (isAvatarModeRef.current && session) {
+          queueMicrotask(() => sendAvatarSpeakText(session, reply));
+        }
+      }
     } catch (error) {
       console.error("Error fetching LLM response:", error);
       setDebug("Failed to fetch response from LLM");
@@ -244,7 +399,7 @@ export default function InteractiveInvestors() {
 
   const resetAllStates = () => {
     setIsRecording(false);
-    setTimeLeft(300);
+    setTimeLeft(500);
     setIsTimeUp(false);
     setIsBeginClock(false);
     setIsPitch(true);
@@ -254,11 +409,28 @@ export default function InteractiveInvestors() {
     setRubricSummary('');
     setRubricJson(null);
     setRubricJson2(null);
+    setRubricSummary2('');
+    setRubricAllRatings2(0);
+    setRubricCitations2(null);
+    setCompetitorCounterplay2('');
+    setInvestorVerdict('');
+    setInvestorVerdictLoading(false);
+    setAwaitingFeedbackAfterAnalytics(false);
     setSentimentScore(0);
     setRubricAllRatings(0);
     setSentimentJson(null);
     setSentimentMetrics({ clarity: 0, relevance: 0, depth: 0, neutrality: 0, engagement: 0 });
     setSentimentSpecificFeedback({ clarity: "", relevance: "", depth: "", neutrality: "", engagement: "" });
+    setRubricSpecificFeedback2({
+      elevatorPitch: '',
+      team: '',
+      marketOpportunity: '',
+      marketSize: '',
+      solutionValueProposition: '',
+      competitivePosition: '',
+      tractionAwards: '',
+      revenueModel: '',
+    });
     setRubricSpecificFeedback({ marketValidation: '', pitchDeck: '', oralPresentation: '' });
     setDebug("");
   }
@@ -371,16 +543,63 @@ export default function InteractiveInvestors() {
   async function endSession() {
     setStream(false);
     setIsBeginClock(false);
-    setShowFeedbackModal(true);
+    setShowFeedbackModal(false);
+    setAwaitingFeedbackAfterAnalytics(true);
     // Also end avatar session if active
     if (avatarRef.current) await endAvatarSession();
     try {
-      fetchSentiment();
-      fetchAllMetrics();
+      const [sentimentPayload, metricsPayload] = await Promise.all([fetchSentiment(), fetchAllMetrics()]);
+      if (metricsPayload) {
+        await requestInvestorVerdict(metricsPayload, sentimentPayload);
+      }
     } catch (error) {
       console.error('Error fetching pitch sentiment and rubric response:', error);
     }
   }
+
+  const downloadAnalyticsPage = async () => {
+    const sessionCitations = rubricCitations2 ?? [];
+    const { combined } = splitSessionAndFrameworkCitations(sessionCitations);
+    const exportPayload = {
+      rubricSummary: rubricSummary2,
+      rubricOverallScore: rubricAllRatings2,
+      rubricMetrics: rubricJson2,
+      rubricSpecificFeedback: rubricSpecificFeedback2,
+      citations: sessionCitations,
+      competitorCounterplay: competitorCounterplay2,
+      investorVerdict,
+      sentimentScore,
+      sentimentMetrics,
+      sentimentSummary: feedbackText,
+      sentimentSpecificFeedback,
+      chatHistory,
+      assessment,
+    };
+    const html = buildAnalyticsReportHtml(exportPayload, "Pitch analytics report");
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    try {
+      const saveRes = await fetch("/api/savePitchAnalyticsReport", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          html,
+          selectedModel: selectedModel,
+          payload: {
+            ...exportPayload,
+            citationsCombinedCount: combined.length,
+            generatedAt: new Date().toISOString(),
+          },
+        }),
+      });
+      if (!saveRes.ok) {
+        const errBody = await saveRes.json().catch(() => ({}));
+        console.warn("savePitchAnalyticsReport:", saveRes.status, errBody);
+      }
+    } catch (e) {
+      console.warn("savePitchAnalyticsReport failed (download still proceeds):", e);
+    }
+    downloadHtmlFile(html, `pitch-analytics-${stamp}.html`);
+  };
 
   const submitSessionFeedback = async () => {
     if (!emojiSatisfaction || pitchUnderstandingScore < 1 || pitchUnderstandingScore > 5) {
@@ -412,27 +631,119 @@ export default function InteractiveInvestors() {
     }
   };
 
-  const fetchSentiment = async () => {
-    const responseSentiment = await fetch(`/api/pitchSentimentResponse`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userInput, chatHistory, selectedModel }),
-    });
-    const dataSentiment = await responseSentiment.json();
-    if (dataSentiment?.sentimentSummary !== undefined) setFeedbackText(dataSentiment.sentimentSummary);
-    if (dataSentiment?.sentimentSpecifics !== undefined) setSentimentSpecificFeedback(dataSentiment.sentimentSpecifics);
-    if (dataSentiment?.sentimentMetrics !== undefined) {
-      const updateSentimentJson = mergeJsons(sentimentJson, dataSentiment.sentimentMetrics);
-      setSentimentJson(updateSentimentJson);
-      setSentimentMetrics(dataSentiment.sentimentMetrics);
-    }
-    if (dataSentiment.sentimentScore !== undefined) setSentimentScore(dataSentiment.sentimentScore);
+  type SentimentSessionPayload = {
+    sentimentScore: number;
+    sentimentSummary: string;
+    sentimentMetrics: FeedbackMetricData;
+    sentimentSpecifics: FeedbackSpecificMetrics;
   };
 
-  const fetchAllMetrics = async () => {
+  const requestInvestorVerdict = async (
+    metrics: MetricsSessionPayload,
+    sentiment: SentimentSessionPayload | null,
+  ) => {
+    setInvestorVerdict('');
+    setInvestorVerdictLoading(true);
+    try {
+      const r = await fetch('/api/pitchInvestorVerdict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rubricOverallScore: metrics.rubricAllRatings2,
+          rubricSummary: metrics.rubricSummary2,
+          rubricMetrics: metrics.rubricJson2,
+          rubricSpecificFeedback: metrics.rubricSpecificFeedback2,
+          sentimentOverallScore: sentiment?.sentimentScore ?? 0,
+          sentimentSummary: sentiment?.sentimentSummary ?? '',
+          sentimentMetrics: sentiment?.sentimentMetrics ?? {
+            clarity: 0,
+            relevance: 0,
+            depth: 0,
+            neutrality: 0,
+            engagement: 0,
+          },
+        }),
+      });
+      const d = await r.json();
+      if (typeof d.investorVerdict === 'string' && d.investorVerdict.trim()) {
+        setInvestorVerdict(d.investorVerdict.trim());
+      }
+    } catch (e) {
+      console.warn('Investor verdict request failed:', e);
+    } finally {
+      setInvestorVerdictLoading(false);
+    }
+  };
+
+  const fetchSentiment = async (): Promise<SentimentSessionPayload | null> => {
+    try {
+      const responseSentiment = await fetch(`/api/pitchSentimentResponse`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userInput, chatHistory, selectedModel }),
+      });
+      const dataSentiment = await responseSentiment.json();
+      const sentimentSummary =
+        typeof dataSentiment?.sentimentSummary === 'string' ? dataSentiment.sentimentSummary : '';
+      const sentimentScore = typeof dataSentiment?.sentimentScore === 'number' ? dataSentiment.sentimentScore : 0;
+      const sentimentMetricsNext: FeedbackMetricData = dataSentiment?.sentimentMetrics ?? {
+        clarity: 0,
+        relevance: 0,
+        depth: 0,
+        neutrality: 0,
+        engagement: 0,
+      };
+      const sentimentSpecificsNext: FeedbackSpecificMetrics = dataSentiment?.sentimentSpecifics ?? {
+        clarity: '',
+        relevance: '',
+        depth: '',
+        neutrality: '',
+        engagement: '',
+      };
+
+      if (dataSentiment?.sentimentSummary !== undefined) setFeedbackText(sentimentSummary);
+      if (dataSentiment?.sentimentSpecifics !== undefined) setSentimentSpecificFeedback(sentimentSpecificsNext);
+      if (dataSentiment?.sentimentMetrics !== undefined) {
+        const prev = sentimentJson;
+        const mergedMetrics = mergeJsons(
+          {
+            clarity: prev?.clarity ?? 0,
+            relevance: prev?.relevance ?? 0,
+            depth: prev?.depth ?? 0,
+            neutrality: prev?.neutrality ?? 0,
+            engagement: prev?.engagement ?? 0,
+          },
+          sentimentMetricsNext,
+        );
+        setSentimentJson({
+          ...(prev ?? {
+            overallScore: 0,
+            feedbackSummary: '',
+            specificFeedback: { clarity: '', relevance: '', depth: '', neutrality: '', engagement: '' },
+          }),
+          ...mergedMetrics,
+        });
+        setSentimentMetrics(sentimentMetricsNext);
+      }
+      if (dataSentiment.sentimentScore !== undefined) setSentimentScore(sentimentScore);
+
+      return {
+        sentimentScore,
+        sentimentSummary,
+        sentimentMetrics: sentimentMetricsNext,
+        sentimentSpecifics: sentimentSpecificsNext,
+      };
+    } catch (e) {
+      console.error('fetchSentiment', e);
+      return null;
+    }
+  };
+
+  const fetchAllMetrics = async (): Promise<MetricsSessionPayload | null> => {
     setLoadingRubric(true);
     setLoadingRubric1(true);
     setLoadingRubric2(true);
+    setRubricCitations2(null);
     try {
       const [ragSonar] = await Promise.all([
         fetch(`/api/pitchEvaluationResponseRAG`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chatHistory }) }),
@@ -447,17 +758,36 @@ export default function InteractiveInvestors() {
       const dataMetric2 = await responseMetric2.json();
       if (dataMetric1) setLoadingRubric1(false);
       if (dataMetric2) setLoadingRubric2(false);
-      const aggregatedSummary = [dataMetric1.rubricSummary2, dataMetric2.rubricSummary2].filter(Boolean).join(' ');
+      const aggregatedSummary = mergeRubricSummaries([dataMetric1.rubricSummary2, dataMetric2.rubricSummary2]);
       const aggregatedMetrics = { ...dataMetric1.rubricMetrics2, ...dataMetric2.rubricMetrics2 };
-      const aggregatedCitations = [dataMetric1.citations, dataMetric2.citations].filter(Boolean).join(' ');
+      const rawCitationItems: RubricCitationItem[] = [
+        ...(Array.isArray(dataMetric1.citationItems) ? dataMetric1.citationItems : []),
+        ...(Array.isArray(dataMetric2.citationItems) ? dataMetric2.citationItems : []),
+      ];
+      const dedupedCitations = Array.from(new Map(rawCitationItems.map((c) => [c.url, c])).values());
       const scores = [dataMetric1.rubricScore2, dataMetric2.rubricScore2].filter(score => score !== 0);
       const aggregatedScores = scores.length > 0 ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
       const aggregatedFeedback = { ...(dataMetric1.rubricSpecificFeedback2 || {}), ...(dataMetric2.rubricSpecificFeedback2 || {}) };
+      const counter =
+        typeof dataMetric2.competitorCounterplay2 === 'string' ? dataMetric2.competitorCounterplay2 : '';
       if (aggregatedSummary) setRubricSummary2(aggregatedSummary);
       if (aggregatedMetrics) setRubricJson2(aggregatedMetrics);
       if (aggregatedScores) setRubricAllRatings2(aggregatedScores);
       if (aggregatedFeedback) setRubricSpecificFeedback2(aggregatedFeedback);
-      if (aggregatedCitations) setRubricCitations2(aggregatedCitations);
+      setRubricCitations2(dedupedCitations);
+      setCompetitorCounterplay2(counter);
+
+      return {
+        rubricSummary2: aggregatedSummary || '',
+        rubricJson2: (aggregatedMetrics as Rubric2InvestorData) ?? null,
+        rubricAllRatings2: aggregatedScores,
+        rubricSpecificFeedback2: aggregatedFeedback as Rubric2InvestorSpecificData,
+        competitorCounterplay2: counter,
+      };
+    } catch (e) {
+      console.error('fetchAllMetrics', e);
+      setRubricCitations2([]);
+      return null;
     } finally {
       setLoadingRubric(false);
     }
@@ -486,7 +816,10 @@ export default function InteractiveInvestors() {
                 size="md"
                 variant="shadow"
                 onClick={async () => {
-                  // Start avatar session first, then start the pitch session
+                  if (!selectedModel.trim()) {
+                    const fallback = models.find((m) => m !== 'Sharktank') ?? models[0] ?? '';
+                    if (fallback) setSelectedModel(fallback);
+                  }
                   await startAvatarSession();
                   await startSession();
                 }}
@@ -521,7 +854,7 @@ export default function InteractiveInvestors() {
               {/* ── Left: Avatar portrait panel ── */}
               {isAvatarMode && (
                 <div style={{
-                  width: '260px',
+                  width: '700px',
                   minWidth: '260px',
                   height: '100%',
                   display: 'flex',
@@ -581,12 +914,18 @@ export default function InteractiveInvestors() {
                   size="md"
                   variant="shadow"
                   onClick={endSession}
-                  style={{ position: 'absolute', top: '16px', right: '16px', zIndex: 10 }}
+                  style={{ position: 'absolute', top: '16px', left: '50%', transform: 'translateX(-50%)', zIndex: 10 }}
                 >
                   End session
                 </Button>
 
-                <CountdownTimer isTimeUp={isTimeUp} timeLeft={timeLeft} />
+                <CountdownTimer
+                  isTimeUp={isTimeUp}
+                  timeLeft={timeLeft}
+                  statusHint={
+                    isLoadingRepeat ? CHAT_WAITING_ROTATING_MESSAGES[chatWaitTipIndex % CHAT_WAITING_ROTATING_MESSAGES.length] : undefined
+                  }
+                />
 
                 <div className="w-full justify-center items-center flex overflow-hidden" style={{ flexDirection: 'column', marginTop: '50px' }}>
                   <ChatHistoryDisplay chatHistory={chatHistory} />
@@ -655,18 +994,8 @@ export default function InteractiveInvestors() {
             </div>
           ) : !isLoadingSession ? (
             // ── Landing: choose mode ──
-            <div className="h-full justify-center items-center flex flex-col gap-8 w-[500px] self-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '50px', padding: '2rem', maxHeight: '30%' }}>
-              <Button
-                className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white w-full"
-                size="md"
-                variant="shadow"
-                onClick={() => setIsAvatarMode(true)}
-              >
-                Start Session with Avatar
-              </Button>
-              <div className="flex flex-col gap-2 w-full">
-                <div style={{ fontSize: '0.9rem', textAlign: 'center', fontWeight: '500', color: 'white' }}>Or</div>
-                <Select
+            <div className="h-full justify-center items-center flex flex-col gap-4 w-[500px] self-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '50px', padding: '2rem', maxHeight: '30%' }}>
+               {/* <Select
                   placeholder="Select an AI Model"
                   size="md"
                   value={selectedModel}
@@ -678,7 +1007,19 @@ export default function InteractiveInvestors() {
                   {models.map((model, index) => (
                     <SelectItem key={index} value={model}>{model}</SelectItem>
                   ))}
-                </Select>
+                </Select> */}
+              <Button
+                className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white w-full"
+                size="md"
+                style={{minHeight: '40px'}}
+                variant="shadow"
+                onClick={() => setIsAvatarMode(true)}
+              >
+                Start Session with Avatar
+              </Button>
+             
+              <div className="flex flex-col gap-2 w-full">
+                <div style={{ fontSize: '0.9rem', textAlign: 'center', fontWeight: '500', color: 'white' }}>Or</div>
                 <Button
                   className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-full text-white"
                   size="md"
@@ -697,12 +1038,22 @@ export default function InteractiveInvestors() {
         {/* ── Evaluation overlay ── */}
         {(sentimentJson && rubricJson2 && !showFeedbackModal) ?
           <div id='evaluation' style={{ fontSize: '0.8rem', position: 'absolute', top: '50%', left: '50%', backgroundColor: 'rgba(50,51,52)', borderRadius: '50px', transform: 'translate(-50%,-50%)', padding: '2rem', width: '80%', maxHeight: '900px', minWidth: '600px', overflowY: 'scroll', scrollbarWidth: 'none' }}>
-            <button
-              style={{ position: 'absolute', top: '20px', right: '20px', border: 'none', borderRadius: '10px', background: 'rgba(255,255,255,0.4)', color: '#fff', fontSize: '0.8rem', fontWeight: '500', padding: '0.45rem 0.8rem', zIndex: 1200 }}
-              onClick={() => setShowChatHistoryModal(true)}
-            >
-              View ChatHistory
-            </button>
+            <div style={{ position: 'absolute', top: '20px', right: '20px', display: 'flex', gap: '0.5rem', zIndex: 1200 }}>
+              <button
+                type="button"
+                style={{ border: 'none', borderRadius: '10px', background: 'rgba(255,255,255,0.55)', color: '#1a1a1a', fontSize: '0.8rem', fontWeight: 600, padding: '0.45rem 0.8rem' }}
+                onClick={downloadAnalyticsPage}
+              >
+                Download report
+              </button>
+              <button
+                type="button"
+                style={{ border: 'none', borderRadius: '10px', background: 'rgba(255,255,255,0.4)', color: '#fff', fontSize: '0.8rem', fontWeight: '500', padding: '0.45rem 0.8rem' }}
+                onClick={() => setShowChatHistoryModal(true)}
+              >
+                View ChatHistory
+              </button>
+            </div>
             <div style={{ marginBottom: '0.8rem', color: 'white' }}>
               <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>Benchmark Comparison</div>
               <div style={{ fontSize: '0.8rem', opacity: 0.9 }}>Toggle startup examples below to compare your analysis against reference pitches.</div>
@@ -720,11 +1071,25 @@ export default function InteractiveInvestors() {
               ))}
             </div>
             <div style={{ display: 'flex', alignItems: 'start' }}>
-              <RubricInvestorPiechart2 citations={rubricCitations2} data={rubricJson2} overallScore={rubricAllRatings2} summary={rubricSummary2} specificFeedback={rubricSpecificFeedback2} resetAllStates={resetAllStates} totalRounds={0} />
-              {(!rubricCitations2 || loadingRubric1 || loadingRubric2 || loadingRubric) &&
-                <div style={{ position: 'absolute', width: '400px', zIndex: '2000', color: 'black', display: 'flex', gap: '1rem', flexDirection: 'column', backgroundColor: 'rgba(255,255,255)', borderRadius: '20px', padding: '1rem', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', boxShadow: '2px 2px 0px 0px black' }}>
-                  <div style={{ display: 'flex', gap: '1rem' }}>{(!rubricCitations2 || loadingRubric || loadingRubric1) ? <Spinner /> : "! "}<span>{loadingRubric1 ? '[Loading Analysis]' : '[Successfully Loaded]'} Elevation Pitch, Team, Market Opportunity</span></div>
-                  <div style={{ display: 'flex', gap: '1rem' }}>{(!rubricCitations2 || loadingRubric || loadingRubric2) ? <Spinner /> : "! "}<span>{loadingRubric2 ? '[Loading Analysis]' : '[Successfully Loaded]'} Market Size, Solution Value Proposition, Competitive Position</span></div>
+              <RubricInvestorPiechart2
+                citationItems={rubricCitations2 ?? undefined}
+                competitorCounterplay={competitorCounterplay2}
+                data={rubricJson2}
+                investorVerdict={investorVerdict}
+                investorVerdictLoading={investorVerdictLoading}
+                overallScore={rubricAllRatings2}
+                summary={rubricSummary2}
+                specificFeedback={rubricSpecificFeedback2}
+                resetAllStates={resetAllStates}
+                totalRounds={0}
+              />
+              {(rubricCitations2 === null || loadingRubric1 || loadingRubric2 || loadingRubric) &&
+                <div style={{ position: 'absolute', width: '420px', maxWidth: '92vw', zIndex: '2000', color: 'black', display: 'flex', gap: '1rem', flexDirection: 'column', backgroundColor: 'rgba(255,255,255)', borderRadius: '20px', padding: '1rem', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', boxShadow: '2px 2px 0px 0px black' }}>
+                  <p style={{ margin: 0, fontSize: '0.82rem', lineHeight: 1.4, color: '#333', fontStyle: 'italic' }}>
+                    {ANALYTICS_LOADING_ROTATING_MESSAGES[analyticsLoadTipIndex % ANALYTICS_LOADING_ROTATING_MESSAGES.length]}
+                  </p>
+                  <div style={{ display: 'flex', gap: '1rem' }}>{(rubricCitations2 === null || loadingRubric || loadingRubric1) ? <Spinner /> : "! "}<span>{loadingRubric1 ? '[Loading Analysis]' : '[Successfully Loaded]'} Elevation Pitch, Team, Market Opportunity</span></div>
+                  <div style={{ display: 'flex', gap: '1rem' }}>{(rubricCitations2 === null || loadingRubric || loadingRubric2) ? <Spinner /> : "! "}<span>{loadingRubric2 ? '[Loading Analysis]' : '[Successfully Loaded]'} Market Size, Solution Value Proposition, Competitive Position</span></div>
                 </div>
               }
               {displayLookupPitch && <RubricInvestorPiechartExample title={'LookUp'} specificFeedback={lookupPitchRubrics()} />}
@@ -732,19 +1097,44 @@ export default function InteractiveInvestors() {
               {displayMediVRPitch && <RubricInvestorPiechartExample title={'MediVR'} specificFeedback={mediVRPitchRubrics()} />}
               {displayConcretePitch && <RubricInvestorPiechartExample title={'Concrete'} specificFeedback={lookupPitchRubrics()} />}
               {!isAnyComparisonOpen && (
-                (assessment.pronunciation && assessment.intonation && assessment.fluency) ? (
-                  <SentimentInvestorPiechart pronunciationAssessment={assessment.pronunciation} intonationAssessment={assessment.intonation} fluencyAssessment={assessment.fluency} data={sentimentMetrics} overallScore={sentimentScore} feedbackSummary={feedbackText} specificFeedback={sentimentSpecificFeedback} />
-                ) : (
-                  <div style={{ color: 'white', padding: '1rem', maxWidth: '420px' }}>
-                    <b>Sentiment Analysis Loaded</b>
-                    <p style={{ marginTop: '0.5rem' }}>Voice-specific assessment is unavailable for this run. The pitch sentiment and rubric analysis are still shown.</p>
-                  </div>
-                )
+                <SentimentInvestorPiechart
+                  pronunciationAssessment={assessment.pronunciation ?? undefined}
+                  intonationAssessment={assessment.intonation ?? undefined}
+                  fluencyAssessment={assessment.fluency ?? undefined}
+                  data={sentimentMetrics}
+                  overallScore={sentimentScore}
+                  feedbackSummary={feedbackText}
+                  specificFeedback={sentimentSpecificFeedback}
+                />
               )}
             </div>
           </div>
           : loadingRubric &&
-          <Spinner style={{ color: 'white', background: 'rgba(50,51,52)', padding: '2rem', borderRadius: '50px', position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%) scale(0.6)', width: '30%' }} size="lg" />
+          <div
+            style={{
+              color: 'white',
+              background: 'rgba(50,51,52)',
+              padding: '2rem',
+              borderRadius: '50px',
+              position: 'absolute',
+              left: '50%',
+              top: '50%',
+              transform: 'translate(-50%,-50%) scale(0.6)',
+              width: 'min(420px, 88vw)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '1rem',
+              textAlign: 'center',
+            }}
+          >
+            <Spinner size="lg" />
+            {awaitingFeedbackAfterAnalytics ? (
+              <p style={{ margin: 0, fontSize: '1.2rem', lineHeight: 1.45, opacity: 0.92, maxWidth: '280px' }}>
+                {ANALYTICS_LOADING_ROTATING_MESSAGES[analyticsLoadTipIndex % ANALYTICS_LOADING_ROTATING_MESSAGES.length]}
+              </p>
+            ) : null}
+          </div>
         }
       </Card>
 

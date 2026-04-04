@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { pitchEvaluationPromptMetric2} from './prompts';
 import {  metric2ResultInvestorFilter} from './completionFilterFunctions';
-import { ChatMessage, cleanResponse, getSonarChatCompletionForMetric, transformFeedback } from './pitchEvaluationResponseShared';
+import { buildCitationItemsFromSonarResponse, cleanResponse, getSonarChatCompletionForMetric, transformFeedback } from './pitchEvaluationResponseShared';
 
 const pitchEvaluationResponseMetric2 = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
@@ -14,12 +14,16 @@ const pitchEvaluationResponseMetric2 = async (req: NextApiRequest, res: NextApiR
       rubricResult2 = rubricResult?.rubricData;
       citations = rubricResult?.citations;
 
-      let rubricScore2, rubricSummary2, rubricMetrics2, rubricSpecificFeedback2;
+      let rubricScore2, rubricSummary2, rubricMetrics2, rubricSpecificFeedback2, competitorCounterplay2;
       if (rubricResult2?.rubricScore !== undefined) {
         rubricScore2 = rubricResult2.rubricScore;
         rubricSummary2 = rubricResult2.rubricSummary;
         rubricMetrics2 = rubricResult2.rubricMetrics;
         rubricSpecificFeedback2 = rubricResult2.rubricSpecificFeedback;
+        competitorCounterplay2 =
+          typeof (rubricResult2 as { competitorCounterplay?: string }).competitorCounterplay === 'string'
+            ? String((rubricResult2 as { competitorCounterplay: string }).competitorCounterplay)
+            : '';
       } else {
         console.log("Invalid rubric data, keeping previous values.");
       }
@@ -29,7 +33,9 @@ const pitchEvaluationResponseMetric2 = async (req: NextApiRequest, res: NextApiR
         rubricSummary2,
         rubricMetrics2,
         rubricSpecificFeedback2,
+        competitorCounterplay2,
         citations,
+        citationItems: rubricResult?.citationItems ?? [],
       });
 
     } catch (error) {
@@ -75,10 +81,12 @@ const fetchMetric2 = async (currentMarketStats:string,chatHistory: any[]) => {
     }    
 
     const citations = metric2Result?.citations || [];
+    const citationItems = buildCitationItemsFromSonarResponse(metric2Result);
 
     const result = {
       rubricData: filteredResponse,
-      citations:citations
+      citations,
+      citationItems,
     };
     console.log('metric2 final result',result)
     return result;
@@ -166,7 +174,9 @@ const cleanSonarOutputMetric2 = (metric2:any): string => {
     ];
     const overallScore = Math.round(scores.reduce((sum: number, score: number) => sum + score, 0) / 4);
 
-    const summary= metric2Data.summary;
+    const summary = metric2Data.summary;
+    const competitorCounterplay =
+      typeof metric2Data.competitorCounterplay === 'string' ? metric2Data.competitorCounterplay : '';
 
     // const strengths = [];
     // const weaknesses = [];
@@ -188,6 +198,7 @@ const cleanSonarOutputMetric2 = (metric2:any): string => {
       revenueModel: validatedMetric2.revenueModel,
       overallScore,
       summary,
+      competitorCounterplay,
       rubricSpecificFeedback: {
         marketSize: validatedMetric2.marketSize.feedback,
         solutionValueProposition: validatedMetric2.solutionValueProposition.feedback,
@@ -206,6 +217,7 @@ const cleanSonarOutputMetric2 = (metric2:any): string => {
       revenueModel: { score: 0, feedback: " Unable to evaluate due to Sonar parsing error." },
       overallScore: 0,
       summary: "[Market Size, Solution Value Proposition, Competitive Position] Failed to evaluate pitch due to parsing errors in Sonar responses.",
+      competitorCounterplay: "",
       rubricSpecificFeedback: {
         marketSize: "Unable to evaluate due to Sonar parsing error.",
         solutionValueProposition: "Unable to evaluate due to Sonar parsing error.",

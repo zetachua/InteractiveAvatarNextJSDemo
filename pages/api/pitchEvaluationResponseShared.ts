@@ -7,6 +7,22 @@ export type ChatMessage = {
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+/** Cap messages sent to LLMs (lower = faster, less context). Env: CHAT_HISTORY_MAX_MESSAGES, default 24. */
+function chatHistoryMaxMessages(): number {
+  const raw = process.env.CHAT_HISTORY_MAX_MESSAGES;
+  const n = raw ? parseInt(raw, 10) : 24;
+  if (!Number.isFinite(n)) return 24;
+  return Math.min(100, Math.max(4, n));
+}
+
+/** Keep the most recent turns so prompts stay small (latency + cost). */
+export function truncateChatMessagesForLlm(chatHistory: unknown): any[] {
+  if (!Array.isArray(chatHistory)) return [];
+  const max = chatHistoryMaxMessages();
+  if (chatHistory.length <= max) return chatHistory;
+  return chatHistory.slice(-max);
+}
+
 const sonar = {
   chat: {
     completions: {
@@ -95,7 +111,7 @@ const sharktankMetaLLM2 = {
 
 // Function to request a chat completion using the local LLM
 export const getLocalChatCompletion = async (chatHistory:any[], prompt: string, model:string) => {
-  const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
+  const validChatHistory = truncateChatMessagesForLlm(chatHistory);
 
   let response;
   if (model==="sharktank-model"){
@@ -135,8 +151,98 @@ export const getLocalChatCompletion = async (chatHistory:any[], prompt: string, 
 };
 
 
+export type SonarCitationItem = { title: string; url: string };
+
+function titleFromUrl(url: string): string {
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, '');
+    return hostname || url;
+  } catch {
+    return 'Source';
+  }
+}
+
+/**
+ * Drop Sonar citations that are mostly generic “how to pitch / present” or screenwriting noise.
+ * Company sites, news, industry, gov, databases, etc. stay allowed unless they match these patterns.
+ */
+export function isPresentationHowToOrIrrelevantPitchCitationUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    const h = u.hostname.toLowerCase().replace(/^www\./, '');
+    const path = `${u.pathname}${u.search}`.toLowerCase();
+
+    const hostBlocks = [
+      'toastmasters',
+      'screenwrit',
+      'screenplay',
+      'simplyscripts',
+      'writersdigest',
+      'slidemodel.com',
+      'slidesgo.com',
+      'presentationzen.com',
+    ];
+    if (hostBlocks.some((s) => (s.includes('.') ? h === s || h.endsWith(`.${s}`) : h.includes(s)))) {
+      return true;
+    }
+
+    // Path-based: generic pitch/speaking advice slugs on any domain
+    if (
+      /\/(how[-_]to[-_])?pitch\b|elevator[-_]pitch|pitch[-_]deck[-_]template|public[-_]speaking|presentation[-_]skills|powerpoint[-_]tips|slide[-_]design/i.test(
+        path,
+      )
+    ) {
+      return true;
+    }
+
+    if (h.endsWith('wikihow.com') && /pitch|elevator|public-speaking|slide|presentation|powerpoint/i.test(path)) {
+      return true;
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/** @deprecated use !isPresentationHowToOrIrrelevantPitchCitationUrl for clarity */
+export function isAllowedRubricCitationUrl(url: string): boolean {
+  return !isPresentationHowToOrIrrelevantPitchCitationUrl(url);
+}
+
+/** Map Perplexity completion payload to titled links for the UI (prefers search_results over citations). */
+export function buildCitationItemsFromSonarResponse(apiResult: unknown): SonarCitationItem[] {
+  if (!apiResult || typeof apiResult !== 'object') return [];
+  const r = apiResult as Record<string, unknown>;
+  const filterItems = (items: SonarCitationItem[]) =>
+    items.filter((i) => !isPresentationHowToOrIrrelevantPitchCitationUrl(i.url));
+
+  const searchResults = r.search_results;
+  if (Array.isArray(searchResults) && searchResults.length > 0) {
+    const out: SonarCitationItem[] = [];
+    for (const item of searchResults) {
+      if (!item || typeof item !== 'object') continue;
+      const o = item as Record<string, unknown>;
+      const url = typeof o.url === 'string' ? o.url.trim() : '';
+      if (!url) continue;
+      const rawTitle = typeof o.title === 'string' ? o.title.trim() : '';
+      const title = rawTitle || titleFromUrl(url);
+      out.push({ title, url });
+    }
+    return filterItems(out);
+  }
+  const citations = r.citations;
+  if (!Array.isArray(citations)) return [];
+  return filterItems(
+    citations
+      .filter((u): u is string => typeof u === 'string' && u.length > 0)
+      .map((url) => ({ title: titleFromUrl(url.trim()), url: url.trim() })),
+  );
+}
+
 export const getSonarChatCompletionForMetric = async (chatHistory: any, prompt: string) => {
-    const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
+    const validChatHistory = truncateChatMessagesForLlm(chatHistory);
+    const model = process.env.PERPLEXITY_SONAR_MODEL?.trim() || 'sonar';
     return sonar.chat.completions.create({
       messages: [
         {
@@ -149,14 +255,14 @@ export const getSonarChatCompletionForMetric = async (chatHistory: any, prompt: 
             content: 'Please evaluate the pitch transcript based on the provided instructions.',
         },
       ],
-      model: 'sonar'
+      model,
     });
   };
 
 
 
 export const getGroqChatCompletionForMetric = async (chatHistory: any, prompt: string) => {
-    const validChatHistory = Array.isArray(chatHistory) ? chatHistory : [];
+    const validChatHistory = truncateChatMessagesForLlm(chatHistory);
     return groq.chat.completions.create({
         messages: [
           {
@@ -169,7 +275,7 @@ export const getGroqChatCompletionForMetric = async (chatHistory: any, prompt: s
             content: 'Please evaluate the pitch transcript based on the provided instructions.',
           },
         ],
-        model:'openai/gpt-oss-120b', 
+        model:'llama-3.3-70b-versatile', 
       });
   };
 

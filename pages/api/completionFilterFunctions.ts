@@ -384,17 +384,25 @@ export const metric2ResultInvestorFilter = (responseContent: string) => {
           "score":0,
           "feedback": "No revenue model was defined, with unclear monetization strategy and scalability concerns."
         },
+        competitorCounterplay: "",
       };
     }
 
+    const m = rubricDataJson.marketSize.score;
+    const s = rubricDataJson.solutionValueProposition.score;
+    const c = rubricDataJson.competitivePosition.score;
+    const r = rubricDataJson.revenueModel.score;
+    const counter =
+      typeof rubricDataJson.competitorCounterplay === "string" ? rubricDataJson.competitorCounterplay : "";
+
     return {
-      rubricScore: (rubricDataJson.marketSize.score+rubricDataJson.solutionValueProposition.score+rubricDataJson.competitivePosition.score)/3,
+      rubricScore: (m + s + c + r) / 4,
       rubricSummary: rubricDataJson.summary,
       rubricMetrics: {
-        marketSize: rubricDataJson.marketSize.score,
-        solutionValueProposition: rubricDataJson.solutionValueProposition.score,
-        competitivePosition: rubricDataJson.competitivePosition.score,
-        revenueModel: rubricDataJson.revenueModel.score,
+        marketSize: m,
+        solutionValueProposition: s,
+        competitivePosition: c,
+        revenueModel: r,
       },
       rubricSpecificFeedback: {
         marketSize: rubricDataJson.marketSize.feedback,
@@ -402,6 +410,7 @@ export const metric2ResultInvestorFilter = (responseContent: string) => {
         competitivePosition: rubricDataJson.competitivePosition.feedback,
         revenueModel: rubricDataJson.revenueModel.feedback,
       },
+      competitorCounterplay: counter,
     };
 
   } catch (error) {

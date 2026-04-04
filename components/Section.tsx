@@ -3,9 +3,11 @@ import React, { useMemo, useState } from 'react';
 interface SectionProps {
   title: string;
   feedback?: string;
+  /** Matches pie segment color for this rubric score */
+  headerAccentColor?: string;
 }
 
-const Section: React.FC<SectionProps> = ({ title, feedback }) => {
+const Section: React.FC<SectionProps> = ({ title, feedback, headerAccentColor }) => {
   if (!feedback) return null; // Hide section if no feedback is available
   const [expanded, setExpanded] = useState(false);
   const cleanedFeedback = feedback
@@ -36,7 +38,23 @@ const Section: React.FC<SectionProps> = ({ title, feedback }) => {
         lineHeight: 1.45,
       }}
     >
-      <b style={{ fontSize: '0.95rem' }}>{title}:</b>
+      <b
+        style={{
+          fontSize: '0.95rem',
+          display: 'block',
+          marginBottom: '0.35rem',
+          ...(headerAccentColor
+            ? {
+                borderLeft: `4px solid ${headerAccentColor}`,
+                paddingLeft: '0.65rem',
+                marginLeft: '-0.15rem',
+                color: headerAccentColor,
+              }
+            : {}),
+        }}
+      >
+        {title}:
+      </b>
       <p style={{ whiteSpace: 'pre-line' }}>{expanded ? cleanedFeedback : collapsedText}</p>
       {isLong && (
         <button

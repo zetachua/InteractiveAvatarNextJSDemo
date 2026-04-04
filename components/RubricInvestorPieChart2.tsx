@@ -1,91 +1,166 @@
-import React, { useEffect, useState } from 'react';
-import { PieChart, Pie, Cell, Tooltip, Legend, Text } from 'recharts';
-import { Rubric2InvestorMetricData, Rubric2InvestorSpecificData } from './KnowledgeClasses';
-import { Button } from '@nextui-org/button';
+import React, { useMemo, useState } from 'react';
+import { Spinner } from '@nextui-org/react';
+import { PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
+import { Rubric2InvestorMetricData, Rubric2InvestorSpecificData, RubricCitationItem } from './KnowledgeClasses';
 import Section from './Section';
-// Props for the component
+import { splitSessionAndFrameworkCitations } from '@/utils/analyticsExport';
+
+const RUBRIC_METRIC_LABELS: Record<string, string> = {
+  elevatorPitch: 'Elevator Pitch',
+  team: 'Team',
+  marketOpportunity: 'Market Opportunity',
+  marketSize: 'Market Size',
+  solutionValueProposition: 'Solution & Value Proposition',
+  competitivePosition: 'Competitive Position',
+  tractionAwards: 'Traction & Awards',
+  revenueModel: 'Revenue Model',
+};
+
+function titleFromUrl(url: string): string {
+  try {
+    const h = new URL(url).hostname.replace(/^www\./, '');
+    return h || url;
+  } catch {
+    return 'Source';
+  }
+}
+
+function getRubricPieColor(score: number) {
+  if (score <= 5) {
+    const t = score / 5;
+    // Softer coral/rose (less harsh than pure rgb(R,0,0)); slightly brighter toward mid scores
+    const r = Math.round(255);
+    const g = Math.round(175 - 5 * t);
+    const b = Math.round(175 - 5 * t);
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+  const intensity = (score - 5) / 5;
+  const greenValue = Math.floor(100 + 155 * intensity);
+  return `rgb(0, ${greenValue}, 0)`;
+}
+
 interface RubricInvestorPieChartProps2 {
-  resetAllStates: () => void;
+  resetAllStates?: () => void;
   summary?: string;
   totalRounds: number;
   specificFeedback?: Rubric2InvestorSpecificData;
   data?: Rubric2InvestorMetricData;
   overallScore?: number;
+  /** @deprecated prefer citationItems */
   citations?: string;
+  citationItems?: RubricCitationItem[];
+  /** Metric-2 rival-founder counterplay (Sonar). */
+  competitorCounterplay?: string;
+  /** Groq: unified rubric + sentiment verdict. */
+  investorVerdict?: string;
+  investorVerdictLoading?: boolean;
 }
 
 const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
   data,
   citations,
+  citationItems,
   overallScore,
-  totalRounds,
+  totalRounds: _totalRounds,
   summary,
   specificFeedback,
-  resetAllStates,
+  competitorCounterplay,
+  investorVerdict,
+  investorVerdictLoading,
 }) => {
-  const rubricMetrics: Rubric2InvestorMetricData = data ?? {} as Rubric2InvestorMetricData;
+  const rubricMetrics: Rubric2InvestorMetricData = data ?? ({} as Rubric2InvestorMetricData);
   const rubricSummary: string = summary ?? '';
-  const rubricSpecificFeedback: Rubric2InvestorSpecificData = specificFeedback ?? {} as Rubric2InvestorSpecificData;
+  const rubricSpecificFeedback: Rubric2InvestorSpecificData = specificFeedback ?? ({} as Rubric2InvestorSpecificData);
   const rubricOverallScore: number = overallScore ?? 0;
   const [showFullSummary, setShowFullSummary] = useState(false);
   const [showCitations, setShowCitations] = useState(false);
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard
-      .writeText(text)
-      .then(() => {
-        alert('Text copied to clipboard! Paste this in "Overall Summary Cell" in Excel Sheet');
+  const sortedFeedbackRows = useMemo(() => {
+    const entries = Object.entries(rubricSpecificFeedback || {}).filter(([, fb]) => fb);
+    return entries
+      .map(([key, feedback]) => {
+        const score = rubricMetrics[key as keyof Rubric2InvestorMetricData];
+        const n = typeof score === 'number' && !Number.isNaN(score) ? score : 0;
+        return {
+          key,
+          feedback: feedback as string,
+          score: n,
+          label: RUBRIC_METRIC_LABELS[key] ?? key.replace(/([A-Z])/g, ' $1').replace(/^./, (s) => s.toUpperCase()).trim(),
+          accent: getRubricPieColor(n),
+        };
       })
-      .catch((error) => {
-        console.error('Error copying text: ', error);
+      .sort((a, b) => {
+        if (a.score !== b.score) return a.score - b.score;
+        return a.key.localeCompare(b.key);
       });
-  };
-
-  const combinedText = `${rubricSummary}
-  ${rubricSpecificFeedback?.elevatorPitch}
-  ${rubricSpecificFeedback?.team}
-  ${rubricSpecificFeedback?.marketOpportunity}
-  ${rubricSpecificFeedback?.marketSize}
-  ${rubricSpecificFeedback?.solutionValueProposition}
-  ${rubricSpecificFeedback?.competitivePosition}
-  ${rubricSpecificFeedback?.tractionAwards}
-  ${rubricSpecificFeedback?.revenueModel}
-  `;
-
-
-  console.log(rubricSpecificFeedback, "all the metric feedback");
-  const feedbackEntries = Object.entries(rubricSpecificFeedback || {});
+  }, [rubricSpecificFeedback, rubricMetrics]);
 
   const chartData = Object.entries(rubricMetrics).map(([key, value]) => ({
     name: key.charAt(0).toUpperCase() + key.slice(1),
     value: value as number,
   }));
 
-  // Function to determine color based on score (0-1 scale assumed)
-  const getColor = (score: number) => {
-    if (score <= 5) {
-      // Red gradient: darker red for lower scores, brighter red for higher scores up to 0.5
-      const intensity = score / 5; // Normalize to 0-1 within red range (0 to 0.5)
-      const redValue = Math.floor(100 + (155 * intensity)); // From #640000 (very dark red) to #FF0000 (bright red)
-      return `rgb(${redValue}, 0, 0)`;
-    } else {
-      // Green gradient: darker green for scores just above 0.5, brighter green for higher scores
-      const intensity = (score - 5) / 5; // Normalize to 0-1 within green range (0.5 to 1)
-      const greenValue = Math.floor(100 + (155 * intensity)); // From #006400 (dark green) to #00FF00 (bright green)
-      return `rgb(0, ${greenValue}, 0)`;
-    }
-  };
-
   const roundedOverallScore =
-    rubricOverallScore !== undefined
-      ? Math.ceil((rubricOverallScore + Number.EPSILON) * 10) / 10
-      : 0;
+    rubricOverallScore !== undefined ? Math.ceil((rubricOverallScore + Number.EPSILON) * 10) / 10 : 0;
 
-  const citationList = citations?.split(',').filter(Boolean) || [];
-  const summaryPoints = rubricSummary
-    .split(/[.!?]\s+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
+  const resolvedCitations = useMemo((): RubricCitationItem[] => {
+    if (citationItems?.length) return citationItems;
+    if (!citations?.trim()) return [];
+    return citations
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .map((url) => ({ title: titleFromUrl(url), url }));
+  }, [citationItems, citations]);
+
+  const { session: citeSession, frameworkSupplementary, combined: combinedCitations } = useMemo(
+    () => splitSessionAndFrameworkCitations(resolvedCitations),
+    [resolvedCitations],
+  );
+
+  function renderCitationBlock(title: string, items: RubricCitationItem[], offset: number) {
+    if (items.length === 0) return null;
+    return (
+      <>
+        <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#d4d4d8', marginTop: offset > 0 ? '0.65rem' : 0, marginBottom: '0.35rem' }}>
+          {title}
+        </div>
+        {items.map((item, index) => (
+          <div
+            key={`${item.url}-${offset}-${index}`}
+            style={{
+              padding: '0.5rem 0.6rem',
+              borderRadius: '10px',
+              background: 'rgba(0,0,0,0.2)',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}
+          >
+            <div style={{ fontWeight: 600, color: '#f4f4f5', lineHeight: 1.35, marginBottom: '0.25rem' }}>
+              {offset + index + 1}. {item.title}
+            </div>
+            <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: '0.8rem', color: '#9bb5ff', wordBreak: 'break-all', lineHeight: 1.4 }}>
+              {item.url}
+            </a>
+          </div>
+        ))}
+      </>
+    );
+  }
+
+  const summaryPoints = useMemo(() => {
+    const flat = rubricSummary.replace(/\r\n/g, '\n').replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!flat) return [];
+    const chunks = flat.split(/(?<=[.!?])\s+/).map((s) => s.trim()).filter(Boolean);
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const c of chunks) {
+      const key = c.toLowerCase().replace(/\s+/g, ' ').trim();
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      out.push(c);
+    }
+    return out;
+  }, [rubricSummary]);
   const visibleSummaryPoints = showFullSummary ? summaryPoints : summaryPoints.slice(0, 4);
 
   return (
@@ -103,25 +178,6 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
         fontSize: '0.95rem',
       }}
     >
-      {/* <Button
-        className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
-        size="md"
-        variant="shadow"
-        style={{
-          width: '200px',
-          position: 'absolute',
-          left: '50%',
-          top: '0%',
-          transform: 'translate(-50%,-50%) scale(1.6)',
-        }}
-        onClick={() => {
-          resetAllStates();
-          window.location.reload();
-        }}
-      >
-        Restart Round
-      </Button> */}
-
       <div
         style={{
           display: 'flex',
@@ -146,12 +202,14 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
             <ul style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '12px', padding: '0.75rem 0.95rem', margin: 0, textAlign: 'left' }}>
               {visibleSummaryPoints.map((point, index) => (
                 <li key={`${point}-${index}`} style={{ marginBottom: '0.55rem' }}>
-                  {point}{point.endsWith('.') ? '' : '.'}
+                  {point}
+                  {point.endsWith('.') ? '' : '.'}
                 </li>
               ))}
             </ul>
             {summaryPoints.length > 4 && (
               <button
+                type="button"
                 onClick={() => setShowFullSummary(!showFullSummary)}
                 style={{ marginTop: '0.45rem', border: 'none', background: 'transparent', color: '#9bb5ff', fontSize: '0.82rem', cursor: 'pointer' }}
               >
@@ -160,22 +218,38 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
             )}
           </div>
           <button
+            type="button"
             onClick={() => setShowCitations(!showCitations)}
             style={{ marginTop: '0.25rem', border: 'none', background: 'transparent', color: '#9bb5ff', fontSize: '0.82rem', cursor: 'pointer' }}
           >
-            {showCitations ? 'Hide citations' : `Show citations (${citationList.length})`}
+            {showCitations ? 'Hide citations' : `Show citations (${combinedCitations.length})`}
           </button>
           {showCitations && (
-            <div style={{ display: 'flex', maxHeight: '200px', marginTop: '0.5rem', overflow: 'auto', flexDirection: 'column', gap: '0.3rem', fontSize: '0.85rem', padding: '0.5rem', textAlign: 'left', whiteSpace: 'pre-line', background: 'rgba(255,255,255,0.06)', borderRadius: '12px' }}>
-              <b>Reference Citations:</b>
-              {citationList.map((citation, index) => (
-                <div key={index}>
-                  {index + 1}.{" "}
-                  <u><a href={citation} target="_blank" rel="noopener noreferrer">
-                    {citation}
-                  </a></u>
-                </div>
-              ))}
+            <div
+              style={{
+                display: 'flex',
+                maxHeight: '320px',
+                marginTop: '0.5rem',
+                overflow: 'auto',
+                flexDirection: 'column',
+                gap: '0.55rem',
+                fontSize: '0.85rem',
+                padding: '0.65rem',
+                textAlign: 'left',
+                background: 'rgba(255,255,255,0.06)',
+                borderRadius: '12px',
+              }}
+            >
+              <b style={{ marginBottom: '0.15rem' }}>References</b>
+              {citeSession.length === 0 ? (
+                <span style={{ opacity: 0.85 }}>No session web sources returned for this run (framework links below still apply).</span>
+              ) : null}
+              {renderCitationBlock('Sources from this session (Perplexity / web)', citeSession, 0)}
+              {renderCitationBlock(
+                'Pitch evaluation frameworks (reference)',
+                frameworkSupplementary,
+                citeSession.length,
+              )}
             </div>
           )}
         </div>
@@ -197,17 +271,9 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
             {roundedOverallScore}/10
           </div>
           <PieChart width={450} height={350}>
-            <Pie
-              data={chartData}
-              dataKey="value"
-              nameKey="name"
-              cx="50%"
-              cy="50%"
-              outerRadius={100}
-              label
-            >
+            <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
               {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={getColor(entry.value)} />
+                <Cell key={`cell-${index}`} fill={getRubricPieColor(entry.value)} />
               ))}
             </Pie>
             <Tooltip />
@@ -224,26 +290,46 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
             width: '100%',
           }}
         >
-          {feedbackEntries.map(([metric, feedback]) => (
-            <Section key={metric} title={metric} feedback={feedback} />
+          {sortedFeedbackRows.map(({ key, label, feedback, accent }) => (
+            <Section key={key} title={`${label} (${rubricMetrics[key as keyof Rubric2InvestorMetricData] ?? 0}/10)`} feedback={feedback} headerAccentColor={accent} />
           ))}
-           {/* <button
-          onClick={() => copyToClipboard(combinedText)}
-          style={{
-            position: 'absolute',
-            right: '2%',
-            top: '1%',
-            padding: '0.5rem 1rem',
-            border: 'none',
-            background: 'rgba(255,255,255,0.4)',
-            borderRadius: '50px',
-            color: '#fff',
-            cursor: 'pointer',
-            fontSize: '16px',
-          }}
-        >
-          Copy All
-        </button> */}
+          {competitorCounterplay?.trim() ? (
+            <Section
+              title="Competitor Counterplay"
+              feedback={competitorCounterplay.trim()}
+              headerAccentColor="rgba(255, 193, 7, 0.95)"
+            />
+          ) : null}
+          <div style={{ marginTop: '0.25rem' }}>
+            <div
+              style={{
+                fontWeight: 700,
+                fontSize: '0.95rem',
+                marginBottom: '0.45rem',
+                padding: '0.2rem 0.5rem',
+                borderRadius: '10px',
+                display: 'inline-block',
+                background: 'linear-gradient(90deg, rgba(120, 140, 255, 0.35), rgba(200, 120, 255, 0.25))',
+                color: '#f4f4f5',
+              }}
+            >
+              Investor Verdict
+            </div>
+            {investorVerdictLoading ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#e4e4e7', fontSize: '0.88rem' }}>
+                <Spinner size="sm" color="default" />
+                Synthesizing rubric and sentiment…
+              </div>
+            ) : investorVerdict?.trim() ? (
+              <p style={{ margin: 0, lineHeight: 1.5, color: '#f4f4f5', fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>
+                {investorVerdict.trim()}
+              </p>
+            ) : (
+              <p style={{ margin: 0, fontSize: '0.85rem', color: '#a1a1aa' }}>
+                Verdict will appear here after the session ends and analysis completes.
+              </p>
+            )}
+          </div>
         </div>
       </div>
     </div>

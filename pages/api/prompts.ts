@@ -1,3 +1,48 @@
+/** Perplexity rubric: prefer substance citations; discourage generic presentation / “how to pitch” links (metric 1 & 2). */
+export const RUBRIC_PERPLEXITY_SOURCE_AND_CITATION_POLICY = `
+**Sources & citations**:
+- **Cite freely** when it supports **substance**: the startup’s **product or technology**, **market / industry**, **competitors or peers**, **customers or procurement**, **regulation** (e.g. Singapore **BCA**, **\*.gov.sg**), **company facts**, or **funding / company intelligence**. **Official company websites**, reputable **news**, **trade press**, **research / data providers** (e.g. Crunchbase, PitchBook, market reports), and **academic or engineering** sources are all appropriate when relevant.
+- **Do not cite** (or name as authority) pages whose main purpose is generic **pitch presentation skills**, **public speaking / slide design**, **“how to pitch”** tutorials, **screenwriting or TV/film “pitch”** advice, or **creative-writing** tips—even if the word “pitch” appears. Those sources rarely validate the student’s **business, product, or market** and should be skipped in favor of substantive references.
+- **Relevance self-check**: Before adding a link, ask whether it informs **what they are building, who buys it, who competes, or what rules apply**. If it only helps “present better” without grounding claims about the venture, **omit it**.
+`;
+
+/** Metric 2 only: rival-founder “Competitor Counterplay” block in JSON field \`competitorCounterplay\`. */
+export const RUBRIC_METRIC2_COMPETITOR_COUNTERPLAY_RULES = `
+**Competitor Counterplay (required top-level JSON string field \`competitorCounterplay\`)**:
+After the rubric dimension analysis, add a section **Competitor Counterplay** inside \`competitorCounterplay\`. Write **as a rival startup founder** who has just heard this pitch. Address **(1)**, **(2)**, and **(3)** in clear prose:
+1. The **biggest business model vulnerability** you would exploit.
+2. What you would **build differently** to win the same market.
+3. **One specific technology or pricing strategy** you would use to undercut them.
+Stay concrete and tied to claims in the transcript; avoid generic platitudes.
+`;
+
+export type InvestorVerdictContext = {
+  rubricOverallScore: number;
+  rubricSummary: string;
+  rubricMetrics: Record<string, unknown>;
+  rubricSpecificFeedback?: Record<string, string>;
+  sentimentOverallScore: number;
+  sentimentSummary: string;
+  sentimentMetrics: Record<string, unknown>;
+};
+
+/** Groq: single paragraph merging rubric + sentiment (Shark Tank–style). */
+export const investorVerdictPrompt = (ctx: InvestorVerdictContext) => `
+You are an experienced investor judge in the style of Shark Tank.
+
+Synthesize the **rubric / substance** evaluation and the **sentiment / delivery** evaluation into **one** unified investment recommendation.
+
+Structured inputs (JSON):
+${JSON.stringify(ctx, null, 2)}
+
+Instructions:
+- Output **only** a valid JSON object with exactly one key: \`investorVerdict\`, whose value is **one paragraph** (roughly 120–220 words) of plain text—**no** markdown, **no** heading line inside the string, **no** bullet list.
+- In that paragraph, explicitly weigh **both** rubric scores and sentiment signals; name tradeoffs (e.g. strong substance vs weak delivery, or the reverse).
+- State clearly whether you would **invest**, **pass**, or **invest only with conditions**, and briefly what those conditions are if applicable.
+- Ground every claim in the numbers and summaries above; do not invent company facts not supported by the inputs.
+
+Return only the JSON object. No code fences, no commentary.
+`;
 
 // export const nusPrompt=(uniqueIndustries:any,selectedCase:any)=>`
 //       Instruction: You are a helpful assistant teaching students how to interview customers to understand their motivations.
@@ -544,9 +589,11 @@ Your task is to evaluate it on three key aspects:
 4. **Traction/Awards**
 
 **Guidelines**:
+${RUBRIC_PERPLEXITY_SOURCE_AND_CITATION_POLICY}
 - **Recap**: Quote key details related to each aspect from the pitch transcript as the primary source.
-- **Real-Time Browsing**: Use real-time web searches and X post data to verify traction (e.g., client mentions, award prestige) and validate revenue scalability (e.g., industry pricing norms). Cite sources briefly (e.g., "Per 2025 Crunchbase data").
+- **Real-Time Browsing**: Use real-time web searches and X post data to verify traction (e.g., client mentions, award prestige) and validate revenue scalability (e.g., industry pricing norms). Cite sources briefly when they support **substance** per the citation policy above—avoid generic presentation-how-to links (e.g., "Per 2025 Crunchbase data" for a competitor).
 - **Market Comparison**: For each metric, compare the pitch’s claims to current 2025 standards in the detected industry from the pitch... (e.g., market size benchmarks, unique solution examples, competitor revenue/pricing). Provide specific figures or examples from 2025 data.
+- **Singapore competitor (browsing)**: Whenever your feedback **references competitors, competitive sets, or “who else does this”** (including in Market Opportunity, Traction, or any comparison to peers), use **real-time web search** to name **one real, verifiable company based in or primarily operating in Singapore** that is the closest equivalent in the same or adjacent category. Add **one sourced detail** (e.g. product focus, stage, or public traction). If search yields **no credible Singapore analogue**, say that explicitly—do **not** invent a company.
 - **Suggestions**: Provide one actionable suggestion per area, supported by the transcript, enriched with web/X data, and referencing real-world industry examples (e.g., existing unique sensors or validated market sizes).
 - **Score**: Assign a score (1-10) for each area, justifying it with transcript details, external data insights, and market comparisons.
 
@@ -554,6 +601,12 @@ Your task is to evaluate it on three key aspects:
 - Use the transcript as the foundation. If an area is missing or insufficient, assign a score of 1 and use web data to suggest improvements (e.g., "No revenue details; web shows industry average of $X per unit").
 - Do not invent fictional details or examples. External data must be factual, current, and sourced.
 - Include statistical backing (e.g., adoption rates, pricing benchmarks) from reliable 2025 sources where possible.
+
+**Top-level "summary" field (required)**:
+- Write 3–5 sentences of **investor synthesis only**: cross-cutting strengths, weaknesses, and the top 1–3 fixes to prioritize.
+- Do **not** paste, quote, or replay raw transcript wording (no multi-sentence quotes of what the founder said).
+- Do **not** repeat the same point twice in different sentences; one clear statement per idea.
+- If the transcript is extremely thin or non-substantive, say that **once**, then briefly note what a credible pitch should cover next—avoid duplicating near-identical sentences.
 
 **Important Output Rules**:
 - Return only a **valid raw JSON object**
@@ -563,16 +616,16 @@ Your task is to evaluate it on three key aspects:
   "summary": "The pitch presents a $5M revenue model and a solid market opportunity but requires further clarity on how the business stands out with a stronger hook, highlights of the leadership team's past successes, and a breakdown of the SAM",
   "elevatorPitch": { 
     "score": 6, 
-    "feedback": "The pitch mentions a $5M revenue model but lacks a hook. Per 2025 industry data, concrete tech averages $2M/project (Source: Statista). Suggest: 'Leverage AI to cut costs by 15%, as seen in X Corp’s 2025 model.'"    },
+    "feedback": "The pitch mentions a $5M revenue model but lacks a hook. Per 2025 industry data, cite MarketsandMarkets or Grand View Research for construction-tech spend where applicable. Suggest: quantify savings vs. lab testing using a Crunchbase-backed peer benchmark."    },
   "team": { 
     "score": 5, 
-    "feedback": "Technical expertise mentioned, but no leadership wins. Top 2025 construction teams average 2 exits per leader (Source: Crunchbase). Suggest: 'Highlight past successes like Y Team’s $10M exit in 2024.'"    },
+    "feedback": "Technical expertise mentioned, but no leadership wins. Top 2025 construction teams: cite Crunchbase or PitchBook for comparable founder track records. Suggest: name one relevant exit or scale milestone."    },
   "marketOpportunity": { 
     "score": 7, 
-    "feedback": "Claims a $10M market, but no SAM. 2025 concrete market validation shows $50M deals (Source: Deloitte). Suggest: 'Target $30B logistics AI sector, as Z Co. did in 2025.'"    },
+    "feedback": "Claims a $10M market, but no SAM. Ground sizing in Grand View Research or MarketsandMarkets for the relevant construction segment. Suggest: define SAM/SOM with one sourced TAM anchor."    },
   "tractionAwards": { 
     "score": 7, 
-    "feedback": "Mentions a pilot, but no metrics. 2025 industry avg: 50 clients/pilot (Source: Deloitte). Suggest: ‘Show X% cost reduction, like Y Co.’s 2025 pilot.’"    }
+    "feedback": "Mentions a pilot, but no metrics. Compare to industry pilots using allowed sources only. Suggest: cite one concrete KPI (e.g. cost %, cure time, sites) tied to the product."    }
   }  \`\`\`
 Use only the following text as the pitch transcript, without adding or imagining content.
 
@@ -601,9 +654,12 @@ Your task is to evaluate it on four key aspects:
 4. **Revenue/Business Model**
 
 **Guidelines**:
+${RUBRIC_PERPLEXITY_SOURCE_AND_CITATION_POLICY}
+${RUBRIC_METRIC2_COMPETITOR_COUNTERPLAY_RULES}
 - **Recap**: Quote key details related to each aspect from the pitch transcript as the primary source.
-- **Real-Time Browsing**: Use real-time web searches and X post data to verify traction (e.g., client mentions, award prestige) and validate revenue scalability (e.g., industry pricing norms). Cite sources briefly (e.g., "Per 2025 Crunchbase data").
+- **Real-Time Browsing**: Use real-time web searches and X post data to verify traction (e.g., client mentions, award prestige) and validate revenue scalability (e.g., industry pricing norms). Cite sources briefly when they support **substance** per the citation policy above—avoid generic presentation-how-to links (e.g., "Per 2025 Crunchbase data" for a competitor).
 - **Market Comparison**: For each metric, compare the pitch’s claims to current 2025 standards in the detected industry from the pitch... (e.g., market size benchmarks, unique solution examples, competitor revenue/pricing). Provide specific figures or examples from 2025 data.
+- **Singapore competitor (browsing)**: Whenever your feedback **references competitors or competitive positioning** (including non-Singapore peers), use **real-time web search** to name **one real, verifiable company based in or primarily operating in Singapore** that is the closest equivalent in the same or adjacent space. Include **one sourced fact** (e.g. offering, funding, or customers). **Competitive Positioning** feedback in particular should normally include this Singapore benchmark alongside any global examples. If browsing finds **no credible Singapore analogue**, state that—do **not** fabricate.
 - **Suggestions**: Provide one actionable suggestion per area, supported by the transcript, enriched with web/X data, and referencing real-world industry examples (e.g., actual 2025 market sizes or sensor technologies).
 - **Score**: Assign a score (1-10) for each area, justifying it with transcript details, external data insights, and market comparisons.
 
@@ -612,24 +668,32 @@ Your task is to evaluate it on four key aspects:
 - Do not invent fictional details or examples. External data must be factual, current, and sourced.
 - Include statistical backing (e.g., adoption rates, pricing benchmarks) from reliable 2025 sources where possible.
 
+**Top-level "summary" field (required)**:
+- Write 3–5 sentences of **investor synthesis only**: cross-cutting strengths, weaknesses, and the top fixes to prioritize.
+- Do **not** paste, quote, or replay raw transcript wording (no multi-sentence quotes of filler or chat).
+- Do **not** repeat the same point twice in different sentences; one clear statement per idea.
+- If the transcript is extremely thin, say that **once**, then focus on what a complete pitch should include—avoid duplicating near-identical sentences.
+
 **Important Output Rules**:
 - Return only a **valid raw JSON object**
+- Include the top-level string field **competitorCounterplay** exactly as specified under Competitor Counterplay (required).
 - No markdown, no \`\`\`, no prose, no commentary, no headings
 \`\`\`json
  {
   "summary":"The pitch demonstrates potential with strengths in the outlined $5M TAM and mention of AI monitoring, but needs improvement in providing a breakdown of the SAM/SOM, distinguishing its solution from competitors by offering clear technical advantages, and naming competitors to position itself in the market",
   "marketSize": { 
     "score": 6, 
-    "feedback": "Claims $5M TAM, but no SAM/SOM. 2025 concrete market averages $130B globally (Source: Statista). Suggest: 'Break down SAM to $X, like Y Co.’s 2025 Asia focus.'"    },
+    "feedback": "Claims $5M TAM, but no SAM/SOM. Ground global/regional TAM using Grand View Research or MarketsandMarkets for the relevant segment. Suggest: break down SAM/SOM with one sourced anchor."    },
   "solutionValueProposition": { 
     "score": 7, 
-    "feedback": "Mentions AI monitoring, but no edge. 2025 leaders use patented sensors (e.g., Giatec’s $500/unit model, Crunchbase). Suggest: 'Adopt Z’s 2025 anomaly detection tech.'"    },
+    "feedback": "Mentions AI monitoring, but no edge. Compare to peers using Crunchbase/PitchBook or concrete-tech literature. Suggest: one measurable technical differentiator."    },
   "competitivePosition": { 
     "score": 4, 
-    "feedback": "No competitors named. 2025 market shows Giatec at $10M revenue (Source: Crunchbase). Suggest: ‘Differentiate vs. Giatec with 20% cost cuts.’"    },
+    "feedback": "No competitors named. Name peers with Crunchbase/PitchBook facts where allowed. Suggest: a clear differentiation axis vs. one named competitor."    },
   "revenueModel": { 
     "score": 6, 
-    "feedback": "Subscription model vague. 2025 concrete tech avg: $500/unit (Source: Statista). Suggest: ‘Set tiers at $X-$Y, like Z Co.’s 2025 scale.’"    }
+    "feedback": "Subscription model vague. Anchor pricing to Crunchbase/PitchBook peers or industry reports from Grand View Research or MarketsandMarkets. Suggest: name tier structure and unit economics."    },
+  "competitorCounterplay": "(1) Biggest vulnerability: [business-model weakness tied to transcript]. (2) I would build differently: [product/GTM]. (3) Undercut: [one specific tech or pricing move]."
 }
   \`\`\`
 

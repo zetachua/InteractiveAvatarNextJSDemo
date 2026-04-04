@@ -16,8 +16,10 @@ export async function POST(req: Request) {
         "content-type": "application/json",
         "X-API-KEY": apiKey, // ✅ was process.env.LIVEAVATAR_API_KEY — use resolved apiKey instead
       },
+      // FULL mode: LiveKit `avatar.speak_text` on topic `agent-control` is supported (see LiveAvatar docs).
+      // LITE mode is video-only from your stack: you must send PCM audio via WebSocket `agent.speak`, not plain text.
       body: JSON.stringify({
-        mode: "LITE",
+        mode: "FULL",
         avatar_id: "65f9e3c9-d48b-4118-b73a-4ae2e3cbb8f0",
         is_sandbox: false,
         avatar_persona: {
@@ -25,6 +27,9 @@ export async function POST(req: Request) {
           language: "en",
         },
         interactivity_type: "CONVERSATIONAL",
+        ...(process.env.LIVEAVATAR_MAX_SESSION_SECONDS
+          ? { max_session_duration: Math.min(3600, parseInt(process.env.LIVEAVATAR_MAX_SESSION_SECONDS, 10) || 600) }
+          : {}),
       }),
     });
 

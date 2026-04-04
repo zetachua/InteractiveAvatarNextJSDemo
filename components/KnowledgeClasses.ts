@@ -118,6 +118,11 @@ export interface Rubric2InvestorSpecificData {
   revenueModel: string;
 }
 
+/** Perplexity / web search reference for investor rubric UI */
+export interface RubricCitationItem {
+  title: string;
+  url: string;
+}
 
 export interface Rubric2InvestorSpecificDataExample {
   elevatorPitch: string;
@@ -241,6 +246,8 @@ export interface Metric2InvestorData {
     feedback:string;
   };
   summary: string;
+  /** Rival-founder counterplay (metric 2 Sonar JSON). */
+  competitorCounterplay?: string;
 }
 
 

@@ -21,6 +21,62 @@ export const models = [
   "openai/gpt-oss-120b"
 ];
 
+/** Shown while waiting for the chatbot after Send (same card as countdown). */
+export const CHAT_WAITING_ROTATING_MESSAGES: string[] = [
+  "Your investor is reviewing what you shared…",
+  "Cross-checking your claims against market context…",
+  "Drafting a focused follow-up question…",
+  "Almost there — tightening the reply…",
+];
+
+/** Shown while rubric & sentiment load after End session (spinner popup). */
+export const ANALYTICS_LOADING_ROTATING_MESSAGES: string[] = [
+  "Gathering industry benchmarks for your pitch…",
+  "Scoring rubric dimensions against live sources…",
+  "Running delivery sentiment on your transcript…",
+  "Synthesizing investor-style feedback…",
+  "Preparing references and competitor context…",
+];
+
+/**
+ * Supplementary references: investor pitch evaluation frameworks (always listed under References).
+ * Edit URLs here to curate what appears beside Perplexity session citations.
+ */
+export const PITCH_FRAMEWORK_REFERENCE_CITATIONS: ReadonlyArray<{ title: string; url: string }> = [
+  {
+    title: "Creating a Sales Pitch Evaluation Form for Internal Reviews — Insight7",
+    url: "https://insight7.io/creating-a-sales-pitch-evaluation-form-for-internal-reviews/",
+  },
+  {
+    title: "The Best Company Pitch Evaluation Sheet | DOCX — Slideshare",
+    url: "https://www.slideshare.net/slideshow/startup-pitch-judge-evaluation-sheet/33206721",
+  },
+  {
+    title: "Pre-Pitch Evaluation Framework & Readiness Checklist — Qubit Capital",
+    url: "https://qubit.capital/blog/pre-pitch-evaluation-frameworks-investors",
+  },
+  {
+    title: "My Pitch Framework — Jean de La Rochebrochard — Venture Prose",
+    url: "https://2lr.substack.com/p/my-pitch-framework",
+  },
+  {
+    title: "The Best Company Pitch Evaluation Sheet — Eloquens",
+    url: "https://www.eloquens.com/tool/BX1tRy/startups/startup-investors/the-best-company-pitch-evaluation-sheet",
+  },
+  {
+    title: "From Idea to Investor-Ready — PitchScore",
+    url: "https://pitchscore.com/investor-ready/",
+  },
+  {
+    title: "Tracking Pitch Call Outcomes with Voice and Transcript Data — Insight7",
+    url: "https://insight7.io/tracking-pitch-call-outcomes-with-voice-and-transcript-data/",
+  },
+  {
+    title: "Ways to Track Pitch Performance — Muck Rack Help Center",
+    url: "https://help.muckrack.com/en/articles/10306075-ways-to-track-pitch-performance",
+  },
+];
+
 // "sao10k/l3.1-euryale-70b",
 
 // export const groqModels = [

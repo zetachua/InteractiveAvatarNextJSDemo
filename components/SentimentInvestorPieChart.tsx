@@ -24,9 +24,10 @@ import '../styles/SentimentInvestorPieChart.css';
 
 // Props for the component
 interface SentimentInvestorPieChartProps {
-  pronunciationAssessment: PronunciationAssessment;
-  intonationAssessment: IntonationAssessment;
-  fluencyAssessment: FluencyAssessment;
+  /** When all three are set, pronunciation / intonation / fluency panels appear; otherwise only LLM sentiment is shown. */
+  pronunciationAssessment?: PronunciationAssessment | null;
+  intonationAssessment?: IntonationAssessment | null;
+  fluencyAssessment?: FluencyAssessment | null;
   data: FeedbackMetricData; // Change from 'data' to 'feedbackData'
   overallScore:number;
   feedbackSummary:string;
@@ -44,6 +45,10 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
   intonationAssessment,
   fluencyAssessment,
 }) => {
+  const hasVoiceAnalysis =
+    pronunciationAssessment != null &&
+    intonationAssessment != null &&
+    fluencyAssessment != null;
 
   // Destructure values from the feedbackData prop
   const {
@@ -108,35 +113,54 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
           )}
       </div>
 
-      <Assessment
-        pronunciationAssessment={pronunciationAssessment}
-        intonationAssessment={intonationAssessment}
-        fluencyAssessment={fluencyAssessment}
-      />
+      {!hasVoiceAnalysis ? (
+        <p
+          style={{
+            fontSize: '0.85rem',
+            lineHeight: 1.45,
+            opacity: 0.9,
+            margin: '0.5rem 0 0.75rem',
+            padding: '0.65rem 0.75rem',
+            borderRadius: '10px',
+            background: 'rgba(255,255,255,0.06)',
+          }}
+        >
+          No microphone voice analysis for this session. The scores and breakdown below are from{' '}
+          <strong>LLM sentiment</strong> on your pitch text (clarity, relevance, depth, neutrality, engagement).
+        </p>
+      ) : (
+        <>
+          <Assessment
+            pronunciationAssessment={pronunciationAssessment}
+            intonationAssessment={intonationAssessment}
+            fluencyAssessment={fluencyAssessment}
+          />
 
-      <div className='select-assessment'>
-        {assessments.map((assessment) => (
-          <Button
-            key={assessment}
-            onPress={() => setSelectedAssessment(assessment)}
-            className={`text-sm px-4 py-4 border transition-all ${
-              selectedAssessment === assessment
-                ? 'bg-gray-500 text-white border-gray-500'
-                : 'bg-transparent text-gray-500 border-gray-500'
-            }`}
-            variant='flat'
-          >
-            {assessment}
-          </Button>
-        ))}
-      </div>
+          <div className='select-assessment'>
+            {assessments.map((assessment) => (
+              <Button
+                key={assessment}
+                onPress={() => setSelectedAssessment(assessment)}
+                className={`text-sm px-4 py-4 border transition-all ${
+                  selectedAssessment === assessment
+                    ? 'bg-gray-500 text-white border-gray-500'
+                    : 'bg-transparent text-gray-500 border-gray-500'
+                }`}
+                variant='flat'
+              >
+                {assessment}
+              </Button>
+            ))}
+          </div>
 
-      <Transcript
-        assessment={selectedAssessment}
-        pronunciationAssessment={pronunciationAssessment}
-        intonationAssessment={intonationAssessment}
-        fluencyAssessment={fluencyAssessment}
-      />
+          <Transcript
+            assessment={selectedAssessment}
+            pronunciationAssessment={pronunciationAssessment}
+            intonationAssessment={intonationAssessment}
+            fluencyAssessment={fluencyAssessment}
+          />
+        </>
+      )}
 
       <div className='chart-feedback-card'>
         <div className='chart-feedback-header'>

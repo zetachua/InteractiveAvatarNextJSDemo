@@ -68,16 +68,15 @@ const RubricInvestorPiechartExample: React.FC<RubricInvestorPieChartProps2> = ({
   // Function to determine color based on score (0-1 scale assumed)
   const getColor = (score: number) => {
     if (score <= 5) {
-      // Red gradient: darker red for lower scores, brighter red for higher scores up to 0.5
-      const intensity = score / 5; // Normalize to 0-1 within red range (0 to 0.5)
-      const redValue = Math.floor(100 + (155 * intensity)); // From #640000 (very dark red) to #FF0000 (bright red)
-      return `rgb(${redValue}, 0, 0)`;
-    } else {
-      // Green gradient: darker green for scores just above 0.5, brighter green for higher scores
-      const intensity = (score - 5) / 5; // Normalize to 0-1 within green range (0.5 to 1)
-      const greenValue = Math.floor(100 + (155 * intensity)); // From #006400 (dark green) to #00FF00 (bright green)
-      return `rgb(0, ${greenValue}, 0)`;
+      const t = score / 5;
+      const r = Math.round(255);
+      const g = Math.round(175 - 55 * t);
+      const b = Math.round(175 - 50 * t);
+      return `rgb(${r}, ${g}, ${b})`;
     }
+    const intensity = (score - 5) / 5;
+    const greenValue = Math.floor(100 + 155 * intensity);
+    return `rgb(0, ${greenValue}, 0)`;
   };
 
   const roundedOverallScore =
