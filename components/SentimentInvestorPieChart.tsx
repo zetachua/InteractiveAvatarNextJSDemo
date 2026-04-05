@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Bar,
   BarChart,
@@ -36,6 +36,35 @@ interface SentimentInvestorPieChartProps {
 
 const assessments: AssessmentType[] = ['Pronunciation', 'Intonation', 'Fluency'];
 
+const SENTIMENT_METRIC_LABELS: Record<string, string> = {
+  clarity: 'Clarity',
+  relevance: 'Relevance',
+  depth: 'Depth',
+  neutrality: 'Neutrality',
+  engagement: 'Engagement',
+};
+
+/** Same gradient as rubric pie (RubricInvestorPieChart2); `score` is 0–10. */
+function getRubricPieColor(score: number) {
+  if (score <= 5) {
+    const t = score / 5;
+    const r = Math.round(255);
+    const g = Math.round(175 - 5 * t);
+    const b = Math.round(175 - 5 * t);
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+  const intensity = (score - 5) / 5;
+  const greenValue = Math.floor(100 + 155 * intensity);
+  return `rgb(0, ${greenValue}, 0)`;
+}
+
+/** Map LLM sentiment scores (1–5) onto the same 0–10 palette as the investor rubric. */
+function sentimentScoreColor(score: number) {
+  const s = typeof score === 'number' && !Number.isNaN(score) ? score : 0;
+  const onTen = Math.max(0, Math.min(10, (s / 5) * 10));
+  return getRubricPieColor(onTen);
+}
+
 const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
   data,
   overallScore,
@@ -68,20 +97,37 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
     engagement,
   };
 
-  // Construct the chart data
-  const barData = Object.entries(rubricMetrics).map(([key, value]) => ({
-    name: key.charAt(0).toUpperCase() + key.slice(1),
-    value: value as number,
-  }));
+  const sortedSentimentRows = useMemo(() => {
+    const keys = ['clarity', 'relevance', 'depth', 'neutrality', 'engagement'] as const;
+    return keys
+      .map((key) => {
+        const scoreRaw = rubricMetrics[key];
+        const n = typeof scoreRaw === 'number' && !Number.isNaN(scoreRaw) ? scoreRaw : 0;
+        const feedback = (specificFeedback?.[key] as string) || '';
+        return {
+          key,
+          score: n,
+          feedback,
+          label: SENTIMENT_METRIC_LABELS[key] ?? key,
+          accent: sentimentScoreColor(n),
+        };
+      })
+      .sort((a, b) => {
+        if (a.score !== b.score) return a.score - b.score;
+        return a.key.localeCompare(b.key);
+      });
+  }, [rubricMetrics, specificFeedback]);
 
-  // Colors for the bar chart
-  const getBarColor = (value: number) => {
-    if (value <= 1) return '#FF6B6B';  // Red for low values
-    if (value <= 2) return '#FFC300';  // Orange for low values
-    if (value <= 3) return '#4ECDC4';  // Teal for medium values
-    if (value <= 4) return '#45B7D1';  // Blue for higher values
-    return '#2AB673';  // Green for highest values
-  };
+  // Bar chart: worst → best (same order as feedback sections)
+  const barData = useMemo(
+    () =>
+      sortedSentimentRows.map((row) => ({
+        name: row.label,
+        value: row.score,
+        key: row.key,
+      })),
+    [sortedSentimentRows],
+  );
 
   const roundedOverallScore =
     overallScore !== undefined
@@ -100,7 +146,7 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
     <div className='sentiment-analysis'>
 
       <div className='overall'>
-          <b>Sentiment Overall</b>
+          <b>Sentiment Analysis</b>
           <ul className='overall-summary-points'>
             {visibleSummaryPoints.map((point, index) => (
               <li key={`${point}-${index}`}>{point}{point.endsWith('.') ? '' : '.'}</li>
@@ -184,8 +230,8 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
             >
               {barData.map((entry, index) => (
                 <Cell
-                  key={`bar-${index}`}
-                  fill={getBarColor(entry.value)}
+                  key={`bar-${entry.key ?? index}`}
+                  fill={sentimentScoreColor(entry.value as number)}
                 />
               ))}
             </Bar>
@@ -203,8 +249,13 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
           </BarChart>
         </ResponsiveContainer>
         <div className='metrics'>
-          {Object.entries(specificFeedback || {}).map(([metric, feedback]) => (
-            <Section key={metric} title={metric} feedback={feedback as string} />
+          {sortedSentimentRows.map(({ key, label, feedback, score, accent }) => (
+            <Section
+              key={key}
+              title={`${label} (${score}/5)`}
+              feedback={feedback}
+              headerAccentColor={accent}
+            />
           ))}
         </div>
       </div>

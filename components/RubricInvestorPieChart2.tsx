@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from 'react';
-import { Spinner } from '@nextui-org/react';
 import { PieChart, Pie, Cell, Tooltip, Legend } from 'recharts';
 import { Rubric2InvestorMetricData, Rubric2InvestorSpecificData, RubricCitationItem } from './KnowledgeClasses';
 import Section from './Section';
@@ -51,9 +50,6 @@ interface RubricInvestorPieChartProps2 {
   citationItems?: RubricCitationItem[];
   /** Metric-2 rival-founder counterplay (Sonar). */
   competitorCounterplay?: string;
-  /** Groq: unified rubric + sentiment verdict. */
-  investorVerdict?: string;
-  investorVerdictLoading?: boolean;
 }
 
 const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
@@ -65,8 +61,6 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
   summary,
   specificFeedback,
   competitorCounterplay,
-  investorVerdict,
-  investorVerdictLoading,
 }) => {
   const rubricMetrics: Rubric2InvestorMetricData = data ?? ({} as Rubric2InvestorMetricData);
   const rubricSummary: string = summary ?? '';
@@ -197,7 +191,7 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
             fontSize: '1rem',
           }}
         >
-          <b>Perplexity LLM Analysis Overall</b>
+          <b> AI Analysis</b>
           <div style={{ fontSize: '0.9rem', lineHeight: 1.45, padding: '0.3rem', textAlign: 'left' }}>
             <ul style={{ background: 'rgba(255,255,255,0.06)', borderRadius: '12px', padding: '0.75rem 0.95rem', margin: 0, textAlign: 'left' }}>
               {visibleSummaryPoints.map((point, index) => (
@@ -300,36 +294,6 @@ const RubricInvestorPiechart2: React.FC<RubricInvestorPieChartProps2> = ({
               headerAccentColor="rgba(255, 193, 7, 0.95)"
             />
           ) : null}
-          <div style={{ marginTop: '0.25rem' }}>
-            <div
-              style={{
-                fontWeight: 700,
-                fontSize: '0.95rem',
-                marginBottom: '0.45rem',
-                padding: '0.2rem 0.5rem',
-                borderRadius: '10px',
-                display: 'inline-block',
-                background: 'linear-gradient(90deg, rgba(120, 140, 255, 0.35), rgba(200, 120, 255, 0.25))',
-                color: '#f4f4f5',
-              }}
-            >
-              Investor Verdict
-            </div>
-            {investorVerdictLoading ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#e4e4e7', fontSize: '0.88rem' }}>
-                <Spinner size="sm" color="default" />
-                Synthesizing rubric and sentiment…
-              </div>
-            ) : investorVerdict?.trim() ? (
-              <p style={{ margin: 0, lineHeight: 1.5, color: '#f4f4f5', fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>
-                {investorVerdict.trim()}
-              </p>
-            ) : (
-              <p style={{ margin: 0, fontSize: '0.85rem', color: '#a1a1aa' }}>
-                Verdict will appear here after the session ends and analysis completes.
-              </p>
-            )}
-          </div>
         </div>
       </div>
     </div>

@@ -1,3 +1,5 @@
+import { Spinner } from "@nextui-org/spinner";
+
 interface CountdownTimerProps {
     timeLeft: number;
     isTimeUp: boolean;
@@ -46,20 +48,22 @@ interface CountdownTimerProps {
               maxWidth: "200px",
             }}
           >
-            {statusHint}
+            <Spinner size="sm" color="white" /> <br /> {statusHint}
           </p>
-        ) : null}
-        <h2 style={{ fontSize: "0.92rem", fontWeight: 700, textAlign: "center", marginBottom: "0.2rem" }}>
-          Pitch Countdown Timer
-        </h2>
-        {isTimeUp ? (
-          <p style={{ fontSize: "1.15rem", fontWeight: 700, marginTop: "0.2rem", color: "#5cf7a0" }}>Q&A Time!</p>
-        ) : (
-          <p style={{ fontSize: "1.15rem", fontWeight: 700, marginTop: "0.2rem", color: "#ff8b8b" }}>
-            {formatTime(timeLeft)}
-          </p>
-        )}
-        
+        ) : 
+        <>
+          <h2 style={{ fontSize: "0.92rem", fontWeight: 700, textAlign: "center", marginBottom: "0.2rem" }}>
+            Pitch Countdown Timer
+          </h2>
+          {isTimeUp ? (
+            <p style={{ fontSize: "1.15rem", fontWeight: 700, marginTop: "0.2rem", color: "#5cf7a0" }}>Q&A Time!</p>
+          ) : (
+            <p style={{ fontSize: "1.15rem", fontWeight: 700, marginTop: "0.2rem", color: "#ff8b8b" }}>
+              {formatTime(timeLeft)}
+            </p>
+          )}
+        </>
+        }
       </div>
     );
   };

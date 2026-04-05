@@ -38,6 +38,7 @@ import {
   downloadHtmlFile,
   mergeRubricSummaries,
   splitSessionAndFrameworkCitations,
+  type AnalyticsExportPayload,
 } from "../utils/analyticsExport";
 
 type MetricsSessionPayload = {
@@ -46,6 +47,7 @@ type MetricsSessionPayload = {
   rubricAllRatings2: number;
   rubricSpecificFeedback2: Rubric2InvestorSpecificData;
   competitorCounterplay2: string;
+  citations: RubricCitationItem[];
 };
 
 /** Same topic the SDK uses for LiveKit agent commands (see @heygen/liveavatar-web-sdk `LIVEKIT_COMMAND_CHANNEL_TOPIC`). */
@@ -550,17 +552,76 @@ export default function InteractiveInvestors() {
     try {
       const [sentimentPayload, metricsPayload] = await Promise.all([fetchSentiment(), fetchAllMetrics()]);
       if (metricsPayload) {
-        await requestInvestorVerdict(metricsPayload, sentimentPayload);
+        const verdictText = await requestInvestorVerdict(metricsPayload, sentimentPayload);
+        await persistPitchAnalyticsReportToSupabase(
+          metricsPayload,
+          sentimentPayload,
+          verdictText,
+          chatHistory,
+          assessment,
+          selectedModel,
+        );
       }
     } catch (error) {
       console.error('Error fetching pitch sentiment and rubric response:', error);
     }
   }
 
+  /** Inserts one row into `pitch_analytics_reports` (same shape as download HTML). */
+  async function persistPitchAnalyticsReportToSupabase(
+    metrics: MetricsSessionPayload,
+    sentiment: SentimentSessionPayload | null,
+    investorVerdictText: string,
+    chatHist: ChatHistory[],
+    assess: { pronunciation: unknown; intonation: unknown; fluency: unknown },
+    modelId: string,
+  ) {
+    const emptyMetrics = { clarity: 0, relevance: 0, depth: 0, neutrality: 0, engagement: 0 };
+    const emptySpecific = { clarity: '', relevance: '', depth: '', neutrality: '', engagement: '' };
+    const exportPayload: AnalyticsExportPayload = {
+      rubricSummary: metrics.rubricSummary2,
+      rubricOverallScore: metrics.rubricAllRatings2,
+      rubricMetrics: metrics.rubricJson2,
+      rubricSpecificFeedback: metrics.rubricSpecificFeedback2,
+      citations: metrics.citations,
+      competitorCounterplay: metrics.competitorCounterplay2,
+      investorVerdict: investorVerdictText,
+      sentimentScore: sentiment?.sentimentScore ?? 0,
+      sentimentMetrics: sentiment?.sentimentMetrics ?? emptyMetrics,
+      sentimentSummary: sentiment?.sentimentSummary ?? '',
+      sentimentSpecificFeedback: sentiment?.sentimentSpecifics ?? emptySpecific,
+      chatHistory: chatHist,
+      assessment: assess,
+    };
+    const { combined } = splitSessionAndFrameworkCitations(exportPayload.citations);
+    const html = buildAnalyticsReportHtml(exportPayload, "Pitch analytics report");
+    try {
+      const saveRes = await fetch("/api/savePitchAnalyticsReport", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          html,
+          selectedModel: modelId,
+          payload: {
+            ...exportPayload,
+            citationsCombinedCount: combined.length,
+            generatedAt: new Date().toISOString(),
+            source: "session_end_auto",
+          },
+        }),
+      });
+      if (!saveRes.ok) {
+        const errBody = await saveRes.json().catch(() => ({}));
+        console.warn("savePitchAnalyticsReport (auto):", saveRes.status, errBody);
+      }
+    } catch (e) {
+      console.warn("savePitchAnalyticsReport (auto) failed:", e);
+    }
+  }
+
   const downloadAnalyticsPage = async () => {
     const sessionCitations = rubricCitations2 ?? [];
-    const { combined } = splitSessionAndFrameworkCitations(sessionCitations);
-    const exportPayload = {
+    const exportPayload: AnalyticsExportPayload = {
       rubricSummary: rubricSummary2,
       rubricOverallScore: rubricAllRatings2,
       rubricMetrics: rubricJson2,
@@ -577,27 +638,6 @@ export default function InteractiveInvestors() {
     };
     const html = buildAnalyticsReportHtml(exportPayload, "Pitch analytics report");
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
-    try {
-      const saveRes = await fetch("/api/savePitchAnalyticsReport", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          html,
-          selectedModel: selectedModel,
-          payload: {
-            ...exportPayload,
-            citationsCombinedCount: combined.length,
-            generatedAt: new Date().toISOString(),
-          },
-        }),
-      });
-      if (!saveRes.ok) {
-        const errBody = await saveRes.json().catch(() => ({}));
-        console.warn("savePitchAnalyticsReport:", saveRes.status, errBody);
-      }
-    } catch (e) {
-      console.warn("savePitchAnalyticsReport failed (download still proceeds):", e);
-    }
     downloadHtmlFile(html, `pitch-analytics-${stamp}.html`);
   };
 
@@ -641,7 +681,7 @@ export default function InteractiveInvestors() {
   const requestInvestorVerdict = async (
     metrics: MetricsSessionPayload,
     sentiment: SentimentSessionPayload | null,
-  ) => {
+  ): Promise<string> => {
     setInvestorVerdict('');
     setInvestorVerdictLoading(true);
     try {
@@ -665,11 +705,12 @@ export default function InteractiveInvestors() {
         }),
       });
       const d = await r.json();
-      if (typeof d.investorVerdict === 'string' && d.investorVerdict.trim()) {
-        setInvestorVerdict(d.investorVerdict.trim());
-      }
+      const text = typeof d.investorVerdict === 'string' ? d.investorVerdict.trim() : '';
+      if (text) setInvestorVerdict(text);
+      return text;
     } catch (e) {
       console.warn('Investor verdict request failed:', e);
+      return '';
     } finally {
       setInvestorVerdictLoading(false);
     }
@@ -783,6 +824,7 @@ export default function InteractiveInvestors() {
         rubricAllRatings2: aggregatedScores,
         rubricSpecificFeedback2: aggregatedFeedback as Rubric2InvestorSpecificData,
         competitorCounterplay2: counter,
+        citations: dedupedCitations,
       };
     } catch (e) {
       console.error('fetchAllMetrics', e);
@@ -1037,7 +1079,7 @@ export default function InteractiveInvestors() {
 
         {/* ── Evaluation overlay ── */}
         {(sentimentJson && rubricJson2 && !showFeedbackModal) ?
-          <div id='evaluation' style={{ fontSize: '0.8rem', position: 'absolute', top: '50%', left: '50%', backgroundColor: 'rgba(50,51,52)', borderRadius: '50px', transform: 'translate(-50%,-50%)', padding: '2rem', width: '80%', maxHeight: '900px', minWidth: '600px', overflowY: 'scroll', scrollbarWidth: 'none' }}>
+          <div id='evaluation' style={{ fontSize: '0.8rem', position: 'absolute', top: '50%', left: '50%', backgroundColor: 'rgba(50,51,52)', borderRadius: '50px', transform: 'translate(-50%,-50%)', padding: '2rem', width: '80%', maxHeight: '800px', minWidth: '600px', overflowY: 'scroll', scrollbarWidth: 'none' }}>
             <div style={{ position: 'absolute', top: '20px', right: '20px', display: 'flex', gap: '0.5rem', zIndex: 1200 }}>
               <button
                 type="button"
@@ -1053,6 +1095,57 @@ export default function InteractiveInvestors() {
               >
                 View ChatHistory
               </button>
+            </div>
+            <div
+              style={{
+                width: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                textAlign: 'center',
+                marginTop: '2.75rem',
+                marginBottom: '1.25rem',
+                padding: '0 1.5rem',
+                boxSizing: 'border-box',
+              }}
+            >
+              <div
+                style={{
+                  fontWeight: 700,
+                  fontSize: '1rem',
+                  marginBottom: '0.55rem',
+                  padding: '0.35rem 0.85rem',
+                  borderRadius: '12px',
+                  display: 'inline-block',
+                  background: 'linear-gradient(90deg, rgba(120, 140, 255, 0.4), rgba(200, 120, 255, 0.3))',
+                  color: '#f4f4f5',
+                }}
+              >
+                Investor Verdict
+              </div>
+              {investorVerdictLoading ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', color: '#e4e4e7', fontSize: '0.88rem' }}>
+                  <Spinner size="sm" color="default" />
+                  Synthesizing rubric and sentiment…
+                </div>
+              ) : investorVerdict?.trim() ? (
+                <p
+                  style={{
+                    margin: 0,
+                    lineHeight: 1.55,
+                    color: '#f4f4f5',
+                    fontSize: '0.92rem',
+                    whiteSpace: 'pre-wrap',
+                    maxWidth: '52rem',
+                  }}
+                >
+                  {investorVerdict.trim()}
+                </p>
+              ) : (
+                <p style={{ margin: 0, fontSize: '0.85rem', color: '#a1a1aa', maxWidth: '40rem' }}>
+                  Verdict will appear here after the session ends and analysis completes.
+                </p>
+              )}
             </div>
             <div style={{ marginBottom: '0.8rem', color: 'white' }}>
               <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>Benchmark Comparison</div>
@@ -1075,8 +1168,6 @@ export default function InteractiveInvestors() {
                 citationItems={rubricCitations2 ?? undefined}
                 competitorCounterplay={competitorCounterplay2}
                 data={rubricJson2}
-                investorVerdict={investorVerdict}
-                investorVerdictLoading={investorVerdictLoading}
                 overallScore={rubricAllRatings2}
                 summary={rubricSummary2}
                 specificFeedback={rubricSpecificFeedback2}
