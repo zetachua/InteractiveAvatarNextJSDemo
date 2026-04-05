@@ -12,7 +12,7 @@ const Introduction: React.FC<IntroductionProps> = ({
     <div className='introduction-overlay'>
       <div className='introduction-container'>
         <h1>Begin Pitch Session</h1>
-        <p>You have 5 minutes to complete your pitch before moving to Q&A.</p>
+        <p>You have 8 minutes to complete your pitch before moving to Q&A.</p>
         <p>You can pitch by typing or using voice input.</p>
         <Button
           className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white"
