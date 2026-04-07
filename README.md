@@ -16,7 +16,9 @@ Use two terminals:
    - `npm run dev`
 
 2. **Terminal 2 (Audio analysis server for transcription + fluency/intonation)**
-   - `press the run/play button for the file /page/audioAnalysis.py`
+   -  conda activate pitchdemo
+   -  download model `python -m spacy download en_core_web_sm`
+   - `run python3 audioAnalysis.py`
 
 When both are running:
 - Open `http://localhost:3000`
