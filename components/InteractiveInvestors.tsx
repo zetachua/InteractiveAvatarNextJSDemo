@@ -2005,7 +2005,7 @@ export default function InteractiveInvestors() {
                           <span style={{ flex: 1, fontSize: '0.82rem', opacity: 0.9 }}>
                             <strong>Rubric</strong> {entry.rubricOverallScore.toFixed(1)}/10 · <strong>Sentiment</strong>{' '}
                             {entry.sentimentScore.toFixed(1)}/5
-                            {entry.selectedModel ? ` · ${entry.selectedModel}` : ''}
+                            {entry.startupLabel ? ` · ${entry.startupLabel}` : entry.selectedModel ? ` · ${entry.selectedModel}` : ''}
                           </span>
                           <span style={{ fontSize: '0.72rem', opacity: 0.65, whiteSpace: 'nowrap' }}>{when}</span>
                           <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>{expanded ? '▲' : '▼'}</span>

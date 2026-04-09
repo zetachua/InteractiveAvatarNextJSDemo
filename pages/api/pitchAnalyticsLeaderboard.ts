@@ -8,6 +8,8 @@ type SupabaseRow = {
   payload: Record<string, unknown> | null;
 };
 
+type ChatMessage = { role?: unknown; content?: unknown };
+
 function num(v: unknown): number {
   const n = typeof v === 'number' ? v : parseFloat(String(v ?? ''));
   return Number.isFinite(n) ? n : 0;
@@ -39,6 +41,58 @@ function asFeedback(v: unknown): Record<string, string> {
     if (s) out[k] = s;
   }
   return out;
+}
+
+function roleLabelFromModel(model: string | null): string {
+  const m = (model || '').toLowerCase();
+  if (m.includes('sharktank')) return 'Financial Advisor';
+  if (m.includes('investor')) return 'Investor Coach';
+  if (m.includes('mentor')) return 'Startup Mentor';
+  return 'AI Investor';
+}
+
+function maybeName(text: string): string | null {
+  const cleaned = text
+    .replace(/["'“”]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/[.,;:!?]+$/, '');
+  if (!cleaned) return null;
+  if (cleaned.length < 2 || cleaned.length > 42) return null;
+  if (/^(startup|company|venture|app|platform|product|business)$/i.test(cleaned)) return null;
+  if (/^(we|our|the|my|i|this)$/i.test(cleaned)) return null;
+  return cleaned;
+}
+
+function extractStartupNameFromChat(v: unknown): string | null {
+  if (!Array.isArray(v)) return null;
+  const userTexts = (v as ChatMessage[])
+    .filter((m) => String(m?.role || '').toLowerCase() === 'user')
+    .map((m) => (typeof m?.content === 'string' ? m.content : ''))
+    .filter(Boolean)
+    .slice(0, 8);
+  if (userTexts.length === 0) return null;
+
+  const blob = userTexts.join('\n');
+  const patterns = [
+    /(?:startup|company|venture|platform|app|product)\s*(?:name|called|is called|named)?\s*[:\-]?\s*([A-Z][A-Za-z0-9&' -]{1,40})/i,
+    /(?:we(?:'re| are)\s+(?:called|building)\s+)([A-Z][A-Za-z0-9&' -]{1,40})/i,
+    /(?:my startup is|our startup is|our company is)\s+([A-Z][A-Za-z0-9&' -]{1,40})/i,
+  ];
+  for (const re of patterns) {
+    const m = blob.match(re);
+    const name = maybeName(m?.[1] || '');
+    if (name) return name;
+  }
+  return null;
+}
+
+function inferStartupLabel(payload: Record<string, unknown>, selectedModel: string | null): string {
+  const direct = str(payload.startupLabel || payload.startupName);
+  if (direct) return direct;
+  const fromChat = extractStartupNameFromChat(payload.chatHistory);
+  if (fromChat) return fromChat;
+  return roleLabelFromModel(selectedModel);
 }
 
 function parseSections(v: unknown): { heading: string; body: string }[] | undefined {
@@ -108,6 +162,7 @@ export default async function pitchAnalyticsLeaderboard(req: NextApiRequest, res
         rank: 0,
         createdAt: row.created_at,
         selectedModel: row.selected_model,
+        startupLabel: inferStartupLabel(p, row.selected_model),
         rubricOverallScore,
         sentimentScore,
         rubricSummary: str(p.rubricSummary),

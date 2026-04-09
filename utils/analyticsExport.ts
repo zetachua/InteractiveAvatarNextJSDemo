@@ -81,6 +81,7 @@ export type PitchLeaderboardEntry = {
   rank: number;
   createdAt: string;
   selectedModel: string | null;
+  startupLabel?: string;
   rubricOverallScore: number;
   sentimentScore: number;
   rubricSummary: string;
