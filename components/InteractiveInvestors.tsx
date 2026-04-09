@@ -619,8 +619,8 @@ export default function InteractiveInvestors() {
     try {
       const [pronunciationRes, intonationRes, fluencyRes] = await Promise.all([
         fetch('/api/pronunciationAnalysis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: outputFile, script: transcribedData.text }) }),
-        fetch('http://localhost:8000/intonationAnalysis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: outputFile, script: transcribedData.text, segments: transcribedData.segments }) }),
-        fetch('http://localhost:8000/fluencyAnalysis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ segments: transcribedData.segments }) })
+        fetch('/api/audioIntonationAnalysis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: outputFile, script: transcribedData.text, segments: transcribedData.segments }) }),
+        fetch('/api/audioFluencyAnalysis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ segments: transcribedData.segments }) })
       ]);
       const [pronunciationData, intonationData, fluencyData] = await Promise.all([pronunciationRes.json(), intonationRes.json(), fluencyRes.json()]);
       if (!pronunciationRes.ok) throw new Error(pronunciationData.error);
@@ -637,7 +637,11 @@ export default function InteractiveInvestors() {
 
   /** Transcribe WAV and optionally run voice assessment + send text to chat. Returns false when transcript is empty (no chat/API spend). */
   const processConvertedAudio = async (outputFile: string, runAssessmentInBackground = false): Promise<boolean> => {
-    const transcribedRes = await fetch(`http://localhost:8000/transcribe?file=${encodeURIComponent(outputFile)}`, { method: 'POST' });
+    const transcribedRes = await fetch('/api/audioTranscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ file: outputFile }),
+    });
     const transcribedData = await transcribedRes.json();
     if (!transcribedRes.ok) throw new Error(transcribedData.error || "Transcription failed");
     const transcriptText = typeof transcribedData?.text === 'string' ? transcribedData.text.trim() : '';
