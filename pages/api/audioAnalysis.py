@@ -16,7 +16,10 @@ app = Flask(__name__)
 CORS(app)
 load_dotenv()
 
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'temp')
+# Use repo-root /temp so Python and Next.js reference the exact same files,
+# regardless of which directory this script is launched from.
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+UPLOAD_FOLDER = os.path.join(REPO_ROOT, "temp")
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 whisper_model = whisper.load_model("base")
