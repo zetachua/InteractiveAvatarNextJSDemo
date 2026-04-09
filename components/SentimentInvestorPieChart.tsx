@@ -9,6 +9,7 @@ import {
   YAxis
 } from 'recharts';
 import { Button } from '@nextui-org/button';
+import { Spinner } from '@nextui-org/spinner';
 import Assessment from './Assessment';
 import Section from './Section';
 import Transcript from './Transcript';
@@ -28,6 +29,8 @@ interface SentimentInvestorPieChartProps {
   pronunciationAssessment?: PronunciationAssessment | null;
   intonationAssessment?: IntonationAssessment | null;
   fluencyAssessment?: FluencyAssessment | null;
+  /** True while upload/recording audio is being analyzed (separate from LLM sentiment). */
+  audioAnalyticsLoading?: boolean;
   data: FeedbackMetricData; // Change from 'data' to 'feedbackData'
   overallScore:number;
   feedbackSummary:string;
@@ -73,6 +76,7 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
   pronunciationAssessment,
   intonationAssessment,
   fluencyAssessment,
+  audioAnalyticsLoading = false,
 }) => {
   const hasVoiceAnalysis =
     pronunciationAssessment != null &&
@@ -159,7 +163,26 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
           )}
       </div>
 
-      {!hasVoiceAnalysis ? (
+      {audioAnalyticsLoading ? (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.65rem',
+            fontSize: '0.85rem',
+            lineHeight: 1.45,
+            margin: '0.5rem 0 0.75rem',
+            padding: '0.85rem 0.9rem',
+            borderRadius: '10px',
+            background: 'rgba(120, 140, 255, 0.12)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            color: 'rgba(245,245,250,0.95)',
+          }}
+        >
+          <Spinner size="sm" color="default" />
+          <span>Analyzing your audio (pronunciation, intonation, fluency). This usually takes a little while—scores below are from text sentiment in the meantime.</span>
+        </div>
+      ) : !hasVoiceAnalysis ? (
         <p
           style={{
             fontSize: '0.85rem',

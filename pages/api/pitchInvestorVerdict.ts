@@ -51,10 +51,31 @@ export default async function pitchInvestorVerdict(req: NextApiRequest, res: Nex
     const raw = completion.choices[0]?.message?.content;
     if (!raw) throw new Error('Empty completion');
 
-    const parsed = JSON.parse(cleanResponse(raw)) as { investorVerdict?: string };
-    const investorVerdict = typeof parsed.investorVerdict === 'string' ? parsed.investorVerdict : '';
+    const parsed = JSON.parse(cleanResponse(raw)) as { sections?: unknown; investorVerdict?: string };
 
-    return res.status(200).json({ investorVerdict });
+    type VerdictSection = { heading: string; body: string };
+    const sections: VerdictSection[] = [];
+    if (Array.isArray(parsed.sections)) {
+      for (const item of parsed.sections) {
+        if (!item || typeof item !== 'object') continue;
+        const o = item as Record<string, unknown>;
+        const heading = typeof o.heading === 'string' ? o.heading.trim() : '';
+        const body = typeof o.body === 'string' ? o.body.trim() : '';
+        if (heading && body) sections.push({ heading, body });
+      }
+    }
+
+    let investorVerdict = '';
+    if (sections.length > 0) {
+      investorVerdict = sections.map((s) => `${s.heading}. ${s.body}`).join('\n\n');
+    } else if (typeof parsed.investorVerdict === 'string') {
+      investorVerdict = parsed.investorVerdict.trim();
+    }
+
+    return res.status(200).json({
+      investorVerdict,
+      investorVerdictSections: sections.length > 0 ? sections : undefined,
+    });
   } catch (e) {
     console.error('pitchInvestorVerdict', e);
     return res.status(500).json({ error: 'Failed to generate investor verdict' });

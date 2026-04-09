@@ -1,6 +1,6 @@
 export async function POST(req: Request) {
   try {
-    const requestApiKey = req.headers.get("x-api-key");
+    const requestApiKey = req.headers.get("x-api-key")?.trim() || "";
     const apiKey = requestApiKey || process.env.LIVEAVATAR_API_KEY;
     if (!apiKey) {
       return new Response(JSON.stringify({ error: "LiveAvatar API key missing. Provide x-api-key or set LIVEAVATAR_API_KEY." }), {

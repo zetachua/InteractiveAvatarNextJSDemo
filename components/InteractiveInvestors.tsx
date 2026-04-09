@@ -8,14 +8,9 @@ import {
   SelectItem,
   Spinner,
 } from "@nextui-org/react";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import './TextArea.css';
-
-interface Pause {
-  start: number;
-  end: number;
-}
-
+import './WaveAnimation.css';
 import { ChatHistory, FeedbackData, FeedbackMetricData, FeedbackSpecificMetrics, Rubric2InvestorData, Rubric2InvestorSpecificData, RubricCitationItem, RubricInvestorData, RubricInvestorSpecificData } from "./KnowledgeClasses";
 import { Microphone } from "@phosphor-icons/react";
 import {
@@ -37,9 +32,60 @@ import {
   buildAnalyticsReportHtml,
   downloadHtmlFile,
   mergeRubricSummaries,
+  RUBRIC_LABELS,
   splitSessionAndFrameworkCitations,
   type AnalyticsExportPayload,
+  type InvestorVerdictSection,
+  type PitchLeaderboardEntry,
 } from "../utils/analyticsExport";
+
+interface Pause {
+  start: number;
+  end: number;
+}
+
+/** Dark shell / panels — aligned with leaderboard & analytics modals. */
+const DARK_PAGE_BG =
+  'linear-gradient(165deg, #08080a 0%, #12131a 42%, #0c0b10 72%, #08080a 100%)';
+const DARK_PANEL = {
+  background: '#1a1b1e',
+  border: '1px solid rgba(255, 255, 255, 0.12)',
+  borderRadius: 18,
+  boxShadow: '0 20px 50px rgba(0, 0, 0, 0.45)',
+} as const;
+
+/** Turn investor verdict prose into short bullet lines for readability. */
+function splitInvestorVerdictLines(text: string): string[] {
+  const t = text.trim();
+  if (!t) return [];
+
+  const stripMarker = (s: string) =>
+    s
+      .replace(/^[-*•]\s*/, '')
+      .replace(/^\d+[\).]\s*/, '')
+      .trim();
+
+  const rawLines = t
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (rawLines.length > 1) {
+    return rawLines.map(stripMarker).filter(Boolean);
+  }
+
+  const single = rawLines[0] ?? t;
+  const numbered = single.split(/\s+(?=\d+[\).]\s)/).map(stripMarker).filter(Boolean);
+  if (numbered.length > 1) return numbered;
+
+  const sentences = single
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (sentences.length > 1) return sentences;
+
+  return [single];
+}
 
 type MetricsSessionPayload = {
   rubricSummary2: string;
@@ -128,6 +174,7 @@ export default function InteractiveInvestors() {
   const [rubricSummary2, setRubricSummary2] = useState('');
   const [competitorCounterplay2, setCompetitorCounterplay2] = useState('');
   const [investorVerdict, setInvestorVerdict] = useState('');
+  const [investorVerdictSections, setInvestorVerdictSections] = useState<InvestorVerdictSection[] | null>(null);
   const [investorVerdictLoading, setInvestorVerdictLoading] = useState(false);
   const [rubricCitations2, setRubricCitations2] = useState<RubricCitationItem[] | null>(null);
   const [rubricSpecificFeedback2, setRubricSpecificFeedback2] = useState<Rubric2InvestorSpecificData>({
@@ -171,7 +218,9 @@ export default function InteractiveInvestors() {
 
   // Avatar states
   const [isAvatarMode, setIsAvatarMode] = useState<boolean>(false);
+  /** Optional: only sent to `/api/get-access-token` when non-empty; otherwise the server uses `LIVEAVATAR_API_KEY` from `.env`. */
   const [avatarApiKey, setAvatarApiKey] = useState("");
+  const [showAvatarApiKeyOverride, setShowAvatarApiKeyOverride] = useState(false);
   const [isAvatarConnected, setIsAvatarConnected] = useState(false);
   const [isAvatarLoading, setIsAvatarLoading] = useState(false);
   const avatarVideoRef = useRef<HTMLVideoElement>(null);
@@ -189,6 +238,11 @@ export default function InteractiveInvestors() {
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
   const [feedbackSubmitMessage, setFeedbackSubmitMessage] = useState("");
   const [showChatHistoryModal, setShowChatHistoryModal] = useState(false);
+  const [showLeaderboardModal, setShowLeaderboardModal] = useState(false);
+  const [leaderboardEntries, setLeaderboardEntries] = useState<PitchLeaderboardEntry[]>([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
+  const [leaderboardError, setLeaderboardError] = useState<string | null>(null);
+  const [leaderboardExpandedId, setLeaderboardExpandedId] = useState<string | null>(null);
   const audioUploadRef = useRef<HTMLInputElement | null>(null);
 
   // Recording and pitch analysis states
@@ -200,8 +254,18 @@ export default function InteractiveInvestors() {
     intonation: null,
     fluency: null
   });
+  const [audioAnalyticsLoading, setAudioAnalyticsLoading] = useState(false);
   const isAnyComparisonOpen =
     displayLookupPitch || displayGrantPitch || displayConcretePitch || displayMediVRPitch;
+
+  /** At least one user message in chat — required before running analytics LLMs on end session. */
+  const hasUserPitchContentForAnalytics = useMemo(
+    () =>
+      chatHistory.some(
+        (m) => m.role === "user" && typeof m.content === "string" && m.content.trim().length > 0,
+      ),
+    [chatHistory],
+  );
 
   useEffect(() => {
     isAvatarModeRef.current = isAvatarMode;
@@ -237,6 +301,14 @@ export default function InteractiveInvestors() {
     }, 30000);
     return () => clearTimeout(t);
   }, [awaitingFeedbackAfterAnalytics, sentimentJson, rubricJson2, rubricCitations2, loadingRubric]);
+
+  useEffect(() => {
+    if (debug !== 'Audio file processed successfully.') return;
+    const t = window.setTimeout(() => {
+      setDebug((prev) => (prev === 'Audio file processed successfully.' ? undefined : prev));
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [debug]);
 
   /** Extend session past the ~5min idle window (HTTP + LITE WebSocket keep_alive per LiveAvatar docs). */
   useEffect(() => {
@@ -291,12 +363,16 @@ export default function InteractiveInvestors() {
 
   async function fetchAvatarAccessToken() {
     try {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      const override = avatarApiKey.trim();
+      if (override) {
+        headers["x-api-key"] = override;
+      }
       const response = await fetch("/api/get-access-token", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": avatarApiKey,
-        },
+        headers,
       });
       const data = await response.json();
       if (!response.ok) {
@@ -415,8 +491,9 @@ export default function InteractiveInvestors() {
     setRubricAllRatings2(0);
     setRubricCitations2(null);
     setCompetitorCounterplay2('');
-    setInvestorVerdict('');
-    setInvestorVerdictLoading(false);
+      setInvestorVerdict('');
+      setInvestorVerdictSections(null);
+      setInvestorVerdictLoading(false);
     setAwaitingFeedbackAfterAnalytics(false);
     setSentimentScore(0);
     setRubricAllRatings(0);
@@ -437,6 +514,32 @@ export default function InteractiveInvestors() {
     setDebug("");
   }
 
+  const exitAnalyticsPage = () => {
+    setLoadingRubric(false);
+    setLoadingRubric1(false);
+    setLoadingRubric2(false);
+    resetAllStates();
+    setStream(false);
+  };
+
+  const openLeaderboard = () => {
+    setShowLeaderboardModal(true);
+    setLeaderboardExpandedId(null);
+    setLeaderboardLoading(true);
+    setLeaderboardError(null);
+    fetch('/api/pitchAnalyticsLeaderboard')
+      .then(async (r) => {
+        const d = await r.json();
+        setLeaderboardEntries(Array.isArray(d.entries) ? d.entries : []);
+        if (d.error && typeof d.error === 'string') setLeaderboardError(d.error);
+      })
+      .catch(() => {
+        setLeaderboardError('Could not load leaderboard.');
+        setLeaderboardEntries([]);
+      })
+      .finally(() => setLeaderboardLoading(false));
+  };
+
   const toggleSpeechToText = () => {
     if (isRecording) {
       setIsTimeUp(true);
@@ -445,6 +548,36 @@ export default function InteractiveInvestors() {
     } else {
       startRecording();
     }
+  };
+
+  /** After Talk → stop: save MP3 (or WebM fallback) locally so users can re-upload if transcription fails. */
+  const downloadRecordingBackupCopy = (webmBlob: Blob) => {
+    if (!webmBlob || webmBlob.size === 0) return;
+    void (async () => {
+      try {
+        const formData = new FormData();
+        formData.append('file', webmBlob, 'recording.webm');
+        const res = await fetch('/api/downloadRecordingAsMp3', { method: 'POST', body: formData });
+        if (!res.ok) throw new Error('mp3');
+        const mp3Blob = await res.blob();
+        const url = URL.createObjectURL(mp3Blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pitch-retry-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.mp3`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch {
+        const url = URL.createObjectURL(webmBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pitch-retry-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.webm`;
+        a.click();
+        URL.revokeObjectURL(url);
+        setDebug(
+          'Saved a WebM backup on your device (MP3 conversion unavailable). Use Upload Audio to retry.',
+        );
+      }
+    })();
   };
 
   const startRecording = async () => {
@@ -456,13 +589,21 @@ export default function InteractiveInvestors() {
         if (e.data.size > 0) audioChunksRef.current.push(e.data);
       };
       mediaRecorderRef.current.onstop = async () => {
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const formData = new FormData();
-        formData.append('file', blob, 'audio.webm');
-        const convertRes = await fetch('/api/convertWebmToWav', { method: 'POST', body: formData });
-        const convertData = await convertRes.json();
-        if (!convertRes.ok) throw new Error(convertData.error);
-        await processConvertedAudio(convertData.outputFile);
+        try {
+          const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          downloadRecordingBackupCopy(blob);
+          const formData = new FormData();
+          formData.append('file', blob, 'audio.webm');
+          const convertRes = await fetch('/api/convertWebmToWav', { method: 'POST', body: formData });
+          const convertData = await convertRes.json();
+          if (!convertRes.ok) throw new Error(convertData.error);
+          await processConvertedAudio(convertData.outputFile);
+        } catch (e) {
+          console.error(e);
+          setDebug(e instanceof Error ? e.message : 'Audio processing failed');
+        } finally {
+          setAudioTranscribing(false);
+        }
       };
       mediaRecorderRef.current.start(1000);
       setIsRecording(true);
@@ -474,29 +615,45 @@ export default function InteractiveInvestors() {
   const runPitchAudioAssessment = async (outputFile: string, transcribedData: any) => {
     if (!isPitch) return;
     setIsPitch(false);
-    const [pronunciationRes, intonationRes, fluencyRes] = await Promise.all([
-      fetch('/api/pronunciationAnalysis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: outputFile, script: transcribedData.text }) }),
-      fetch('http://localhost:8000/intonationAnalysis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: outputFile, script: transcribedData.text, segments: transcribedData.segments }) }),
-      fetch('http://localhost:8000/fluencyAnalysis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ segments: transcribedData.segments }) })
-    ]);
-    const [pronunciationData, intonationData, fluencyData] = await Promise.all([pronunciationRes.json(), intonationRes.json(), fluencyRes.json()]);
-    if (!pronunciationRes.ok) throw new Error(pronunciationData.error);
-    if (!intonationRes.ok) throw new Error(intonationData.error);
-    if (!fluencyRes.ok) throw new Error(fluencyData.error);
-    setAssessment({ pronunciation: pronunciationData, intonation: intonationData, fluency: fluencyData });
+    setAudioAnalyticsLoading(true);
+    try {
+      const [pronunciationRes, intonationRes, fluencyRes] = await Promise.all([
+        fetch('/api/pronunciationAnalysis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: outputFile, script: transcribedData.text }) }),
+        fetch('http://localhost:8000/intonationAnalysis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: outputFile, script: transcribedData.text, segments: transcribedData.segments }) }),
+        fetch('http://localhost:8000/fluencyAnalysis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ segments: transcribedData.segments }) })
+      ]);
+      const [pronunciationData, intonationData, fluencyData] = await Promise.all([pronunciationRes.json(), intonationRes.json(), fluencyRes.json()]);
+      if (!pronunciationRes.ok) throw new Error(pronunciationData.error);
+      if (!intonationRes.ok) throw new Error(intonationData.error);
+      if (!fluencyRes.ok) throw new Error(fluencyData.error);
+      setAssessment({ pronunciation: pronunciationData, intonation: intonationData, fluency: fluencyData });
+    } finally {
+      setAudioAnalyticsLoading(false);
+    }
   };
 
-  const processConvertedAudio = async (outputFile: string, runAssessmentInBackground = false) => {
+  const EMPTY_TRANSCRIPT_ALERT =
+    'No speech was detected in that audio, so nothing was sent to the chat (saving an API call). Please try again: speak closer to the mic, reduce background noise, or use a slightly longer clip.';
+
+  /** Transcribe WAV and optionally run voice assessment + send text to chat. Returns false when transcript is empty (no chat/API spend). */
+  const processConvertedAudio = async (outputFile: string, runAssessmentInBackground = false): Promise<boolean> => {
     const transcribedRes = await fetch(`http://localhost:8000/transcribe?file=${encodeURIComponent(outputFile)}`, { method: 'POST' });
     const transcribedData = await transcribedRes.json();
     if (!transcribedRes.ok) throw new Error(transcribedData.error || "Transcription failed");
+    const transcriptText = typeof transcribedData?.text === 'string' ? transcribedData.text.trim() : '';
+    if (!transcriptText) {
+      setAudioTranscribing(false);
+      window.alert(EMPTY_TRANSCRIPT_ALERT);
+      return false;
+    }
     setAudioTranscribing(false);
-    handleSpeak(transcribedData.text);
+    handleSpeak(transcriptText);
     if (runAssessmentInBackground) {
       void runPitchAudioAssessment(outputFile, transcribedData).catch((e) => console.error("Background audio assessment failed:", e));
     } else {
       await runPitchAudioAssessment(outputFile, transcribedData);
     }
+    return true;
   };
 
   const handleAudioFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -510,8 +667,8 @@ export default function InteractiveInvestors() {
       const convertRes = await fetch('/api/convertWebmToWav', { method: 'POST', body: formData });
       const convertData = await convertRes.json();
       if (!convertRes.ok) throw new Error(convertData.error || "Audio conversion failed");
-      await processConvertedAudio(convertData.outputFile, true);
-      setDebug("Audio file processed successfully.");
+      const hadTranscript = await processConvertedAudio(convertData.outputFile, true);
+      if (hadTranscript) setDebug("Audio file processed successfully.");
     } catch (error) {
       setAudioTranscribing(false);
       setDebug(error instanceof Error ? error.message : "Failed to process audio file");
@@ -543,6 +700,11 @@ export default function InteractiveInvestors() {
   }
 
   async function endSession() {
+    if (!hasUserPitchContentForAnalytics) {
+      window.location.reload();
+      return;
+    }
+
     setStream(false);
     setIsBeginClock(false);
     setShowFeedbackModal(false);
@@ -552,11 +714,15 @@ export default function InteractiveInvestors() {
     try {
       const [sentimentPayload, metricsPayload] = await Promise.all([fetchSentiment(), fetchAllMetrics()]);
       if (metricsPayload) {
-        const verdictText = await requestInvestorVerdict(metricsPayload, sentimentPayload);
+        const { text: verdictText, sections: verdictSections } = await requestInvestorVerdict(
+          metricsPayload,
+          sentimentPayload,
+        );
         await persistPitchAnalyticsReportToSupabase(
           metricsPayload,
           sentimentPayload,
           verdictText,
+          verdictSections,
           chatHistory,
           assessment,
           selectedModel,
@@ -572,6 +738,7 @@ export default function InteractiveInvestors() {
     metrics: MetricsSessionPayload,
     sentiment: SentimentSessionPayload | null,
     investorVerdictText: string,
+    verdictSections: InvestorVerdictSection[] | null,
     chatHist: ChatHistory[],
     assess: { pronunciation: unknown; intonation: unknown; fluency: unknown },
     modelId: string,
@@ -586,6 +753,7 @@ export default function InteractiveInvestors() {
       citations: metrics.citations,
       competitorCounterplay: metrics.competitorCounterplay2,
       investorVerdict: investorVerdictText,
+      investorVerdictSections: verdictSections && verdictSections.length > 0 ? verdictSections : undefined,
       sentimentScore: sentiment?.sentimentScore ?? 0,
       sentimentMetrics: sentiment?.sentimentMetrics ?? emptyMetrics,
       sentimentSummary: sentiment?.sentimentSummary ?? '',
@@ -629,6 +797,7 @@ export default function InteractiveInvestors() {
       citations: sessionCitations,
       competitorCounterplay: competitorCounterplay2,
       investorVerdict,
+      investorVerdictSections: investorVerdictSections && investorVerdictSections.length > 0 ? investorVerdictSections : undefined,
       sentimentScore,
       sentimentMetrics,
       sentimentSummary: feedbackText,
@@ -681,8 +850,9 @@ export default function InteractiveInvestors() {
   const requestInvestorVerdict = async (
     metrics: MetricsSessionPayload,
     sentiment: SentimentSessionPayload | null,
-  ): Promise<string> => {
+  ): Promise<{ text: string; sections: InvestorVerdictSection[] | null }> => {
     setInvestorVerdict('');
+    setInvestorVerdictSections(null);
     setInvestorVerdictLoading(true);
     try {
       const r = await fetch('/api/pitchInvestorVerdict', {
@@ -706,11 +876,25 @@ export default function InteractiveInvestors() {
       });
       const d = await r.json();
       const text = typeof d.investorVerdict === 'string' ? d.investorVerdict.trim() : '';
+      const rawSecs = d.investorVerdictSections;
+      let sections: InvestorVerdictSection[] | null = null;
+      if (Array.isArray(rawSecs) && rawSecs.length > 0) {
+        const parsed: InvestorVerdictSection[] = [];
+        for (const item of rawSecs) {
+          if (!item || typeof item !== 'object') continue;
+          const o = item as Record<string, unknown>;
+          const heading = typeof o.heading === 'string' ? o.heading.trim() : '';
+          const body = typeof o.body === 'string' ? o.body.trim() : '';
+          if (heading && body) parsed.push({ heading, body });
+        }
+        if (parsed.length > 0) sections = parsed;
+      }
       if (text) setInvestorVerdict(text);
-      return text;
+      setInvestorVerdictSections(sections);
+      return { text, sections };
     } catch (e) {
       console.warn('Investor verdict request failed:', e);
-      return '';
+      return { text: '', sections: null };
     } finally {
       setInvestorVerdictLoading(false);
     }
@@ -839,39 +1023,105 @@ export default function InteractiveInvestors() {
   if (isAvatarMode && !stream) {
     return (
       <div style={{ position: "relative" }}>
-        <Card className="w-screen h-screen overflow-hidden border-none rounded-none" style={{ background: 'linear-gradient(to top, #987B8C, #F0C7C2)' }}>
+        <Card className="w-screen h-screen overflow-hidden border-none rounded-none" style={{ background: DARK_PAGE_BG }}>
           {!!debug && (
-            <div style={{ position: 'absolute', top: '14px', left: '50%', transform: 'translateX(-50%)', zIndex: 2000, background: 'rgba(0,0,0,0.65)', color: 'white', padding: '0.5rem 0.8rem', borderRadius: '10px', fontSize: '0.8rem' }}>
+            <div style={{ position: 'absolute', top: '14px', left: '50%', transform: 'translateX(-50%)', zIndex: 2000, background: 'rgba(26,27,30,0.92)', color: '#e4e4e7', padding: '0.5rem 0.85rem', borderRadius: '10px', fontSize: '0.8rem', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 24px rgba(0,0,0,0.35)' }}>
               {debug}
             </div>
           )}
-          <CardBody className="flex flex-col justify-center items-center">
-            <div className="h-full justify-center items-center flex flex-col gap-6 w-[500px] self-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '50px', padding: '2rem', maxHeight: '50%' }}>
-              <div style={{ color: 'white', fontWeight: 600, fontSize: '1rem' }}>Setup Avatar Session</div>
-              <Input
-                placeholder="Paste LiveAvatar API Key (or leave blank to use .env)"
-                value={avatarApiKey}
-                onChange={(e) => setAvatarApiKey(e.target.value)}
-              />
-              <Button
-                className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-full text-white"
-                size="md"
-                variant="shadow"
-                onClick={async () => {
-                  if (!selectedModel.trim()) {
-                    const fallback = models.find((m) => m !== 'Sharktank') ?? models[0] ?? '';
-                    if (fallback) setSelectedModel(fallback);
-                  }
-                  await startAvatarSession();
-                  await startSession();
+          <CardBody className="flex flex-col justify-center items-center px-4 py-8">
+            <div
+              className="flex flex-col w-full max-w-md gap-5 self-center"
+              style={{
+                ...DARK_PANEL,
+                padding: '2rem 1.75rem',
+              }}
+            >
+              <div className="text-center space-y-2">
+                <div
+                  style={{
+                    display: 'inline-block',
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    color: '#a5b4fc',
+                    marginBottom: '0.35rem',
+                  }}
+                >
+                  LiveAvatar · API
+                </div>
+                <h2 style={{ color: '#f4f4f5', fontWeight: 700, fontSize: '1.35rem', margin: 0, letterSpacing: '-0.02em' }}>
+                  Setup avatar session
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAvatarApiKeyOverride((v) => !v)}
+                className="text-left w-full"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'rgba(199, 210, 254, 0.95)',
+                  fontSize: '0.84rem',
+                  textDecoration: 'underline',
+                  textUnderlineOffset: 3,
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  padding: '0.25rem 0',
                 }}
-                isDisabled={isAvatarLoading || isLoadingSession}
               >
-                {(isAvatarLoading || isLoadingSession) ? <Spinner size="sm" color="white" /> : "Start Session with Avatar"}
-              </Button>
-              <Button variant="flat" onClick={() => setIsAvatarMode(false)}>
-                Back
-              </Button>
+                {showAvatarApiKeyOverride ? 'Hide optional API key override' : 'Use a different API key (optional)'}
+              </button>
+              {showAvatarApiKeyOverride ? (
+                <div className="w-full flex flex-col gap-2 rounded-xl p-3" style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(165,180,252,0.2)' }}>
+                  <Input
+                    placeholder="Paste LiveAvatar API key"
+                    value={avatarApiKey}
+                    onChange={(e) => setAvatarApiKey(e.target.value)}
+                    classNames={{
+                      input: 'text-sm text-zinc-100 placeholder:text-zinc-500',
+                      inputWrapper: 'bg-zinc-900/80 border-zinc-600/80 data-[hover=true]:border-zinc-500 group-data-[focus=true]:border-indigo-400',
+                    }}
+                  />
+                  <span style={{ fontSize: '0.76rem', color: 'rgba(228,228,231,0.72)', lineHeight: 1.45 }}>
+                    Sent only to your server. Leave empty to keep using <code style={{ fontSize: '0.95em', color: '#c7d2fe' }}>LIVEAVATAR_API_KEY</code>.
+                  </span>
+                </div>
+              ) : null}
+              <div className="flex flex-col gap-3 w-full">
+                <Button
+                  className="w-full font-semibold text-white"
+                  size="lg"
+                  radius="lg"
+                  variant="shadow"
+                  style={{
+                    minHeight: 52,
+                    background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #818cf8 100%)',
+                    boxShadow: '0 4px 20px rgba(79, 70, 229, 0.35)',
+                  }}
+                  onPress={async () => {
+                    if (!selectedModel.trim()) {
+                      const fallback = models.find((m) => m !== 'Sharktank') ?? models[0] ?? '';
+                      if (fallback) setSelectedModel(fallback);
+                    }
+                    await startAvatarSession();
+                    await startSession();
+                  }}
+                  isDisabled={isAvatarLoading || isLoadingSession}
+                >
+                  {(isAvatarLoading || isLoadingSession) ? <Spinner size="sm" color="white" /> : 'Start session with avatar'}
+                </Button>
+                <Button
+                  variant="bordered"
+                  radius="lg"
+                  className="w-full text-zinc-200 border-zinc-600/80 hover:bg-white/5"
+                  style={{ minHeight: 48 }}
+                  onPress={() => setIsAvatarMode(false)}
+                >
+                  Back
+                </Button>
+              </div>
             </div>
           </CardBody>
         </Card>
@@ -882,9 +1132,24 @@ export default function InteractiveInvestors() {
   // ─── Main session view ────────────────────────────────────────────────────
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-      <Card className="w-screen h-screen overflow-hidden border-none rounded-none" style={{ background: 'linear-gradient(to top, #987B8C, #F0C7C2)' }}>
+      <Card className="w-screen h-screen overflow-hidden border-none rounded-none" style={{ background: DARK_PAGE_BG }}>
         {!!debug && (
-          <div style={{ position: 'absolute', top: '14px', left: '50%', transform: 'translateX(-50%)', zIndex: 2000, background: 'rgba(0,0,0,0.65)', color: 'white', padding: '0.5rem 0.8rem', borderRadius: '10px', fontSize: '0.8rem' }}>
+          <div
+            style={{
+              position: 'absolute',
+              top: '14px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 2000,
+              background: 'rgba(26,27,30,0.92)',
+              color: '#e4e4e7',
+              padding: '0.5rem 0.85rem',
+              borderRadius: '10px',
+              fontSize: '0.8rem',
+              border: '1px solid rgba(255,255,255,0.1)',
+              boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+            }}
+          >
             {debug}
           </div>
         )}
@@ -903,8 +1168,8 @@ export default function InteractiveInvestors() {
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: 'rgba(0,0,0,0.25)',
-                  borderRight: '1px solid rgba(255,255,255,0.15)',
+                  background: 'linear-gradient(180deg, #0c0d10 0%, #12131a 100%)',
+                  borderRight: '1px solid rgba(255,255,255,0.08)',
                   position: 'relative',
                   flexShrink: 0,
                 }}>
@@ -950,13 +1215,36 @@ export default function InteractiveInvestors() {
               )}
 
               {/* ── Right: Chat panel ── */}
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+              <div style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                position: 'relative',
+                overflow: 'hidden',
+                background: 'linear-gradient(180deg, #12131a 0%, #16171d 55%, #14151a 100%)',
+              }}>
                 <Button
-                  className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white rounded-lg"
+                  className="text-white rounded-lg font-semibold"
                   size="md"
                   variant="shadow"
-                  onClick={endSession}
-                  style={{ position: 'absolute', top: '16px', left: '50%', transform: 'translateX(-50%)', zIndex: 10 }}
+                  onPress={() => void endSession()}
+                  title={
+                    hasUserPitchContentForAnalytics
+                      ? undefined
+                      : "No pitch in chat yet—click to reload the page and leave without using analytics APIs."
+                  }
+                  style={{
+                    position: 'absolute',
+                    top: '16px',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 10,
+                    background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #818cf8 100%)',
+                    boxShadow: '0 4px 18px rgba(79, 70, 229, 0.35)',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                  }}
                 >
                   End session
                 </Button>
@@ -980,19 +1268,20 @@ export default function InteractiveInvestors() {
                           onChange={(e) => setUserInput(e.target.value)}
                           className="custom-textarea"
                           style={{
-                            backgroundColor: 'rgba(255,255,255,0.2)',
+                            backgroundColor: 'rgba(26,27,30,0.9)',
                             textAlign: "left",
                             padding: "0.5rem 0.5rem 0.5rem 1rem",
                             width: "400px",
                             fontSize: '14px',
-                            color: audioTranscribing ? '#cdcdcd' : '#fff',
+                            color: audioTranscribing ? '#a1a1aa' : '#f4f4f5',
                             maxHeight: "70px",
                             minHeight: "20px",
                             overflowY: "scroll",
                             scrollbarWidth: "none",
                             borderRadius: "20px",
-                            border: "none",
+                            border: "1px solid rgba(255,255,255,0.12)",
                             outline: "none",
+                            boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.2)',
                           }}
                         />
                         <Button
@@ -1003,19 +1292,47 @@ export default function InteractiveInvestors() {
                             setUserInput('');
                           }}
                           isDisabled={!userInput.trim() || isLoadingRepeat}
-                          style={{ margin: '0rem 0rem 0rem 0.5rem', background: 'rgba(255,255,255,0.1)' }}
+                          style={{
+                            margin: '0rem 0rem 0rem 0.5rem',
+                            background: 'rgba(255,255,255,0.08)',
+                            color: '#e4e4e7',
+                            border: '1px solid rgba(255,255,255,0.12)',
+                          }}
                         >
                           {isLoadingRepeat ? <Spinner /> : "Send"}
                         </Button>
                         <Button
-                          onClick={toggleSpeechToText}
-                          style={{ background: 'rgba(255,255,255,0.1)', margin: '0.5rem', borderRadius: '100px' }}
+                          onPress={toggleSpeechToText}
+                          aria-label={isRecording ? 'Stop recording' : 'Start recording'}
+                          style={{
+                            background: isRecording ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255,255,255,0.08)',
+                            color: '#e4e4e7',
+                            border: '1px solid rgba(255,255,255,0.12)',
+                            margin: '0.5rem',
+                            borderRadius: '100px',
+                            minWidth: '5.5rem',
+                          }}
                         >
-                          {isRecording ? <div className={`wave`} /> : <><Microphone size={14} /> Talk</>}
+                          {isRecording ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                              <span className="wave" />
+                              <span style={{ fontSize: 13 }}>Rec</span>
+                            </span>
+                          ) : (
+                            <>
+                              <Microphone size={14} /> Voice
+                            </>
+                          )}
                         </Button>
                         <Button
-                          onClick={() => audioUploadRef.current?.click()}
-                          style={{ background: 'rgba(255,255,255,0.1)', margin: '0.5rem', borderRadius: '100px' }}
+                          onPress={() => audioUploadRef.current?.click()}
+                          style={{
+                            background: 'rgba(255,255,255,0.08)',
+                            color: '#e4e4e7',
+                            border: '1px solid rgba(255,255,255,0.12)',
+                            margin: '0.5rem',
+                            borderRadius: '100px',
+                          }}
                         >
                           Upload Audio
                         </Button>
@@ -1028,7 +1345,7 @@ export default function InteractiveInvestors() {
                         />
                       </>
                     ) : (
-                      <Introduction setIsBeginClock={setIsBeginClock} />
+                      <Introduction setIsBeginClock={setIsBeginClock} isAvatarMode={isAvatarMode} />
                     )}
                   </div>
                 </div>
@@ -1036,61 +1353,218 @@ export default function InteractiveInvestors() {
             </div>
           ) : !isLoadingSession ? (
             // ── Landing: choose mode ──
-            <div className="h-full justify-center items-center flex flex-col gap-4 w-[500px] self-center" style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: '50px', padding: '2rem', maxHeight: '30%' }}>
-               {/* <Select
-                  placeholder="Select an AI Model"
-                  size="md"
-                  value={selectedModel}
-                  onChange={(e) => {
-                    const selectedValue = Number(e.target.value);
-                    setSelectedModel(models[selectedValue]);
+            <div
+              className="h-full justify-center items-center flex flex-col gap-5 w-full max-w-lg self-center px-4"
+              style={{
+                ...DARK_PANEL,
+                padding: '2rem 1.75rem',
+                maxHeight: 'min(520px, 88vh)',
+              }}
+            >
+              <header style={{ textAlign: 'center' }}>
+                <div
+                  style={{
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.12em',
+                    textTransform: 'uppercase',
+                    color: '#a5b4fc',
+                    marginBottom: '0.65rem',
                   }}
                 >
-                  {models.map((model, index) => (
-                    <SelectItem key={index} value={model}>{model}</SelectItem>
-                  ))}
-                </Select> */}
-              <Button
-                className="bg-gradient-to-tr from-indigo-500 to-indigo-300 text-white w-full"
-                size="md"
-                style={{minHeight: '40px'}}
-                variant="shadow"
-                onClick={() => setIsAvatarMode(true)}
-              >
-                Start Session with Avatar
-              </Button>
-             
-              <div className="flex flex-col gap-2 w-full">
-                <div style={{ fontSize: '0.9rem', textAlign: 'center', fontWeight: '500', color: 'white' }}>Or</div>
-                <Button
-                  className="bg-gradient-to-tr from-indigo-500 to-indigo-300 w-full text-white"
-                  size="md"
-                  variant="shadow"
-                  onClick={startSession}
+                  NUS · AI investor practice
+                </div>
+                <h1
+                  style={{
+                    color: '#f4f4f5',
+                    fontWeight: 700,
+                    fontSize: 'clamp(1.2rem, 2.8vw, 1.45rem)',
+                    margin: '0 0 0.75rem',
+                    letterSpacing: '-0.02em',
+                    lineHeight: 1.25,
+                  }}
                 >
-                  Start session
+                  Sharpen your pitch with NUS AI Investor
+                </h1>
+                <p
+                  style={{
+                    color: 'rgba(244,244,245,0.76)',
+                    fontSize: '0.88rem',
+                    lineHeight: 1.55,
+                    margin: 0,
+                    maxWidth: '420px',
+                    marginLeft: 'auto',
+                    marginRight: 'auto',
+                  }}
+                >
+                  Start a session below to rehearse with an AI investor—NUS-style rubric feedback plus delivery sentiment (and optional voice analytics when you record or upload audio).
+                </p>
+              </header>
+              <Button
+                className="w-full font-semibold text-white"
+                size="lg"
+                radius="lg"
+                variant="shadow"
+                style={{
+                  minHeight: 50,
+                  background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 50%, #818cf8 100%)',
+                  boxShadow: '0 4px 20px rgba(79, 70, 229, 0.35)',
+                }}
+                onPress={() => setIsAvatarMode(true)}
+              >
+                Start session with avatar
+              </Button>
+              <div className="flex flex-col gap-3 w-full">
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.65rem',
+                    margin: '0.15rem 0',
+                    opacity: 0.55,
+                  }}
+                >
+                  <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.14)' }} />
+                  <span style={{ fontSize: '0.72rem', fontWeight: 600, letterSpacing: '0.08em', color: '#a1a1aa', textTransform: 'uppercase' }}>
+                    Or
+                  </span>
+                  <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.14)' }} />
+                </div>
+                <Button
+                  className="w-full font-semibold text-zinc-100"
+                  size="lg"
+                  radius="lg"
+                  variant="bordered"
+                  style={{
+                    minHeight: 50,
+                    borderColor: 'rgba(255,255,255,0.18)',
+                    background: 'rgba(255,255,255,0.04)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.06)',
+                  }}
+                  onPress={startSession}
+                >
+                  Start session without avatar
                 </Button>
               </div>
+              <p
+                style={{
+                  margin: '0.25rem 0 0',
+                  textAlign: 'center',
+                  fontSize: '0.76rem',
+                  lineHeight: 1.45,
+                  color: 'rgba(228,228,231,0.65)',
+                }}
+              >
+                Any issues? Email{' '}
+                <a
+                  href="mailto:zetachua@u.nus.edu.sg"
+                  style={{ color: '#c7d2fe', textDecoration: 'underline', textUnderlineOffset: 2 }}
+                >
+                  zetachua@u.nus.edu.sg
+                </a>
+                .
+              </p>
             </div>
           ) : (
-            <Spinner color="default" size="lg" />
+            <Spinner color="white" size="lg" />
           )}
         </CardBody>
 
         {/* ── Evaluation overlay ── */}
         {(sentimentJson && rubricJson2 && !showFeedbackModal) ?
-          <div id='evaluation' style={{ fontSize: '0.8rem', position: 'absolute', top: '50%', left: '50%', backgroundColor: 'rgba(50,51,52)', borderRadius: '50px', transform: 'translate(-50%,-50%)', padding: '2rem', width: '80%', maxHeight: '800px', minWidth: '600px', overflowY: 'scroll', scrollbarWidth: 'none' }}>
+          <div
+            id="evaluation"
+            style={{
+              fontSize: '0.8rem',
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%,-50%)',
+              padding: '2rem',
+              width: '80%',
+              maxHeight: '800px',
+              minWidth: '600px',
+              overflowY: 'scroll',
+              scrollbarWidth: 'none',
+              ...DARK_PANEL,
+              borderRadius: 20,
+            }}
+          >
+            <button
+              type="button"
+              onClick={exitAnalyticsPage}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 1250,
+                border: 'none',
+                borderRadius: '10px',
+                background: 'rgba(248, 113, 113, 0.35)',
+                color: '#fecaca',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                padding: '0.5rem 1rem',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              }}
+            >
+              Exit analytics page
+            </button>
+            <button
+              type="button"
+              onClick={openLeaderboard}
+              style={{
+                position: 'absolute',
+                top: '16px',
+                left: '20px',
+                zIndex: 1250,
+                border: 'none',
+                borderRadius: '10px',
+                background: 'rgba(129, 140, 248, 0.45)',
+                color: '#e0e7ff',
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                padding: '0.5rem 1rem',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+              }}
+            >
+              Leaderboard
+            </button>
             <div style={{ position: 'absolute', top: '20px', right: '20px', display: 'flex', gap: '0.5rem', zIndex: 1200 }}>
               <button
                 type="button"
-                style={{ border: 'none', borderRadius: '10px', background: 'rgba(255,255,255,0.55)', color: '#1a1a1a', fontSize: '0.8rem', fontWeight: 600, padding: '0.45rem 0.8rem' }}
+                style={{
+                  border: '1px solid rgba(255,255,255,0.14)',
+                  borderRadius: '10px',
+                  background: 'rgba(255,255,255,0.08)',
+                  color: '#e4e4e7',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  padding: '0.45rem 0.8rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                }}
                 onClick={downloadAnalyticsPage}
               >
                 Download report
               </button>
               <button
                 type="button"
-                style={{ border: 'none', borderRadius: '10px', background: 'rgba(255,255,255,0.4)', color: '#fff', fontSize: '0.8rem', fontWeight: '500', padding: '0.45rem 0.8rem' }}
+                style={{
+                  border: '1px solid rgba(255,255,255,0.14)',
+                  borderRadius: '10px',
+                  background: 'rgba(255,255,255,0.06)',
+                  color: '#d4d4d8',
+                  fontSize: '0.8rem',
+                  fontWeight: 500,
+                  padding: '0.45rem 0.8rem',
+                  cursor: 'pointer',
+                }}
                 onClick={() => setShowChatHistoryModal(true)}
               >
                 View ChatHistory
@@ -1117,7 +1591,7 @@ export default function InteractiveInvestors() {
                   padding: '0.35rem 0.85rem',
                   borderRadius: '12px',
                   display: 'inline-block',
-                  background: 'linear-gradient(90deg, rgba(120, 140, 255, 0.4), rgba(200, 120, 255, 0.3))',
+                  background: 'linear-gradient(90deg, rgba(79, 70, 229, 0.45), rgba(99, 102, 241, 0.3))',
                   color: '#f4f4f5',
                 }}
               >
@@ -1125,33 +1599,79 @@ export default function InteractiveInvestors() {
               </div>
               {investorVerdictLoading ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', color: '#e4e4e7', fontSize: '0.88rem' }}>
-                  <Spinner size="sm" color="default" />
+                  <Spinner size="sm" color="white" />
                   Synthesizing rubric and sentiment…
                 </div>
               ) : investorVerdict?.trim() ? (
-                <p
-                  style={{
-                    margin: 0,
-                    lineHeight: 1.55,
-                    color: '#f4f4f5',
-                    fontSize: '0.92rem',
-                    whiteSpace: 'pre-wrap',
-                    maxWidth: '52rem',
-                  }}
-                >
-                  {investorVerdict.trim()}
-                </p>
+                investorVerdictSections && investorVerdictSections.length > 0 ? (
+                  <div
+                    style={{
+                      maxWidth: '52rem',
+                      textAlign: 'left',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '1rem',
+                    }}
+                  >
+                    {investorVerdictSections.map((sec, idx) => (
+                      <section
+                        key={`verdict-sec-${idx}-${sec.heading.slice(0, 24)}`}
+                        style={{
+                          padding: '0.65rem 0.85rem',
+                          borderRadius: 12,
+                          background: 'rgba(255,255,255,0.06)',
+                          borderLeft: '3px solid rgba(165, 180, 252, 0.65)',
+                        }}
+                      >
+                        <h3
+                          style={{
+                            margin: '0 0 0.4rem',
+                            fontSize: '0.82rem',
+                            fontWeight: 700,
+                            letterSpacing: '0.04em',
+                            textTransform: 'uppercase',
+                            color: '#c7d2fe',
+                          }}
+                        >
+                          {sec.heading}
+                        </h3>
+                        <p style={{ margin: 0, lineHeight: 1.55, color: '#f4f4f5', fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>
+                          {sec.body}
+                        </p>
+                      </section>
+                    ))}
+                  </div>
+                ) : (
+                  <ul
+                    style={{
+                      margin: 0,
+                      paddingLeft: '1.35rem',
+                      lineHeight: 1.55,
+                      color: '#f4f4f5',
+                      fontSize: '0.92rem',
+                      maxWidth: '52rem',
+                      textAlign: 'left',
+                      listStyleType: 'disc',
+                    }}
+                  >
+                    {splitInvestorVerdictLines(investorVerdict).map((line, idx) => (
+                      <li key={`verdict-${idx}-${line.slice(0, 32)}`} style={{ marginBottom: '0.5rem', paddingLeft: '0.25rem' }}>
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                )
               ) : (
                 <p style={{ margin: 0, fontSize: '0.85rem', color: '#a1a1aa', maxWidth: '40rem' }}>
                   Verdict will appear here after the session ends and analysis completes.
                 </p>
               )}
             </div>
-            <div style={{ marginBottom: '0.8rem', color: 'white' }}>
+            <div style={{ marginBottom: '0.8rem', color: '#e4e4e7', textAlign: 'center' }}>
               <div style={{ fontSize: '0.95rem', fontWeight: 700 }}>Benchmark Comparison</div>
-              <div style={{ fontSize: '0.8rem', opacity: 0.9 }}>Toggle startup examples below to compare your analysis against reference pitches.</div>
+              <div style={{ fontSize: '0.8rem', opacity: 0.88 }}>Toggle startup examples below to compare your analysis against reference pitches.</div>
             </div>
-            <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'flex-start', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'center', flexWrap: 'wrap' }}>
               {[
                 { label: 'LookUp', state: displayLookupPitch, setter: setDisplayLookupPitch },
                 { label: 'Grant', state: displayGrantPitch, setter: setDisplayGrantPitch },
@@ -1174,15 +1694,46 @@ export default function InteractiveInvestors() {
                 resetAllStates={resetAllStates}
                 totalRounds={0}
               />
-              {(rubricCitations2 === null || loadingRubric1 || loadingRubric2 || loadingRubric) &&
-                <div style={{ position: 'absolute', width: '420px', maxWidth: '92vw', zIndex: '2000', color: 'black', display: 'flex', gap: '1rem', flexDirection: 'column', backgroundColor: 'rgba(255,255,255)', borderRadius: '20px', padding: '1rem', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', boxShadow: '2px 2px 0px 0px black' }}>
-                  <p style={{ margin: 0, fontSize: '0.82rem', lineHeight: 1.4, color: '#333', fontStyle: 'italic' }}>
-                    {ANALYTICS_LOADING_ROTATING_MESSAGES[analyticsLoadTipIndex % ANALYTICS_LOADING_ROTATING_MESSAGES.length]}
-                  </p>
-                  <div style={{ display: 'flex', gap: '1rem' }}>{(rubricCitations2 === null || loadingRubric || loadingRubric1) ? <Spinner /> : "! "}<span>{loadingRubric1 ? '[Loading Analysis]' : '[Successfully Loaded]'} Elevation Pitch, Team, Market Opportunity</span></div>
-                  <div style={{ display: 'flex', gap: '1rem' }}>{(rubricCitations2 === null || loadingRubric || loadingRubric2) ? <Spinner /> : "! "}<span>{loadingRubric2 ? '[Loading Analysis]' : '[Successfully Loaded]'} Market Size, Solution Value Proposition, Competitive Position</span></div>
+              {(rubricCitations2 === null || loadingRubric1 || loadingRubric2 || loadingRubric) && (
+                <div
+                  role="presentation"
+                  style={{
+                    position: 'fixed',
+                    inset: 0,
+                    zIndex: 2500,
+                    background: 'rgba(0,0,0,0.45)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '1rem',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '420px',
+                      maxWidth: '92vw',
+                      color: '#e4e4e7',
+                      display: 'flex',
+                      gap: '1rem',
+                      flexDirection: 'column',
+                      backgroundColor: '#1a1b1e',
+                      borderRadius: '18px',
+                      padding: '1.15rem',
+                      border: '1px solid rgba(255,255,255,0.12)',
+                      boxShadow: '0 20px 50px rgba(0,0,0,0.45)',
+                      fontSize: '0.82rem',
+                    }}
+                  >
+                    <p style={{ margin: 0, fontSize: '0.82rem', lineHeight: 1.45, color: 'rgba(228,228,231,0.88)', fontStyle: 'italic' }}>
+                      {ANALYTICS_LOADING_ROTATING_MESSAGES[analyticsLoadTipIndex % ANALYTICS_LOADING_ROTATING_MESSAGES.length]}
+                    </p>
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>{(rubricCitations2 === null || loadingRubric || loadingRubric1) ? <Spinner size="sm" color="white" /> : '✓ '}<span>{loadingRubric1 ? '[Loading Analysis]' : '[Successfully Loaded]'} Elevation Pitch, Team, Market Opportunity</span></div>
+                    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>{(rubricCitations2 === null || loadingRubric || loadingRubric2) ? <Spinner size="sm" color="white" /> : '✓ '}<span>{loadingRubric2 ? '[Loading Analysis]' : '[Successfully Loaded]'} Market Size, Solution Value Proposition, Competitive Position</span></div>
+                  </div>
                 </div>
-              }
+              )}
               {displayLookupPitch && <RubricInvestorPiechartExample title={'LookUp'} specificFeedback={lookupPitchRubrics()} />}
               {displayGrantPitch && <RubricInvestorPiechartExample title={'Grant'} specificFeedback={grantedPitchRubrics()} />}
               {displayMediVRPitch && <RubricInvestorPiechartExample title={'MediVR'} specificFeedback={mediVRPitchRubrics()} />}
@@ -1192,6 +1743,7 @@ export default function InteractiveInvestors() {
                   pronunciationAssessment={assessment.pronunciation ?? undefined}
                   intonationAssessment={assessment.intonation ?? undefined}
                   fluencyAssessment={assessment.fluency ?? undefined}
+                  audioAnalyticsLoading={audioAnalyticsLoading}
                   data={sentimentMetrics}
                   overallScore={sentimentScore}
                   feedbackSummary={feedbackText}
@@ -1200,40 +1752,69 @@ export default function InteractiveInvestors() {
               )}
             </div>
           </div>
-          : loadingRubric &&
+          : loadingRubric && (
           <div
+            role="presentation"
             style={{
-              color: 'white',
-              background: 'rgba(50,51,52)',
-              padding: '2rem',
-              borderRadius: '50px',
-              position: 'absolute',
-              left: '50%',
-              top: '50%',
-              transform: 'translate(-50%,-50%) scale(0.6)',
-              width: 'min(420px, 88vw)',
+              position: 'fixed',
+              inset: 0,
+              zIndex: 2500,
+              background: 'rgba(0,0,0,0.45)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
               display: 'flex',
-              flexDirection: 'column',
               alignItems: 'center',
-              gap: '1rem',
-              textAlign: 'center',
+              justifyContent: 'center',
+              padding: '1rem',
             }}
           >
-            <Spinner size="lg" />
-            {awaitingFeedbackAfterAnalytics ? (
-              <p style={{ margin: 0, fontSize: '1.2rem', lineHeight: 1.45, opacity: 0.92, maxWidth: '280px' }}>
-                {ANALYTICS_LOADING_ROTATING_MESSAGES[analyticsLoadTipIndex % ANALYTICS_LOADING_ROTATING_MESSAGES.length]}
-              </p>
-            ) : null}
+            <div
+              style={{
+                ...DARK_PANEL,
+                color: '#e4e4e7',
+                padding: '2rem',
+                borderRadius: 18,
+                width: 'min(420px, 88vw)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '1rem',
+                textAlign: 'center',
+                transform: 'scale(0.96)',
+              }}
+            >
+              <Spinner size="lg" color="white" />
+              {awaitingFeedbackAfterAnalytics ? (
+                <p style={{ margin: 0, fontSize: '1.2rem', lineHeight: 1.45, opacity: 0.92, maxWidth: '280px' }}>
+                  {ANALYTICS_LOADING_ROTATING_MESSAGES[analyticsLoadTipIndex % ANALYTICS_LOADING_ROTATING_MESSAGES.length]}
+                </p>
+              ) : null}
+            </div>
           </div>
-        }
+        )}
       </Card>
 
       {/* ── Feedback modal ── */}
       {showFeedbackModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3000 }}>
-          <div style={{ width: "90%", maxWidth: "520px", background: "#1f1f1f", borderRadius: "16px", padding: "1.2rem", color: "white" }}>
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.55)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 3000,
+            padding: '1rem',
+          }}
+        >
+          <div style={{ width: "90%", maxWidth: "520px", borderRadius: "16px", padding: "1.2rem", color: "white", boxShadow: "0 12px 40px rgba(0,0,0,0.35)" }}>
             <h3 style={{ fontWeight: 700, marginBottom: "0.7rem" }}>Session Feedback</h3>
+            <p style={{ fontSize: "0.85rem", marginBottom: "0.85rem", opacity: 0.92, lineHeight: 1.45 }}>
+              Your feedback would greatly help us improve the experience.
+            </p>
             <p style={{ fontSize: "0.9rem", marginBottom: "0.7rem" }}>1) Emoji satisfaction</p>
             <div style={{ display: "flex", gap: "0.5rem", marginBottom: "0.9rem" }}>
               {[{ key: "satisfied", label: "Satisfied", cls: "bg-green-500 text-white" }, { key: "neutral", label: "Neutral", cls: "bg-yellow-500 text-black" }, { key: "dissatisfied", label: "Dissatisfied", cls: "bg-red-500 text-white" }].map(({ key, label, cls }) => (
@@ -1261,11 +1842,39 @@ export default function InteractiveInvestors() {
 
       {/* ── Chat history modal ── */}
       {showChatHistoryModal && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 3000 }}>
-          <div style={{ width: "90%", maxWidth: "760px", maxHeight: "80vh", overflowY: "auto", background: "#1f1f1f", borderRadius: "16px", padding: "1rem", color: "white" }}>
+        <div
+          role="presentation"
+          onClick={() => setShowChatHistoryModal(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.45)",
+            backdropFilter: "blur(10px)",
+            WebkitBackdropFilter: "blur(10px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 3000,
+            padding: "1rem",
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '90%',
+              maxWidth: '760px',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              ...DARK_PANEL,
+              padding: '1.15rem',
+              color: '#f4f4f5',
+            }}
+          >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.7rem" }}>
-              <h3 style={{ fontWeight: 700 }}>Chat History</h3>
-              <Button size="sm" variant="flat" onClick={() => setShowChatHistoryModal(false)}>Close</Button>
+              <h3 style={{ fontWeight: 700, margin: 0 }}>Chat History</h3>
+              <Button size="sm" variant="flat" className="text-zinc-200" onClick={() => setShowChatHistoryModal(false)}>Close</Button>
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
               {chatHistory.length === 0 ? (
@@ -1276,6 +1885,216 @@ export default function InteractiveInvestors() {
                     <b style={{ textTransform: "capitalize" }}>{message.role}:</b> {message.content}
                   </div>
                 ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Leaderboard (saved pitch analytics from Supabase; text only) ── */}
+      {showLeaderboardModal && (
+        <div
+          role="presentation"
+          onClick={() => setShowLeaderboardModal(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 3100,
+            padding: '1rem',
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="leaderboard-title"
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '92%',
+              maxWidth: '720px',
+              maxHeight: '86vh',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              background: '#1a1b1e',
+              borderRadius: '18px',
+              border: '1px solid rgba(255,255,255,0.12)',
+              color: '#f4f4f5',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.45)',
+            }}
+          >
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                padding: '1rem 1.15rem',
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
+                flexShrink: 0,
+              }}
+            >
+              <div>
+                <h3 id="leaderboard-title" style={{ margin: 0, fontWeight: 700, fontSize: '1.05rem' }}>
+                  Pitch leaderboard
+                </h3>
+                <p style={{ margin: '0.25rem 0 0', fontSize: '0.78rem', opacity: 0.75, lineHeight: 1.4 }}>
+                  Ranked by rubric overall score, then sentiment. Text analytics only (no voice).
+                </p>
+              </div>
+              <Button size="sm" variant="flat" onPress={() => setShowLeaderboardModal(false)}>
+                Close
+              </Button>
+            </div>
+            <div style={{ overflowY: 'auto', padding: '0.75rem 1rem 1rem', flex: 1 }}>
+              {leaderboardLoading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
+                  <Spinner color="default" />
+                </div>
+              ) : leaderboardError && leaderboardEntries.length === 0 ? (
+                <p style={{ opacity: 0.85, fontSize: '0.9rem' }}>{leaderboardError}</p>
+              ) : leaderboardEntries.length === 0 ? (
+                <p style={{ opacity: 0.85, fontSize: '0.9rem' }}>No saved reports yet. End a session with pitch content to save to the database.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  {leaderboardError ? (
+                    <p style={{ fontSize: '0.78rem', color: '#fca5a5', margin: '0 0 0.35rem' }}>{leaderboardError}</p>
+                  ) : null}
+                  {leaderboardEntries.map((entry) => {
+                    const expanded = leaderboardExpandedId === entry.id;
+                    const medal = entry.rank === 1 ? '🥇 ' : entry.rank === 2 ? '🥈 ' : entry.rank === 3 ? '🥉 ' : '';
+                    const when = entry.createdAt ? new Date(entry.createdAt).toLocaleString() : '—';
+                    return (
+                      <div
+                        key={entry.id}
+                        style={{
+                          borderRadius: '12px',
+                          background: expanded ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255,255,255,0.06)',
+                          border: `1px solid ${expanded ? 'rgba(165, 180, 252, 0.35)' : 'rgba(255,255,255,0.08)'}`,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => setLeaderboardExpandedId(expanded ? null : entry.id)}
+                          style={{
+                            width: '100%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '0.75rem',
+                            padding: '0.65rem 0.85rem',
+                            border: 'none',
+                            background: 'transparent',
+                            color: 'inherit',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                          }}
+                        >
+                          <span style={{ fontWeight: 700, fontSize: '0.88rem', minWidth: '2.5rem' }}>
+                            {medal}#{entry.rank}
+                          </span>
+                          <span style={{ flex: 1, fontSize: '0.82rem', opacity: 0.9 }}>
+                            <strong>Rubric</strong> {entry.rubricOverallScore.toFixed(1)}/10 · <strong>Sentiment</strong>{' '}
+                            {entry.sentimentScore.toFixed(1)}/5
+                            {entry.selectedModel ? ` · ${entry.selectedModel}` : ''}
+                          </span>
+                          <span style={{ fontSize: '0.72rem', opacity: 0.65, whiteSpace: 'nowrap' }}>{when}</span>
+                          <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>{expanded ? '▲' : '▼'}</span>
+                        </button>
+                        {expanded ? (
+                          <div
+                            style={{
+                              padding: '0 0.85rem 0.85rem',
+                              fontSize: '0.82rem',
+                              lineHeight: 1.5,
+                              borderTop: '1px solid rgba(255,255,255,0.06)',
+                            }}
+                          >
+                            {entry.rubricSummary ? (
+                              <>
+                                <div style={{ fontWeight: 700, marginTop: '0.65rem', marginBottom: '0.35rem', color: '#c7d2fe' }}>
+                                  Rubric summary
+                                </div>
+                                <p style={{ margin: 0, whiteSpace: 'pre-wrap', opacity: 0.92 }}>{entry.rubricSummary}</p>
+                              </>
+                            ) : null}
+                            {Object.keys(entry.rubricMetrics).length > 0 ? (
+                              <>
+                                <div style={{ fontWeight: 700, marginTop: '0.85rem', marginBottom: '0.35rem', color: '#c7d2fe' }}>
+                                  Rubric scores
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '0.25rem 1rem', fontSize: '0.8rem' }}>
+                                  {Object.entries(entry.rubricMetrics).map(([k, v]) => (
+                                    <Fragment key={k}>
+                                      <span style={{ opacity: 0.88 }}>{RUBRIC_LABELS[k] ?? k}</span>
+                                      <span style={{ fontWeight: 600 }}>{v}/10</span>
+                                    </Fragment>
+                                  ))}
+                                </div>
+                              </>
+                            ) : null}
+                            {Object.keys(entry.rubricSpecificFeedback).length > 0 ? (
+                              <>
+                                <div style={{ fontWeight: 700, marginTop: '0.85rem', marginBottom: '0.35rem', color: '#c7d2fe' }}>
+                                  Rubric feedback
+                                </div>
+                                {Object.entries(entry.rubricSpecificFeedback).map(([k, text]) => (
+                                  <div key={k} style={{ marginBottom: '0.5rem' }}>
+                                    <div style={{ fontWeight: 600, fontSize: '0.78rem', opacity: 0.85 }}>{RUBRIC_LABELS[k] ?? k}</div>
+                                    <p style={{ margin: '0.15rem 0 0', whiteSpace: 'pre-wrap', opacity: 0.9 }}>{text}</p>
+                                  </div>
+                                ))}
+                              </>
+                            ) : null}
+                            {entry.sentimentSummary ? (
+                              <>
+                                <div style={{ fontWeight: 700, marginTop: '0.85rem', marginBottom: '0.35rem', color: '#c7d2fe' }}>
+                                  Sentiment summary
+                                </div>
+                                <p style={{ margin: 0, whiteSpace: 'pre-wrap', opacity: 0.92 }}>{entry.sentimentSummary}</p>
+                              </>
+                            ) : null}
+                            {entry.investorVerdictSections && entry.investorVerdictSections.length > 0 ? (
+                              <>
+                                <div style={{ fontWeight: 700, marginTop: '0.85rem', marginBottom: '0.35rem', color: '#c7d2fe' }}>
+                                  Investor verdict
+                                </div>
+                                {entry.investorVerdictSections.map((sec, i) => (
+                                  <div key={`${entry.id}-v-${i}`} style={{ marginBottom: '0.55rem' }}>
+                                    <div style={{ fontWeight: 600, fontSize: '0.76rem', textTransform: 'uppercase', letterSpacing: '0.04em', color: '#a5b4fc' }}>
+                                      {sec.heading}
+                                    </div>
+                                    <p style={{ margin: '0.2rem 0 0', whiteSpace: 'pre-wrap', opacity: 0.9 }}>{sec.body}</p>
+                                  </div>
+                                ))}
+                              </>
+                            ) : entry.investorVerdict ? (
+                              <>
+                                <div style={{ fontWeight: 700, marginTop: '0.85rem', marginBottom: '0.35rem', color: '#c7d2fe' }}>
+                                  Investor verdict
+                                </div>
+                                <p style={{ margin: 0, whiteSpace: 'pre-wrap', opacity: 0.92 }}>{entry.investorVerdict}</p>
+                              </>
+                            ) : null}
+                            {entry.competitorCounterplay?.trim() ? (
+                              <>
+                                <div style={{ fontWeight: 700, marginTop: '0.85rem', marginBottom: '0.35rem', color: '#c7d2fe' }}>
+                                  Competitor counterplay
+                                </div>
+                                <p style={{ margin: 0, whiteSpace: 'pre-wrap', opacity: 0.92 }}>{entry.competitorCounterplay}</p>
+                              </>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           </div>

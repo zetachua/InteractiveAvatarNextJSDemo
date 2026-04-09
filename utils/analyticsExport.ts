@@ -26,7 +26,7 @@ export function splitSessionAndFrameworkCitations(sessionCitations: RubricCitati
   };
 }
 
-const RUBRIC_LABELS: Record<string, string> = {
+export const RUBRIC_LABELS: Record<string, string> = {
   elevatorPitch: 'Elevator Pitch',
   team: 'Team',
   marketOpportunity: 'Market Opportunity',
@@ -73,6 +73,25 @@ export function mergeRubricSummaries(parts: (string | undefined | null)[]): stri
   return sentences.join(' ');
 }
 
+export type InvestorVerdictSection = { heading: string; body: string };
+
+/** Row returned by `/api/pitchAnalyticsLeaderboard` (text analytics only; no voice / chat). */
+export type PitchLeaderboardEntry = {
+  id: string;
+  rank: number;
+  createdAt: string;
+  selectedModel: string | null;
+  rubricOverallScore: number;
+  sentimentScore: number;
+  rubricSummary: string;
+  sentimentSummary: string;
+  investorVerdict: string;
+  investorVerdictSections?: InvestorVerdictSection[];
+  rubricMetrics: Record<string, number>;
+  rubricSpecificFeedback: Record<string, string>;
+  competitorCounterplay: string;
+};
+
 export type AnalyticsExportPayload = {
   rubricSummary: string;
   rubricOverallScore: number;
@@ -81,6 +100,7 @@ export type AnalyticsExportPayload = {
   citations: RubricCitationItem[];
   competitorCounterplay?: string;
   investorVerdict?: string;
+  investorVerdictSections?: InvestorVerdictSection[];
   sentimentScore: number;
   sentimentMetrics: FeedbackMetricData;
   sentimentSummary: string;
@@ -189,7 +209,16 @@ export function buildAnalyticsReportHtml(payload: AnalyticsExportPayload, title 
   <p style="white-space:pre-wrap">${esc((payload.competitorCounterplay || '').trim() || '—')}</p>
 
   <h2>Investor Verdict</h2>
-  <p style="white-space:pre-wrap">${esc((payload.investorVerdict || '').trim() || '—')}</p>
+  ${
+    payload.investorVerdictSections && payload.investorVerdictSections.length > 0
+      ? payload.investorVerdictSections
+          .map(
+            (s) =>
+              `<h3 style="margin:0.75rem 0 0.35rem;font-size:1.05rem">${esc(s.heading)}</h3><p style="white-space:pre-wrap;margin:0 0 0.5rem">${esc(s.body)}</p>`,
+          )
+          .join('')
+      : `<p style="white-space:pre-wrap">${esc((payload.investorVerdict || '').trim() || '—')}</p>`
+  }
 
   <h2>References</h2>
   ${citesSessionBlock}

@@ -26,19 +26,25 @@ export type InvestorVerdictContext = {
   sentimentMetrics: Record<string, unknown>;
 };
 
-/** Groq: single paragraph merging rubric + sentiment (Shark Tank–style). */
+/** Groq: sectioned verdict merging rubric + sentiment (Shark Tank–style). */
 export const investorVerdictPrompt = (ctx: InvestorVerdictContext) => `
 You are an experienced investor judge in the style of Shark Tank.
 
-Synthesize the **rubric / substance** evaluation and the **sentiment / delivery** evaluation into **one** unified investment recommendation.
+Synthesize the **rubric / substance** evaluation and the **sentiment / delivery** evaluation into a **unified investment read**, split into clear sections for a student-facing UI.
 
 Structured inputs (JSON):
 ${JSON.stringify(ctx, null, 2)}
 
 Instructions:
-- Output **only** a valid JSON object with exactly one key: \`investorVerdict\`, whose value is **one paragraph** (roughly 120–220 words) of plain text—**no** markdown, **no** heading line inside the string, **no** bullet list.
-- In that paragraph, explicitly weigh **both** rubric scores and sentiment signals; name tradeoffs (e.g. strong substance vs weak delivery, or the reverse).
-- State clearly whether you would **invest**, **pass**, or **invest only with conditions**, and briefly what those conditions are if applicable.
+- Output **only** a valid JSON object with exactly one key: \`sections\`, whose value is an **array of exactly 4 objects**, each with:
+  - \`heading\`: short label (2–7 words), Title Case, **no** markdown, **no** trailing colon in the string.
+  - \`body\`: **plain text**, 2–4 sentences, **no** markdown, **no** bullet characters.
+- Use this **order** and **intent** for the four sections (you may slightly rephrase headings to fit the pitch, but keep the same meaning):
+  1. **Overall read** — one tight summary of how the opportunity lands holistically.
+  2. **Substance & rubric** — what the rubric scores and substance feedback imply; strengths and gaps in the business story.
+  3. **Delivery & sentiment** — what sentiment / delivery signals suggest; tradeoffs vs substance if relevant.
+  4. **Investment stance** — clearly **invest**, **pass**, or **invest with conditions**; name conditions briefly if applicable.
+- Total length similar to ~120–220 words across all bodies combined.
 - Ground every claim in the numbers and summaries above; do not invent company facts not supported by the inputs.
 
 Return only the JSON object. No code fences, no commentary.

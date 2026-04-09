@@ -279,17 +279,63 @@ export const getGroqChatCompletionForMetric = async (chatHistory: any, prompt: s
       });
   };
 
-  export const cleanResponse = (content: string): string => {
-    let cleaned = content
-    .replace(/```json|```/g, '')           // Remove code block markers
-    .replace(/<think>[\s\S]*?<\/think>/g, '')  // Remove <think>...</think> tags
-    .trim();
+  function extractBalancedJson(text: string): string | null {
+    const start = text.search(/[\{\[]/);
+    if (start === -1) return null;
 
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
+    const open = text[start];
+    const close = open === '{' ? '}' : ']';
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = start; i < text.length; i += 1) {
+      const ch = text[i];
+
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (ch === '\\') {
+          escaped = true;
+          continue;
+        }
+        if (ch === '"') {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+
+      if (ch === open) depth += 1;
+      if (ch === close) {
+        depth -= 1;
+        if (depth === 0) {
+          return text.slice(start, i + 1);
+        }
+      }
+    }
+
+    return null;
+  }
+
+  export const cleanResponse = (content: string): string => {
+    const cleaned = content
+      .replace(/```json|```/g, '') // Remove code block markers
+      .replace(/<think>[\s\S]*?<\/think>/g, '') // Remove <think>...</think> tags
+      .trim();
+
+    const extracted = extractBalancedJson(cleaned);
+    if (!extracted) {
       throw new Error("No valid JSON found in response");
     }
-    return jsonMatch[0];
+
+    return extracted;
   };
 
   export const transformFeedback = (feedback: any): string => {

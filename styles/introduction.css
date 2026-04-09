@@ -14,12 +14,12 @@
     border-radius: 24px;
     padding: 1.4rem 1.3rem;
     text-align: center;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background-image: linear-gradient(90deg, rgba(50, 181, 255, 0.07) 9.15%, rgba(255, 114, 224, 0.07) 104.07%), none;
-    background-color: rgba(18, 20, 26, 0.92);
-    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background-image: linear-gradient(165deg, rgba(99, 102, 241, 0.14) 0%, rgba(24, 24, 30, 0.98) 42%, rgba(18, 19, 26, 0.98) 100%);
+    background-color: #1a1b1e;
+    color: #f4f4f5;
     font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    box-shadow: 0 14px 36px rgba(0, 0, 0, 0.35);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
 }
 
 .introduction-container h1 {
@@ -32,6 +32,34 @@
     font-size: 0.92rem;
     line-height: 1.45;
     opacity: 0.95;
+}
+
+.introduction-lead {
+    margin: 0 0 0.85rem;
+    text-align: center;
+}
+
+.introduction-tips {
+    margin: 0 0 1.25rem;
+    padding-left: 1.15rem;
+    text-align: left;
+    font-size: 0.88rem;
+    line-height: 1.5;
+    opacity: 0.94;
+}
+
+.introduction-tips li {
+    margin-bottom: 0.65rem;
+}
+
+.introduction-tips li:last-child {
+    margin-bottom: 0;
+}
+
+.introduction-start-btn {
+    margin-top: 0.25rem;
+    min-height: 48px;
+    font-weight: 600;
 }
 
 .introduction-container button,

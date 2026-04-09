@@ -1,6 +1,4 @@
 "use client";
-
-import { useState } from "react";
 // import InteractiveAvatar from "@/components/InteractiveAvatar";
 // import InteractiveAvatarKnowledge from "@/components/InteractiveAvatarKnowledge";
 // import InteractiveAvatarInvestors from "@/components/InteractiveAvatarInvestors";
@@ -9,7 +7,7 @@ import InteractiveInvestors from "@/components/InteractiveInvestors";
 export default function App() {
 
   return (
-    <div className="w-screen h-screen relative">
+    <div className="w-screen h-screen relative min-h-screen bg-[#08080a]">
       {/* Button Navigation - Absolute Positioned */}
       {/* <div className="absolute top-4 left-4 flex gap-4 z-10">
         <Button
@@ -68,8 +66,8 @@ export default function App() {
           <InteractiveInvestors />
         )}
       </div> */}
-       <div className="w-full h-full">
-          <InteractiveInvestors />
+      <div className="w-full h-full">
+        <InteractiveInvestors />
       </div>
     </div>
   );

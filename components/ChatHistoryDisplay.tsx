@@ -24,18 +24,19 @@ const ChatHistoryDisplay: React.FC<ChatHistoryProps> = ({ chatHistory }) => {
   return (
     <div
       ref={chatContainerRef}
-      className="text-white font-mono"
+      className="text-zinc-100 font-mono"
       style={{
         margin: "1rem",
-        width: "60%",
-        height: "600px", // Increased height for better visibility
+        width: "min(720px, 92%)",
+        height: "600px",
         padding: "1rem",
         overflowY: "auto",
-        scrollbarWidth: "none", // Firefox
-        msOverflowStyle: "none", // IE/Edge
-        backgroundColor: "rgba(255, 255, 255, 0.3)",
-        boxShadow: "2px 2px 0px 0px rgba(0, 0, 0, 0.3)",
-        borderRadius: "20px",
+        scrollbarWidth: "none",
+        msOverflowStyle: "none",
+        backgroundColor: "rgba(26, 27, 30, 0.85)",
+        border: "1px solid rgba(255, 255, 255, 0.12)",
+        boxShadow: "0 12px 40px rgba(0, 0, 0, 0.35)",
+        borderRadius: "18px",
       }}
     >
       {chatHistory.map((message, index) => (
@@ -54,9 +55,13 @@ const ChatHistoryDisplay: React.FC<ChatHistoryProps> = ({ chatHistory }) => {
               borderRadius: "12px",
               backgroundColor:
                 message.role === "user"
-                  ? "rgba(0, 128, 255, 0.8)" // Blue for user
-                  : "rgba(50, 50, 50, 0.8)", // Gray for assistant
-              color: "white",
+                  ? "rgba(99, 102, 241, 0.35)"
+                  : "rgba(255, 255, 255, 0.06)",
+              border:
+                message.role === "user"
+                  ? "1px solid rgba(165, 180, 252, 0.35)"
+                  : "1px solid rgba(255, 255, 255, 0.08)",
+              color: "#f4f4f5",
               fontSize: "14px",
             }}
           >
