@@ -13,6 +13,10 @@ function num(v: unknown): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+function round1(n: number): number {
+  return Math.round((n + Number.EPSILON) * 10) / 10;
+}
+
 function str(v: unknown): string {
   return typeof v === 'string' ? v.trim() : '';
 }
@@ -117,6 +121,16 @@ export default async function pitchAnalyticsLeaderboard(req: NextApiRequest, res
     }
 
     entries.sort((a, b) => {
+      // Sort by displayed values first (1 decimal) so ranking matches UI labels.
+      const aRubricDisplay = round1(a.rubricOverallScore);
+      const bRubricDisplay = round1(b.rubricOverallScore);
+      if (bRubricDisplay !== aRubricDisplay) return bRubricDisplay - aRubricDisplay;
+
+      const aSentimentDisplay = round1(a.sentimentScore);
+      const bSentimentDisplay = round1(b.sentimentScore);
+      if (bSentimentDisplay !== aSentimentDisplay) return bSentimentDisplay - aSentimentDisplay;
+
+      // If displayed values tie, preserve deterministic order with raw precision.
       if (b.rubricOverallScore !== a.rubricOverallScore) return b.rubricOverallScore - a.rubricOverallScore;
       if (b.sentimentScore !== a.sentimentScore) return b.sentimentScore - a.sentimentScore;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
