@@ -1,4 +1,5 @@
 import { FeedbackData, Metric1InvestorData, Metric2InvestorData, Metric3InvestorData, QnaData, Rubric2InvestorData, Rubric3InvestorData, RubricData, RubricInvestorData } from "@/components/KnowledgeClasses";
+import { clampChars, clampSentences } from './pitchEvaluationResponseShared';
 
 export const suggestionsOptionsFilter = (responseContent: string,rating:number) => {
   let filteredResponseContent = responseContent.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
@@ -39,8 +40,6 @@ export const responseFilter = (responseContent: string) => {
   return { filteredResponseContent };
 };
 
-
-import { clampChars, clampSentences } from './pitchEvaluationResponseShared';
 
 export const feedbackFilter = (responseContent: string) => {
   try {
