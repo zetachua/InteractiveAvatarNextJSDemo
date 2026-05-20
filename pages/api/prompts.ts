@@ -618,6 +618,7 @@ ${RUBRIC_PERPLEXITY_SOURCE_AND_CITATION_POLICY}
 - Return only a **valid raw JSON object**
 - No markdown, no code fences, no prose, no commentary, no headings
 - Required keys: summary, elevatorPitch, team, marketOpportunity, tractionAwards (each metric object must include score and feedback)
+- Keep each feedback field concise (max 3 sentences) so the full JSON fits in one response
 Example shape (return raw JSON only, not this markdown block):
 {
   "summary": "...",
@@ -678,6 +679,7 @@ ${RUBRIC_METRIC2_COMPETITOR_COUNTERPLAY_RULES}
 - Include the top-level string field **competitorCounterplay** exactly as specified under Competitor Counterplay (required).
 - No markdown, no code fences, no prose, no commentary, no headings
 - Required keys: summary, marketSize, solutionValueProposition, competitivePosition, revenueModel, competitorCounterplay
+- Keep each feedback field concise (max 3 sentences) so the full JSON fits in one response
 
 Use only the following text as the pitch transcript.
 Chat History (may include pitch and/or Q&A; analyze it carefully):

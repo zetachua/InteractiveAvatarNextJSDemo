@@ -240,6 +240,13 @@ export function buildCitationItemsFromSonarResponse(apiResult: unknown): SonarCi
   );
 }
 
+function sonarMaxTokens(): number {
+  const raw = process.env.SONAR_MAX_TOKENS;
+  const n = raw ? parseInt(raw, 10) : 8192;
+  if (!Number.isFinite(n)) return 8192;
+  return Math.min(16384, Math.max(1024, n));
+}
+
 export const getSonarChatCompletionForMetric = async (chatHistory: any, prompt: string) => {
     const validChatHistory = truncateChatMessagesForLlm(chatHistory);
     const model = process.env.PERPLEXITY_SONAR_MODEL?.trim() || 'sonar';
@@ -252,10 +259,11 @@ export const getSonarChatCompletionForMetric = async (chatHistory: any, prompt: 
         ...validChatHistory,
         {
             role: 'user',
-            content: 'Please evaluate the pitch transcript based on the provided instructions.',
+            content: 'Please evaluate the pitch transcript based on the provided instructions. Return compact JSON only; keep each feedback field under 3 sentences.',
         },
       ],
       model,
+      max_tokens: sonarMaxTokens(),
     });
   };
 
@@ -391,7 +399,87 @@ export const getGroqChatCompletionForMetric = async (chatHistory: any, prompt: s
       searchFrom = nextIndex + chunk.length;
     }
 
+    const start = stripped.indexOf('{');
+    if (start !== -1) {
+      push(stripped.slice(start));
+    }
+
     return candidates;
+  }
+
+  /** Close unterminated strings/brackets when Sonar truncates mid-JSON. */
+  function closeTruncatedJson(fragment: string): string {
+    let inString = false;
+    let escaped = false;
+    const stack: ('}' | ']')[] = [];
+
+    for (let i = 0; i < fragment.length; i += 1) {
+      const ch = fragment[i];
+      if (inString) {
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+        if (ch === '\\') {
+          escaped = true;
+          continue;
+        }
+        if (ch === '"') inString = false;
+        continue;
+      }
+      if (ch === '"') {
+        inString = true;
+        continue;
+      }
+      if (ch === '{') stack.push('}');
+      else if (ch === '[') stack.push(']');
+      else if ((ch === '}' || ch === ']') && stack.length && stack[stack.length - 1] === ch) {
+        stack.pop();
+      }
+    }
+
+    let out = fragment;
+    if (inString) out += '"';
+    out = out.replace(/,\s*$/, '');
+    while (stack.length) out += stack.pop();
+    return out;
+  }
+
+  function trimIncompleteJsonTail(json: string): string {
+    let s = json.trim();
+    s = s.replace(/,?\s*"[^"]*"\s*:\s*"[^"\\]*(?:\\.[^"\\]*)*$/, '');
+    s = s.replace(/,?\s*"[^"]*"\s*:\s*\{[^}]*$/, '');
+    s = s.replace(/,?\s*"[^"]*"\s*:\s*$/, '');
+    s = s.replace(/,?\s*"[^"]*"\s*$/, '');
+    s = s.replace(/,\s*$/, '');
+    return s.trim();
+  }
+
+  function salvageTruncatedJsonObject(text: string): Record<string, unknown> | null {
+    const start = text.indexOf('{');
+    if (start === -1) return null;
+
+    let working = text.slice(start).trim();
+    for (let attempt = 0; attempt < 14; attempt += 1) {
+      const candidate = repairJsonString(closeTruncatedJson(trimIncompleteJsonTail(working)));
+      try {
+        const parsed = JSON.parse(candidate) as unknown;
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+          working = trimIncompleteJsonTail(working);
+          continue;
+        }
+        const obj = parsed as Record<string, unknown>;
+        const score = scoreJsonCandidate(obj);
+        if (score >= 20) return obj;
+        if (score >= 10 && attempt >= 2) return obj;
+      } catch {
+        /* try a shorter tail */
+      }
+      const next = trimIncompleteJsonTail(working);
+      if (next === working || next.length < 24) break;
+      working = next;
+    }
+    return null;
   }
 
   function scoreJsonCandidate(parsed: unknown): number {
@@ -405,6 +493,8 @@ export const getGroqChatCompletionForMetric = async (chatHistory: any, prompt: s
       'marketSize',
       'solutionValueProposition',
       'competitivePosition',
+      'revenueModel',
+      'competitorCounterplay',
       'summary',
       'sections',
       'investorVerdict',
@@ -443,6 +533,14 @@ export const getGroqChatCompletionForMetric = async (chatHistory: any, prompt: s
     }
 
     if (best) return best.value;
+
+    const salvaged = salvageTruncatedJsonObject(text);
+    if (salvaged) {
+      console.warn(
+        'parseJsonFromLlmContent: recovered truncated Sonar JSON (partial fields may be missing)',
+      );
+      return salvaged;
+    }
 
     console.error(
       'parseJsonFromLlmContent: no parseable JSON. Snippet:',
