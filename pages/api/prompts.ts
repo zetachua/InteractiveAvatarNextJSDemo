@@ -637,6 +637,46 @@ ${JSON.stringify(marketStatsContent, null, 2)}
 
 `;
 
+/** Small Sonar shard: one metric1 dimension only. */
+export const pitchEvaluationPromptMetric1Shard = (
+  metricKey: string,
+  metricLabel: string,
+  marketStatsContent: string,
+  chatHistory: unknown,
+) => `
+You are an experienced VC. Evaluate ONLY: **${metricLabel}**.
+${RUBRIC_PERPLEXITY_SOURCE_AND_CITATION_POLICY}
+
+Return ONLY valid raw JSON (no markdown). Schema (exact keys):
+{"${metricKey}":{"score":<integer 1-10>,"feedback":"<max 2 sentences>"}}
+
+Rules:
+- "${metricKey}" MUST be an object with numeric score and string feedback (never a plain string).
+- Do not include any other top-level keys.
+
+Chat History:
+${JSON.stringify(chatHistory)}
+
+Market Stats (reference only):
+${JSON.stringify(marketStatsContent, null, 2)}
+`;
+
+export const pitchEvaluationPromptMetric1SummaryShard = (
+  marketStatsContent: string,
+  chatHistory: unknown,
+) => `
+You are an experienced VC. Write a short overall summary for this pitch (all rubric dimensions).
+
+Return ONLY valid raw JSON (no markdown). Schema:
+{"summary":"<max 4 sentences>"}
+
+Chat History:
+${JSON.stringify(chatHistory)}
+
+Market Stats (reference only):
+${JSON.stringify(marketStatsContent, null, 2)}
+`;
+
 export const pitchEvaluationPromptMetric2 = (marketStatsContent:string,chatHistory: any) => `
 
 You are an experienced venture capitalist. I will give you a transcript of a startup pitch.

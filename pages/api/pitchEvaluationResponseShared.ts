@@ -607,3 +607,54 @@ export const getGroqChatCompletionForMetric = async (chatHistory: any, prompt: s
   export function useSplitRubricMetric2(): boolean {
     return process.env.RUBRIC_METRIC2_SPLIT !== '0';
   }
+
+  export function useSplitRubricMetric1(): boolean {
+    return process.env.RUBRIC_METRIC1_SPLIT !== '0';
+  }
+
+  function isRubricMetricBlock(value: unknown): boolean {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const o = value as Record<string, unknown>;
+    return (
+      typeof o.score === 'number' ||
+      typeof o.score === 'string' ||
+      typeof o.feedback === 'string' ||
+      typeof o.assessment === 'string'
+    );
+  }
+
+  /**
+   * When truncated JSON is "repaired", sibling metrics can end up nested inside
+   * elevatorPitch (e.g. elevatorPitch.team). Hoist the shallowest valid block per key.
+   */
+  export function flattenRubricPayload(
+    data: Record<string, unknown>,
+    metricKeys: readonly string[],
+  ): Record<string, unknown> {
+    const found: Record<string, { value: unknown; depth: number }> = {};
+
+    const walk = (node: Record<string, unknown>, depth: number) => {
+      for (const key of metricKeys) {
+        if (key in node && isRubricMetricBlock(node[key])) {
+          const prev = found[key];
+          if (!prev || depth < prev.depth) {
+            found[key] = { value: node[key], depth };
+          }
+        }
+      }
+      for (const v of Object.values(node)) {
+        if (v && typeof v === 'object' && !Array.isArray(v)) {
+          walk(v as Record<string, unknown>, depth + 1);
+        }
+      }
+    };
+
+    walk(data, 0);
+
+    const out: Record<string, unknown> = { ...data };
+    if (typeof data.summary === 'string') out.summary = data.summary;
+    for (const key of metricKeys) {
+      if (found[key]) out[key] = found[key].value;
+    }
+    return out;
+  }
