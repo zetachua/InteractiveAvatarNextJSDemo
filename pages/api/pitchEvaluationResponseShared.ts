@@ -470,8 +470,7 @@ export const getGroqChatCompletionForMetric = async (chatHistory: any, prompt: s
         }
         const obj = parsed as Record<string, unknown>;
         const score = scoreJsonCandidate(obj);
-        if (score >= 20) return obj;
-        if (score >= 10 && attempt >= 2) return obj;
+        if (score >= 10) return obj;
       } catch {
         /* try a shorter tail */
       }
@@ -567,3 +566,44 @@ export const getGroqChatCompletionForMetric = async (chatHistory: any, prompt: s
     // Concatenate all relevant fields
     return `${recap}. ${comparison}. ${feedbackText}. ${suggestion}`;
   };
+
+  export type RubricMetricBlock = { score: number; feedback: string };
+
+  /** Coerce Sonar rubric fields (string / assessment / nested recap) into { score, feedback }. */
+  export function normalizeRubricMetricBlock(value: unknown): RubricMetricBlock {
+    const fallback: RubricMetricBlock = { score: 0, feedback: 'Not provided.' };
+    if (value == null) return fallback;
+    if (typeof value === 'string') {
+      const t = value.trim();
+      return { score: 0, feedback: t || fallback.feedback };
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return { score: Math.min(10, Math.max(0, Math.round(value))), feedback: fallback.feedback };
+    }
+    if (typeof value !== 'object' || Array.isArray(value)) return fallback;
+
+    const o = value as Record<string, unknown>;
+    let score = 0;
+    if (typeof o.score === 'number' && Number.isFinite(o.score)) score = o.score;
+    else if (typeof o.score === 'string') {
+      const n = parseFloat(o.score);
+      if (Number.isFinite(n)) score = n;
+    }
+    score = Math.min(10, Math.max(0, Math.round(score)));
+
+    if (typeof o.feedback === 'string' && o.feedback.trim()) {
+      return { score, feedback: o.feedback.trim() };
+    }
+    if (typeof o.assessment === 'string' && o.assessment.trim()) {
+      return { score, feedback: o.assessment.trim() };
+    }
+    if (typeof o.comment === 'string' && o.comment.trim()) {
+      return { score, feedback: o.comment.trim() };
+    }
+    const merged = transformFeedback(o);
+    return { score, feedback: merged.trim() || fallback.feedback };
+  }
+
+  export function useSplitRubricMetric2(): boolean {
+    return process.env.RUBRIC_METRIC2_SPLIT !== '0';
+  }

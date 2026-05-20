@@ -679,13 +679,57 @@ ${RUBRIC_METRIC2_COMPETITOR_COUNTERPLAY_RULES}
 - Include the top-level string field **competitorCounterplay** exactly as specified under Competitor Counterplay (required).
 - No markdown, no code fences, no prose, no commentary, no headings
 - Required keys: summary, marketSize, solutionValueProposition, competitivePosition, revenueModel, competitorCounterplay
-- Keep each feedback field concise (max 3 sentences) so the full JSON fits in one response
+- Each rubric key (marketSize, solutionValueProposition, competitivePosition, revenueModel) MUST be an object: {"score": <1-10>, "feedback": "<text>"} — never a plain string
+- Use "feedback" only (not "assessment", "recap", or other field names)
+- Keep each feedback field concise (max 2 sentences) so the full JSON fits in one response
 
 Use only the following text as the pitch transcript.
 Chat History (may include pitch and/or Q&A; analyze it carefully):
 ${JSON.stringify(chatHistory)}
 
 Market Stats Content (use for industry benchmarks):
+${JSON.stringify(marketStatsContent, null, 2)}
+`;
+
+/** Small Sonar shard: one rubric dimension only (avoids huge truncated JSON). */
+export const pitchEvaluationPromptMetric2Shard = (
+  metricKey: string,
+  metricLabel: string,
+  marketStatsContent: string,
+  chatHistory: unknown,
+) => `
+You are an experienced VC. Evaluate ONLY: **${metricLabel}**.
+${RUBRIC_PERPLEXITY_SOURCE_AND_CITATION_POLICY}
+
+Return ONLY valid raw JSON (no markdown). Schema (exact keys):
+{"${metricKey}":{"score":<integer 1-10>,"feedback":"<max 2 sentences>"}}
+
+Rules:
+- "${metricKey}" MUST be an object with numeric score and string feedback (never a plain string).
+- Do not include any other top-level keys.
+
+Chat History:
+${JSON.stringify(chatHistory)}
+
+Market Stats (reference only):
+${JSON.stringify(marketStatsContent, null, 2)}
+`;
+
+/** Small Sonar shard: summary + competitor counterplay only. */
+export const pitchEvaluationPromptMetric2SummaryShard = (
+  marketStatsContent: string,
+  chatHistory: unknown,
+) => `
+You are an experienced VC. Write a short overall summary and competitor counterplay for this pitch.
+${RUBRIC_METRIC2_COMPETITOR_COUNTERPLAY_RULES}
+
+Return ONLY valid raw JSON (no markdown). Schema (exact keys):
+{"summary":"<max 4 sentences>","competitorCounterplay":"<3 short numbered bullets>"}
+
+Chat History:
+${JSON.stringify(chatHistory)}
+
+Market Stats (reference only):
 ${JSON.stringify(marketStatsContent, null, 2)}
 `;
 

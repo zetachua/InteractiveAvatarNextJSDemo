@@ -1,24 +1,43 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { pitchEvaluationPromptMetric2} from './prompts';
-import {  metric2ResultInvestorFilter} from './completionFilterFunctions';
+import {
+  pitchEvaluationPromptMetric2,
+  pitchEvaluationPromptMetric2Shard,
+  pitchEvaluationPromptMetric2SummaryShard,
+} from './prompts';
+import { metric2ResultInvestorFilter } from './completionFilterFunctions';
 import {
   buildCitationItemsFromSonarResponse,
+  getGroqChatCompletionForMetric,
   getSonarChatCompletionForMetric,
   messageContentToString,
+  normalizeRubricMetricBlock,
   parseJsonFromLlmContent,
-  transformFeedback,
+  useSplitRubricMetric2,
 } from './pitchEvaluationResponseShared';
+
+const METRIC2_KEYS = [
+  'marketSize',
+  'solutionValueProposition',
+  'competitivePosition',
+  'revenueModel',
+] as const;
+
+type Metric2Key = (typeof METRIC2_KEYS)[number];
+
+const METRIC2_LABELS: Record<Metric2Key, string> = {
+  marketSize: 'Market Size',
+  solutionValueProposition: 'Solution & Value Proposition',
+  competitivePosition: 'Competitive Positioning',
+  revenueModel: 'Revenue/Business Model',
+};
 
 const pitchEvaluationResponseMetric2 = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
     try {
-      const { currentMarketStats,chatHistory } = req.body;
-      let rubricResult,citations,rubricResult2;
-
-      rubricResult = await fetchMetric2(currentMarketStats, chatHistory);
-
-      rubricResult2 = rubricResult?.rubricData;
-      citations = rubricResult?.citations;
+      const { currentMarketStats, chatHistory } = req.body;
+      const rubricResult = await fetchMetric2(currentMarketStats, chatHistory);
+      const rubricResult2 = rubricResult?.rubricData;
+      const citations = rubricResult?.citations;
 
       let rubricScore2, rubricSummary2, rubricMetrics2, rubricSpecificFeedback2, competitorCounterplay2;
       if (rubricResult2?.rubricScore !== undefined) {
@@ -31,7 +50,7 @@ const pitchEvaluationResponseMetric2 = async (req: NextApiRequest, res: NextApiR
             ? String((rubricResult2 as { competitorCounterplay: string }).competitorCounterplay)
             : '';
       } else {
-        console.log("Invalid rubric data, keeping previous values.");
+        console.log('Invalid rubric data, keeping previous values.');
       }
 
       res.status(200).json({
@@ -43,205 +62,219 @@ const pitchEvaluationResponseMetric2 = async (req: NextApiRequest, res: NextApiR
         citations,
         citationItems: rubricResult?.citationItems ?? [],
       });
-
     } catch (error) {
       console.error('Error fetching chat completion:', error);
-      res.status(500).json({ error: "Internal Server Error" });
+      res.status(500).json({ error: 'Internal Server Error' });
     }
   }
 };
 
-const getSharktankMetric2 = async (currentMarketStats:string,chatHistory: any) => {
-  const prompt = pitchEvaluationPromptMetric2(currentMarketStats,chatHistory);
-  return await getSonarChatCompletionForMetric(chatHistory, prompt);
-};
-
-const fetchMetric2 = async (currentMarketStats:string,chatHistory: any[]) => {
+async function completeWithPrompt(chatHistory: unknown[], prompt: string) {
   try {
-    let rubricRatingCompletion;
+    return await getSonarChatCompletionForMetric(chatHistory, prompt);
+  } catch (e) {
+    console.warn('Sonar shard failed, trying Groq:', e);
+    return getGroqChatCompletionForMetric(chatHistory, prompt);
+  }
+}
 
-      let metric2Result = await getSharktankMetric2(currentMarketStats, chatHistory);
-      console.log(metric2Result, 'direct metric2 completion');
+async function parseShard(
+  completion: unknown,
+  label: string,
+): Promise<Record<string, unknown>> {
+  const raw = messageContentToString(
+    (completion as { choices?: { message?: { content?: unknown } }[] })?.choices?.[0]?.message
+      ?.content,
+  );
+  try {
+    return parseJsonFromLlmContent(raw);
+  } catch (e) {
+    console.warn(`parseShard failed (${label}):`, e);
+    return {};
+  }
+}
 
-      let cleaned = cleanSonarOutputMetric2(metric2Result);
-      if (cleaned.includes('Sonar parsing error')) {
-        console.warn('metric2: first Sonar parse failed, retrying once…');
-        metric2Result = await getSharktankMetric2(currentMarketStats, chatHistory);
-        cleaned = cleanSonarOutputMetric2(metric2Result);
-      }
+function buildCombinedMetric2Json(
+  metric2Data: Record<string, unknown>,
+): string {
+  const marketSize = normalizeRubricMetricBlock(metric2Data.marketSize);
+  const solutionValueProposition = normalizeRubricMetricBlock(metric2Data.solutionValueProposition);
+  const competitivePosition = normalizeRubricMetricBlock(metric2Data.competitivePosition);
+  const revenueModel = normalizeRubricMetricBlock(metric2Data.revenueModel);
 
-      rubricRatingCompletion = {
-        choices: [
-          {
-            message: {
-              content: cleaned,
-            },
-          },
-        ],
-      };
+  const scores = [
+    marketSize.score,
+    solutionValueProposition.score,
+    competitivePosition.score,
+    revenueModel.score,
+  ];
+  const overallScore = Math.round(scores.reduce((sum, score) => sum + score, 0) / 4);
+  const summary =
+    typeof metric2Data.summary === 'string' && metric2Data.summary.trim()
+      ? metric2Data.summary.trim()
+      : 'Summary not available.';
+  const competitorCounterplay =
+    typeof metric2Data.competitorCounterplay === 'string'
+      ? metric2Data.competitorCounterplay.trim()
+      : '';
 
-    let responseContent = rubricRatingCompletion?.choices[0].message.content;
+  return JSON.stringify({
+    marketSize,
+    solutionValueProposition,
+    competitivePosition,
+    revenueModel,
+    overallScore,
+    summary,
+    competitorCounterplay,
+    rubricSpecificFeedback: {
+      marketSize: marketSize.feedback,
+      solutionValueProposition: solutionValueProposition.feedback,
+      competitivePosition: competitivePosition.feedback,
+      revenueModel: revenueModel.feedback,
+    },
+  });
+}
 
-    if (!responseContent) {
-      throw new Error("Empty rubric response");
+/** 5 small parallel Sonar/Groq calls — avoids one huge JSON blob. */
+async function fetchMetric2Split(currentMarketStats: string, chatHistory: unknown[]) {
+  const summaryPrompt = pitchEvaluationPromptMetric2SummaryShard(currentMarketStats, chatHistory);
+  const shardPrompts = METRIC2_KEYS.map((key) =>
+    pitchEvaluationPromptMetric2Shard(key, METRIC2_LABELS[key], currentMarketStats, chatHistory),
+  );
+
+  const [summaryCompletion, ...metricCompletions] = await Promise.all([
+    completeWithPrompt(chatHistory, summaryPrompt),
+    ...shardPrompts.map((p) => completeWithPrompt(chatHistory, p)),
+  ]);
+
+  const merged: Record<string, unknown> = {};
+  const summaryParsed = await parseShard(summaryCompletion, 'summary');
+  if (typeof summaryParsed.summary === 'string') merged.summary = summaryParsed.summary;
+  if (typeof summaryParsed.competitorCounterplay === 'string') {
+    merged.competitorCounterplay = summaryParsed.competitorCounterplay;
+  }
+
+  for (let i = 0; i < METRIC2_KEYS.length; i += 1) {
+    const key = METRIC2_KEYS[i];
+    const parsed = await parseShard(metricCompletions[i], key);
+    if (parsed[key] != null) merged[key] = parsed[key];
+    else if (Object.keys(parsed).length === 1) {
+      const onlyKey = Object.keys(parsed)[0];
+      merged[key] = parsed[onlyKey];
+    }
+  }
+
+  const content = buildCombinedMetric2Json(merged);
+  const allCompletions = [summaryCompletion, ...metricCompletions];
+  const citations = Array.from(
+    new Set(
+      allCompletions.flatMap((c) =>
+        Array.isArray((c as { citations?: string[] })?.citations)
+          ? ((c as { citations: string[] }).citations as string[])
+          : [],
+      ),
+    ),
+  );
+  const citationItems = allCompletions.flatMap((c) => buildCitationItemsFromSonarResponse(c));
+  const dedupedCitationItems = Array.from(
+    new Map(citationItems.map((item) => [item.url, item])).values(),
+  );
+
+  return { content, citations, citationItems: dedupedCitationItems };
+}
+
+async function fetchMetric2Monolithic(currentMarketStats: string, chatHistory: unknown[]) {
+  let metric2Result = await getSonarChatCompletionForMetric(
+    chatHistory,
+    pitchEvaluationPromptMetric2(currentMarketStats, chatHistory),
+  );
+  console.log(metric2Result, 'direct metric2 completion');
+
+  let cleaned = cleanSonarOutputMetric2(metric2Result);
+  if (cleaned.includes('Sonar parsing error')) {
+    console.warn('metric2: monolithic Sonar parse failed, retrying once…');
+    metric2Result = await getSonarChatCompletionForMetric(
+      chatHistory,
+      pitchEvaluationPromptMetric2(currentMarketStats, chatHistory),
+    );
+    cleaned = cleanSonarOutputMetric2(metric2Result);
+  }
+  if (cleaned.includes('Sonar parsing error')) {
+    console.warn('metric2: monolithic failed twice, falling back to split shards…');
+    return fetchMetric2Split(currentMarketStats, chatHistory);
+  }
+
+  return {
+    content: cleaned,
+    citations: metric2Result?.citations || [],
+    citationItems: buildCitationItemsFromSonarResponse(metric2Result),
+  };
+}
+
+const fetchMetric2 = async (currentMarketStats: string, chatHistory: unknown[]) => {
+  try {
+    const { content, citations, citationItems } = useSplitRubricMetric2()
+      ? await fetchMetric2Split(currentMarketStats, chatHistory)
+      : await fetchMetric2Monolithic(currentMarketStats, chatHistory);
+
+    if (!content || content.includes('Sonar parsing error')) {
+      console.log('Invalid rubric JSON format, returning null');
+      return null;
     }
 
-    let filteredResponse =metric2ResultInvestorFilter(responseContent);
-
+    const filteredResponse = metric2ResultInvestorFilter(content);
     if (!filteredResponse) {
-      console.log("Invalid rubric JSON format, returning null");
+      console.log('Invalid rubric JSON format, returning null');
       return null;
-    }    
-
-    const citations = metric2Result?.citations || [];
-    const citationItems = buildCitationItemsFromSonarResponse(metric2Result);
+    }
 
     const result = {
       rubricData: filteredResponse,
       citations,
       citationItems,
     };
-    console.log('metric2 final result',result)
+    console.log('metric2 final result', result);
     return result;
-  
   } catch (error) {
-    console.error("Error in fetchRubric:", error);
+    console.error('Error in fetchRubric:', error);
     return null;
   }
 };
 
-
-const cleanSonarOutputMetric2 = (metric2:any): string => {
-  // This function remains largely the same as mergeDeepSeekOutputs
-  // Only the name changes and error messages reference Sonar instead
+const cleanSonarOutputMetric2 = (metric2: unknown): string => {
   try {
-
-    if (!metric2 ) {
-      throw new Error("One or more metrics have invalid JSON.");
+    if (!metric2) {
+      throw new Error('One or more metrics have invalid JSON.');
     }
-    console.log("testFn metric2 begin")
+    console.log('testFn metric2 begin');
 
-    const rawContent = messageContentToString(metric2?.choices?.[0]?.message?.content);
-    const metric2Data = parseJsonFromLlmContent(rawContent) as Record<string, any>;
-    console.log(metric2Data,"testFn3 metric2: JSON.parse cleanResponse successful")
+    const rawContent = messageContentToString(
+      (metric2 as { choices?: { message?: { content?: unknown } }[] })?.choices?.[0]?.message
+        ?.content,
+    );
+    const metric2Data = parseJsonFromLlmContent(rawContent) as Record<string, unknown>;
+    console.log(metric2Data, 'testFn3 metric2: parse successful');
 
-    const defaultMetric = {
-      score: 0,
-      feedback: "Not provided. Unable to evaluate due to missing data."
-    };
-
-    const validatedMetric2 = {
-      marketSize: metric2Data.marketSize
-        ? {
-            ...metric2Data.marketSize,
-            feedback: transformFeedback({
-              recap: metric2Data.marketSize.recap,
-              feedback: metric2Data.marketSize.feedback,
-              comparison: metric2Data.marketSize.comparison,
-              suggestion: metric2Data.marketSize.suggestion,
-            }),
-          }
-        : defaultMetric,
-    
-      solutionValueProposition: metric2Data.solutionValueProposition
-        ? {
-            ...metric2Data.solutionValueProposition,
-            feedback: transformFeedback({
-              recap: metric2Data.solutionValueProposition.recap,
-              feedback: metric2Data.solutionValueProposition.feedback,
-              comparison: metric2Data.solutionValueProposition.comparison,
-              suggestion: metric2Data.solutionValueProposition.suggestion,
-            }),
-          }
-        : defaultMetric,
-    
-      competitivePosition: metric2Data.competitivePosition
-        ? {
-            ...metric2Data.competitivePosition,
-            feedback: transformFeedback({
-              recap: metric2Data.competitivePosition.recap,
-              feedback: metric2Data.competitivePosition.feedback,
-              comparison: metric2Data.competitivePosition.comparison,
-              suggestion: metric2Data.competitivePosition.suggestion,
-            }),
-          }
-        : defaultMetric,
-
-        revenueModel: metric2Data.revenueModel
-        ? {
-            ...metric2Data.revenueModel,
-            feedback: transformFeedback({
-              recap: metric2Data.revenueModel.recap,
-              feedback: metric2Data.revenueModel.feedback,
-              comparison: metric2Data.revenueModel.comparison,
-              suggestion: metric2Data.revenueModel.suggestion,
-            }),
-          }
-        : defaultMetric,
-    };
-
-    const scores = [
-      validatedMetric2.marketSize.score,
-      validatedMetric2.solutionValueProposition.score,
-      validatedMetric2.competitivePosition.score,
-      validatedMetric2.revenueModel.score,
-    ];
-    const overallScore = Math.round(scores.reduce((sum: number, score: number) => sum + score, 0) / 4);
-
-    const summary = metric2Data.summary;
-    const competitorCounterplay =
-      typeof metric2Data.competitorCounterplay === 'string' ? metric2Data.competitorCounterplay : '';
-
-    // const strengths = [];
-    // const weaknesses = [];
-    // const allMetrics = {
-    //   marketSize: validatedMetric2.marketSize,
-    //   solutionValueProposition: validatedMetric2.solutionValueProposition,
-    //   competitivePosition: validatedMetric2.competitivePosition,
-    // };
-    // for (const [key, value] of Object.entries(allMetrics)) {
-    //   if (value.score >= 7) strengths.push(key);
-    //   if (value.score < 5) weaknesses.push(key);
-    // }
-    // const summary = `The pitch shows potential with strengths in ${strengths.length ? strengths.join(', ') : 'none'}, but needs improvement in ${weaknesses.length ? weaknesses.join(', ') : 'none'}.`;
-
-    const combinedData = {
-      marketSize: validatedMetric2.marketSize,
-      solutionValueProposition: validatedMetric2.solutionValueProposition,
-      competitivePosition: validatedMetric2.competitivePosition,
-      revenueModel: validatedMetric2.revenueModel,
-      overallScore,
-      summary,
-      competitorCounterplay,
-      rubricSpecificFeedback: {
-        marketSize: validatedMetric2.marketSize.feedback,
-        solutionValueProposition: validatedMetric2.solutionValueProposition.feedback,
-        competitivePosition: validatedMetric2.competitivePosition.feedback,
-        revenueModel: validatedMetric2.revenueModel.feedback,
-      },
-    };
-
-    return JSON.stringify(combinedData);
+    return buildCombinedMetric2Json(metric2Data);
   } catch (error) {
-    console.error("Error merging Sonar outputs:", error);
-    const defaultData = {
-      marketSize: { score: 0, feedback: "Unable to evaluate due to Sonar parsing error." },
-      solutionValueProposition: { score: 0, feedback: "Unable to evaluate due to Sonar parsing error." },
-      competitivePosition: { score: 0, feedback: " Unable to evaluate due to Sonar parsing error." },
-      revenueModel: { score: 0, feedback: " Unable to evaluate due to Sonar parsing error." },
+    console.error('Error merging Sonar outputs:', error);
+    return JSON.stringify({
+      marketSize: { score: 0, feedback: 'Unable to evaluate due to Sonar parsing error.' },
+      solutionValueProposition: { score: 0, feedback: 'Unable to evaluate due to Sonar parsing error.' },
+      competitivePosition: { score: 0, feedback: ' Unable to evaluate due to Sonar parsing error.' },
+      revenueModel: { score: 0, feedback: ' Unable to evaluate due to Sonar parsing error.' },
       overallScore: 0,
-      summary: "[Market Size, Solution Value Proposition, Competitive Position] Failed to evaluate pitch due to parsing errors in Sonar responses.",
-      competitorCounterplay: "",
+      summary:
+        '[Market Size, Solution Value Proposition, Competitive Position] Failed to evaluate pitch due to parsing errors in Sonar responses.',
+      competitorCounterplay: '',
       rubricSpecificFeedback: {
-        marketSize: "Unable to evaluate due to Sonar parsing error.",
-        solutionValueProposition: "Unable to evaluate due to Sonar parsing error.",
-        competitivePosition: "Unable to evaluate due to Sonar parsing error.",
-        revenueModel: "Unable to evaluate due to Sonar parsing error.",
+        marketSize: 'Unable to evaluate due to Sonar parsing error.',
+        solutionValueProposition: 'Unable to evaluate due to Sonar parsing error.',
+        competitivePosition: 'Unable to evaluate due to Sonar parsing error.',
+        revenueModel: 'Unable to evaluate due to Sonar parsing error.',
       },
-    };
-    return JSON.stringify(defaultData);
+    });
   }
 };
-
 
 export default pitchEvaluationResponseMetric2;

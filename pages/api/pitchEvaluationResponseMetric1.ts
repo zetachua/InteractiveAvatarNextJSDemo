@@ -5,8 +5,8 @@ import {
   buildCitationItemsFromSonarResponse,
   getSonarChatCompletionForMetric,
   messageContentToString,
+  normalizeRubricMetricBlock,
   parseJsonFromLlmContent,
-  transformFeedback,
 } from './pitchEvaluationResponseShared';
 
 const pitchEvaluationResponseMetric1 = async (req: NextApiRequest, res: NextApiResponse) => {
@@ -121,59 +121,11 @@ const cleanSonarOutputMetric1 = (metric1:any): string => {
     const metric1Data = parseJsonFromLlmContent(rawContent) as Record<string, any>;
     console.log(metric1Data,"testFn3 metric1: JSON.parse cleanResponse successful")
 
-    const defaultMetric = {
-      score: 0,
-      feedback: "Not provided. Unable to evaluate due to missing data."
-    };
-
     const validatedMetric1 = {
-      elevatorPitch: metric1Data.elevatorPitch
-        ? {
-            ...metric1Data.elevatorPitch,
-            feedback: transformFeedback({
-              recap: metric1Data.elevatorPitch.recap,
-              feedback: metric1Data.elevatorPitch.feedback,
-              comparison: metric1Data.elevatorPitch.comparison,
-              suggestion: metric1Data.elevatorPitch.suggestion,
-            }),
-          }
-        : defaultMetric,
-    
-      team: metric1Data.team
-        ? {
-            ...metric1Data.team,
-            feedback: transformFeedback({
-              recap: metric1Data.team.recap,
-              feedback: metric1Data.team.feedback,
-              comparison: metric1Data.team.comparison,
-              suggestion: metric1Data.team.suggestion,
-            }),
-          }
-        : defaultMetric,
-    
-      marketOpportunity: metric1Data.marketOpportunity
-        ? {
-            ...metric1Data.marketOpportunity,
-            feedback: transformFeedback({
-              recap: metric1Data.marketOpportunity.recap,
-              feedback: metric1Data.marketOpportunity.feedback,
-              comparison: metric1Data.marketOpportunity.comparison,
-              suggestion: metric1Data.marketOpportunity.suggestion,
-            }),
-          }
-        : defaultMetric,
-
-        tractionAwards: metric1Data.tractionAwards
-        ? {
-            ...metric1Data.tractionAwards,
-            feedback: transformFeedback({
-              recap: metric1Data.tractionAwards.recap,
-              feedback: metric1Data.tractionAwards.feedback,
-              comparison: metric1Data.tractionAwards.comparison,
-              suggestions: metric1Data.tractionAwards.suggestion,
-            }),
-          }
-        : defaultMetric,
+      elevatorPitch: normalizeRubricMetricBlock(metric1Data.elevatorPitch),
+      team: normalizeRubricMetricBlock(metric1Data.team),
+      marketOpportunity: normalizeRubricMetricBlock(metric1Data.marketOpportunity),
+      tractionAwards: normalizeRubricMetricBlock(metric1Data.tractionAwards),
     };
 
     const scores = [
