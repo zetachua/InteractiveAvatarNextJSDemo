@@ -40,6 +40,8 @@ export const responseFilter = (responseContent: string) => {
 };
 
 
+import { clampChars, clampSentences } from './pitchEvaluationResponseShared';
+
 export const feedbackFilter = (responseContent: string) => {
   try {
     console.log(responseContent,"original responseContent sentiment")
@@ -54,9 +56,23 @@ export const feedbackFilter = (responseContent: string) => {
 
     const feedbackDataJson: FeedbackData = JSON.parse(feedbackJson);
 
+    const specific = feedbackDataJson.specificFeedback;
+    const feedbackSpecific =
+      specific && typeof specific === 'object'
+        ? Object.fromEntries(
+            Object.entries(specific as Record<string, unknown>).map(([k, v]) => [
+              k,
+              clampSentences(clampChars(String(v ?? ''), 160), 1),
+            ]),
+          )
+        : specific;
+
     return {
       feedbackScore: feedbackDataJson.overallScore,
-      feedbackSummary: feedbackDataJson.feedbackSummary,
+      feedbackSummary: clampSentences(
+        clampChars(String(feedbackDataJson.feedbackSummary ?? ''), 280),
+        2,
+      ),
       feedbackMetrics: {
         clarity: feedbackDataJson.clarity,
         relevance: feedbackDataJson.relevance,
@@ -64,7 +80,7 @@ export const feedbackFilter = (responseContent: string) => {
         engagement: feedbackDataJson.engagement,
         depth: feedbackDataJson.depth,
       },
-      feedbackSpecific: feedbackDataJson.specificFeedback,
+      feedbackSpecific,
     };
   } catch (error) {
     console.error("Error parsing JSON:", error);

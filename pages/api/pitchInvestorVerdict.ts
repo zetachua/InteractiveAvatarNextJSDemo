@@ -1,7 +1,12 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import Groq from 'groq-sdk';
 import { investorVerdictPrompt, type InvestorVerdictContext } from './prompts';
-import { cleanResponse } from './pitchEvaluationResponseShared';
+import {
+  clampChars,
+  clampSentences,
+  cleanResponse,
+  trimVerdictContextInput,
+} from './pitchEvaluationResponseShared';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -23,7 +28,7 @@ export default async function pitchInvestorVerdict(req: NextApiRequest, res: Nex
     const rubricMetrics = asRecord(body.rubricMetrics);
     const sentimentMetrics = asRecord(body.sentimentMetrics);
     const rubricFb = body.rubricSpecificFeedback;
-    const ctx: InvestorVerdictContext = {
+    const rawCtx: InvestorVerdictContext = {
       rubricOverallScore: Number(body.rubricOverallScore) || 0,
       rubricSummary: String(body.rubricSummary ?? ''),
       rubricMetrics,
@@ -37,15 +42,18 @@ export default async function pitchInvestorVerdict(req: NextApiRequest, res: Nex
       sentimentSummary: String(body.sentimentSummary ?? ''),
       sentimentMetrics,
     };
+    const trimmed = trimVerdictContextInput(rawCtx);
+    const ctx: InvestorVerdictContext = { ...rawCtx, ...trimmed };
 
     const prompt = investorVerdictPrompt(ctx);
     const completion = await groq.chat.completions.create({
       messages: [
         { role: 'system', content: prompt },
-        { role: 'user', content: 'Produce the JSON object now.' },
+        { role: 'user', content: 'Produce the JSON object now. Keep each section body under 45 words.' },
       ],
       model: process.env.GROQ_INVESTOR_VERDICT_MODEL || 'llama-3.3-70b-versatile',
       response_format: { type: 'json_object' },
+      max_tokens: 512,
     });
 
     const raw = completion.choices[0]?.message?.content;
@@ -61,7 +69,12 @@ export default async function pitchInvestorVerdict(req: NextApiRequest, res: Nex
         const o = item as Record<string, unknown>;
         const heading = typeof o.heading === 'string' ? o.heading.trim() : '';
         const body = typeof o.body === 'string' ? o.body.trim() : '';
-        if (heading && body) sections.push({ heading, body });
+        if (heading && body) {
+          sections.push({
+            heading: clampChars(heading, 48),
+            body: clampSentences(clampChars(body, 320), 2),
+          });
+        }
       }
     }
 

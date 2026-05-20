@@ -14,6 +14,7 @@ After the rubric dimension analysis, add a section **Competitor Counterplay** in
 2. What you would **build differently** to win the same market.
 3. **One specific technology or pricing strategy** you would use to undercut them.
 Stay concrete and tied to claims in the transcript; avoid generic platitudes.
+Keep \`competitorCounterplay\` to **at most 3 short bullets**, **one sentence each** (under 35 words per bullet).
 `;
 
 export type InvestorVerdictContext = {
@@ -37,15 +38,15 @@ ${JSON.stringify(ctx, null, 2)}
 
 Instructions:
 - Output **only** a valid JSON object with exactly one key: \`sections\`, whose value is an **array of exactly 4 objects**, each with:
-  - \`heading\`: short label (2–7 words), Title Case, **no** markdown, **no** trailing colon in the string.
-  - \`body\`: **plain text**, 2–4 sentences, **no** markdown, **no** bullet characters.
-- Use this **order** and **intent** for the four sections (you may slightly rephrase headings to fit the pitch, but keep the same meaning):
-  1. **Overall read** — one tight summary of how the opportunity lands holistically.
-  2. **Substance & rubric** — what the rubric scores and substance feedback imply; strengths and gaps in the business story.
-  3. **Delivery & sentiment** — what sentiment / delivery signals suggest; tradeoffs vs substance if relevant.
-  4. **Investment stance** — clearly **invest**, **pass**, or **invest with conditions**; name conditions briefly if applicable.
-- Total length similar to ~120–220 words across all bodies combined.
-- Ground every claim in the numbers and summaries above; do not invent company facts not supported by the inputs.
+  - \`heading\`: short label (2–5 words), Title Case, **no** markdown, **no** trailing colon.
+  - \`body\`: **exactly 1–2 short sentences**, **max 45 words total** for that body. Plain text only — no bullets, no markdown.
+- Use this **order** and **intent** (you may slightly rephrase headings):
+  1. **Overall read** — holistic take in one breath.
+  2. **Substance & rubric** — top strength + top gap from rubric scores (cite numbers).
+  3. **Delivery & sentiment** — delivery takeaway from sentiment score (one line).
+  4. **Investment stance** — **Invest**, **Pass**, or **Invest with conditions** (max one condition, half a sentence).
+- **Hard cap:** ~80–110 words across all four bodies combined. Be direct; no filler or repetition.
+- Ground claims in the inputs only; do not invent facts.
 
 Return only the JSON object. No code fences, no commentary.
 `;
@@ -194,14 +195,8 @@ export const sentimentPitchPrompt = (userInput: any, chatHistory: any) => `
   Your output should be a JSON object with:
   - A score (1-5) for each of the above categories.
   - An **overall sentiment score** (1-5, with decimals allowed) derived from the individual scores, with special emphasis on the tone, enthusiasm, and clarity of the pitch based only on the provided text.
-  - A **specificFeedback** object containing detailed feedback for each criterion, highlighting what was done well and areas for improvement. Use the following structure for each feedback entry:
-    - "clarity": "The pitch [specific strength], but could improve by [specific area]."
-    - "relevance": "The pitch addressed [specific investor interest], but could better align with [specific improvement]."
-    - "depth": "The pitch provided detail on [specific aspect], but lacked [specific missing element]."
-    - "neutrality": "The tone was [specific observation], but could adjust [specific suggestion]."
-    - "engagement": "The delivery showed [specific strength], but could enhance [specific area]."
-    - If information is missing, state: "The pitch provided no [criterion] information, so it’s unclear. Suggest: [specific suggestion]."
-  - A **feedbackSummary** that provides an overall evaluation of the student's sentiment based only on the provided text, highlighting strengths and areas for improvement in engaging the investor.
+  - A **specificFeedback** object: **one sentence per criterion** (max 25 words each) — strength + one improvement.
+  - A **feedbackSummary**: **max 2 sentences** (max 50 words total) on delivery overall.
 
   Output format:
   {
@@ -609,7 +604,7 @@ ${RUBRIC_PERPLEXITY_SOURCE_AND_CITATION_POLICY}
 - Include statistical backing (e.g., adoption rates, pricing benchmarks) from reliable 2025 sources where possible.
 
 **Top-level "summary" field (required)**:
-- Write 3–5 sentences of **investor synthesis only**: cross-cutting strengths, weaknesses, and the top 1–3 fixes to prioritize.
+- Write **2–3 sentences max** of **investor synthesis only**: cross-cutting strengths, weaknesses, and the top 1–2 fixes to prioritize.
 - Do **not** paste, quote, or replay raw transcript wording (no multi-sentence quotes of what the founder said).
 - Do **not** repeat the same point twice in different sentences; one clear statement per idea.
 - If the transcript is extremely thin or non-substantive, say that **once**, then briefly note what a credible pitch should cover next—avoid duplicating near-identical sentences.
@@ -618,7 +613,7 @@ ${RUBRIC_PERPLEXITY_SOURCE_AND_CITATION_POLICY}
 - Return only a **valid raw JSON object**
 - No markdown, no code fences, no prose, no commentary, no headings
 - Required keys: summary, elevatorPitch, team, marketOpportunity, tractionAwards (each metric object must include score and feedback)
-- Keep each feedback field concise (max 3 sentences) so the full JSON fits in one response
+- Keep each feedback field concise (**max 2 sentences**, under 50 words each)
 Example shape (return raw JSON only, not this markdown block):
 {
   "summary": "...",
@@ -668,7 +663,7 @@ export const pitchEvaluationPromptMetric1SummaryShard = (
 You are an experienced VC. Write a short overall summary for this pitch (all rubric dimensions).
 
 Return ONLY valid raw JSON (no markdown). Schema:
-{"summary":"<max 4 sentences>"}
+{"summary":"<max 2 sentences, under 60 words>"}
 
 Chat History:
 ${JSON.stringify(chatHistory)}
@@ -709,7 +704,7 @@ ${RUBRIC_METRIC2_COMPETITOR_COUNTERPLAY_RULES}
 - Include statistical backing (e.g., adoption rates, pricing benchmarks) from reliable 2025 sources where possible.
 
 **Top-level "summary" field (required)**:
-- Write 3–5 sentences of **investor synthesis only**: cross-cutting strengths, weaknesses, and the top fixes to prioritize.
+- Write **2–3 sentences max** of **investor synthesis only**: cross-cutting strengths, weaknesses, and the top 1–2 fixes to prioritize.
 - Do **not** paste, quote, or replay raw transcript wording (no multi-sentence quotes of filler or chat).
 - Do **not** repeat the same point twice in different sentences; one clear statement per idea.
 - If the transcript is extremely thin, say that **once**, then focus on what a complete pitch should include—avoid duplicating near-identical sentences.
@@ -764,7 +759,7 @@ You are an experienced VC. Write a short overall summary and competitor counterp
 ${RUBRIC_METRIC2_COMPETITOR_COUNTERPLAY_RULES}
 
 Return ONLY valid raw JSON (no markdown). Schema (exact keys):
-{"summary":"<max 4 sentences>","competitorCounterplay":"<3 short numbered bullets>"}
+{"summary":"<max 2 sentences, under 60 words>","competitorCounterplay":"<3 bullets, one short sentence each>"}
 
 Chat History:
 ${JSON.stringify(chatHistory)}

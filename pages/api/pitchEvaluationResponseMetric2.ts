@@ -7,6 +7,8 @@ import {
 import { metric2ResultInvestorFilter } from './completionFilterFunctions';
 import {
   buildCitationItemsFromSonarResponse,
+  clampChars,
+  clampSentences,
   flattenRubricPayload,
   getGroqChatCompletionForMetric,
   getSonarChatCompletionForMetric,
@@ -99,10 +101,14 @@ function buildCombinedMetric2Json(
   metric2Data: Record<string, unknown>,
 ): string {
   const flat = flattenRubricPayload(metric2Data, METRIC2_KEYS);
-  const marketSize = normalizeRubricMetricBlock(flat.marketSize);
-  const solutionValueProposition = normalizeRubricMetricBlock(flat.solutionValueProposition);
-  const competitivePosition = normalizeRubricMetricBlock(flat.competitivePosition);
-  const revenueModel = normalizeRubricMetricBlock(flat.revenueModel);
+  const clampMetric = (v: unknown) => {
+    const m = normalizeRubricMetricBlock(v);
+    return { score: m.score, feedback: clampSentences(clampChars(m.feedback, 380), 2) };
+  };
+  const marketSize = clampMetric(flat.marketSize);
+  const solutionValueProposition = clampMetric(flat.solutionValueProposition);
+  const competitivePosition = clampMetric(flat.competitivePosition);
+  const revenueModel = clampMetric(flat.revenueModel);
 
   const scores = [
     marketSize.score,
@@ -113,11 +119,11 @@ function buildCombinedMetric2Json(
   const overallScore = Math.round(scores.reduce((sum, score) => sum + score, 0) / 4);
   const summary =
     typeof flat.summary === 'string' && flat.summary.trim()
-      ? flat.summary.trim()
+      ? clampSentences(clampChars(flat.summary.trim(), 420), 3)
       : 'Summary not available.';
   const competitorCounterplay =
     typeof flat.competitorCounterplay === 'string'
-      ? flat.competitorCounterplay.trim()
+      ? clampSentences(clampChars(flat.competitorCounterplay.trim(), 480), 3)
       : '';
 
   return JSON.stringify({

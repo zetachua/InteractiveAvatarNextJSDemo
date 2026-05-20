@@ -11,6 +11,8 @@ import {
   getGroqChatCompletionForMetric,
   getSonarChatCompletionForMetric,
   messageContentToString,
+  clampChars,
+  clampSentences,
   normalizeRubricMetricBlock,
   parseJsonFromLlmContent,
   useSplitRubricMetric1,
@@ -85,16 +87,20 @@ async function parseShard(completion: unknown, label: string): Promise<Record<st
 function buildCombinedMetric1Json(metric1Data: Record<string, unknown>): string {
   const flat = flattenRubricPayload(metric1Data, METRIC1_KEYS);
 
-  const elevatorPitch = normalizeRubricMetricBlock(flat.elevatorPitch);
-  const team = normalizeRubricMetricBlock(flat.team);
-  const marketOpportunity = normalizeRubricMetricBlock(flat.marketOpportunity);
-  const tractionAwards = normalizeRubricMetricBlock(flat.tractionAwards);
+  const clampMetric = (v: unknown) => {
+    const m = normalizeRubricMetricBlock(v);
+    return { score: m.score, feedback: clampSentences(clampChars(m.feedback, 380), 2) };
+  };
+  const elevatorPitch = clampMetric(flat.elevatorPitch);
+  const team = clampMetric(flat.team);
+  const marketOpportunity = clampMetric(flat.marketOpportunity);
+  const tractionAwards = clampMetric(flat.tractionAwards);
 
   const scores = [elevatorPitch.score, team.score, marketOpportunity.score, tractionAwards.score];
   const overallScore = Math.round(scores.reduce((sum, score) => sum + score, 0) / 4);
   const summary =
     typeof flat.summary === 'string' && flat.summary.trim()
-      ? flat.summary.trim()
+      ? clampSentences(clampChars(flat.summary.trim(), 420), 3)
       : 'Summary not available.';
 
   return JSON.stringify({

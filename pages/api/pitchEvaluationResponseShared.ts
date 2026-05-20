@@ -7,6 +7,43 @@ export type ChatMessage = {
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+/** Limit prose length for UI and downstream LLM prompts. */
+export function clampSentences(text: string, maxSentences: number): string {
+  const t = String(text ?? '').trim();
+  if (!t || maxSentences < 1) return t;
+  const parts = t.split(/(?<=[.!?])\s+/).filter(Boolean);
+  if (parts.length <= maxSentences) return t;
+  return parts.slice(0, maxSentences).join(' ').trim();
+}
+
+export function clampChars(text: string, maxChars: number): string {
+  const t = String(text ?? '').trim();
+  if (!t || maxChars < 8) return t;
+  if (t.length <= maxChars) return t;
+  return `${t.slice(0, maxChars - 1).trimEnd()}…`;
+}
+
+/** Trim rubric/sentiment blobs before investor verdict so Groq stays concise. */
+export function trimVerdictContextInput(ctx: {
+  rubricSummary: string;
+  rubricSpecificFeedback?: Record<string, string>;
+  sentimentSummary: string;
+}): typeof ctx {
+  const rubricSpecificFeedback = ctx.rubricSpecificFeedback
+    ? Object.fromEntries(
+        Object.entries(ctx.rubricSpecificFeedback).map(([k, v]) => [
+          k,
+          clampSentences(clampChars(v, 220), 2),
+        ]),
+      )
+    : undefined;
+  return {
+    rubricSummary: clampSentences(clampChars(ctx.rubricSummary, 500), 3),
+    rubricSpecificFeedback,
+    sentimentSummary: clampSentences(clampChars(ctx.sentimentSummary, 320), 2),
+  };
+}
+
 /** Cap messages sent to LLMs (lower = faster, less context). Env: CHAT_HISTORY_MAX_MESSAGES, default 24. */
 function chatHistoryMaxMessages(): number {
   const raw = process.env.CHAT_HISTORY_MAX_MESSAGES;
