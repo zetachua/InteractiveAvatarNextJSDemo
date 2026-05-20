@@ -616,23 +616,16 @@ ${RUBRIC_PERPLEXITY_SOURCE_AND_CITATION_POLICY}
 
 **Important Output Rules**:
 - Return only a **valid raw JSON object**
-- No markdown, no \`\`\`, no prose, no commentary, no headings
-\`\`\`json
+- No markdown, no code fences, no prose, no commentary, no headings
+- Required keys: summary, elevatorPitch, team, marketOpportunity, tractionAwards (each metric object must include score and feedback)
+Example shape (return raw JSON only, not this markdown block):
 {
-  "summary": "The pitch presents a $5M revenue model and a solid market opportunity but requires further clarity on how the business stands out with a stronger hook, highlights of the leadership team's past successes, and a breakdown of the SAM",
-  "elevatorPitch": { 
-    "score": 6, 
-    "feedback": "The pitch mentions a $5M revenue model but lacks a hook. Per 2025 industry data, cite MarketsandMarkets or Grand View Research for construction-tech spend where applicable. Suggest: quantify savings vs. lab testing using a Crunchbase-backed peer benchmark."    },
-  "team": { 
-    "score": 5, 
-    "feedback": "Technical expertise mentioned, but no leadership wins. Top 2025 construction teams: cite Crunchbase or PitchBook for comparable founder track records. Suggest: name one relevant exit or scale milestone."    },
-  "marketOpportunity": { 
-    "score": 7, 
-    "feedback": "Claims a $10M market, but no SAM. Ground sizing in Grand View Research or MarketsandMarkets for the relevant construction segment. Suggest: define SAM/SOM with one sourced TAM anchor."    },
-  "tractionAwards": { 
-    "score": 7, 
-    "feedback": "Mentions a pilot, but no metrics. Compare to industry pilots using allowed sources only. Suggest: cite one concrete KPI (e.g. cost %, cure time, sites) tied to the product."    }
-  }  \`\`\`
+  "summary": "...",
+  "elevatorPitch": { "score": 6, "feedback": "..." },
+  "team": { "score": 5, "feedback": "..." },
+  "marketOpportunity": { "score": 7, "feedback": "..." },
+  "tractionAwards": { "score": 7, "feedback": "..." }
+}
 Use only the following text as the pitch transcript, without adding or imagining content.
 
 Chat History (may include pitch and/or Q&A; analyze it carefully):
@@ -683,25 +676,8 @@ ${RUBRIC_METRIC2_COMPETITOR_COUNTERPLAY_RULES}
 **Important Output Rules**:
 - Return only a **valid raw JSON object**
 - Include the top-level string field **competitorCounterplay** exactly as specified under Competitor Counterplay (required).
-- No markdown, no \`\`\`, no prose, no commentary, no headings
-\`\`\`json
- {
-  "summary":"The pitch demonstrates potential with strengths in the outlined $5M TAM and mention of AI monitoring, but needs improvement in providing a breakdown of the SAM/SOM, distinguishing its solution from competitors by offering clear technical advantages, and naming competitors to position itself in the market",
-  "marketSize": { 
-    "score": 6, 
-    "feedback": "Claims $5M TAM, but no SAM/SOM. Ground global/regional TAM using Grand View Research or MarketsandMarkets for the relevant segment. Suggest: break down SAM/SOM with one sourced anchor."    },
-  "solutionValueProposition": { 
-    "score": 7, 
-    "feedback": "Mentions AI monitoring, but no edge. Compare to peers using Crunchbase/PitchBook or concrete-tech literature. Suggest: one measurable technical differentiator."    },
-  "competitivePosition": { 
-    "score": 4, 
-    "feedback": "No competitors named. Name peers with Crunchbase/PitchBook facts where allowed. Suggest: a clear differentiation axis vs. one named competitor."    },
-  "revenueModel": { 
-    "score": 6, 
-    "feedback": "Subscription model vague. Anchor pricing to Crunchbase/PitchBook peers or industry reports from Grand View Research or MarketsandMarkets. Suggest: name tier structure and unit economics."    },
-  "competitorCounterplay": "(1) Biggest vulnerability: [business-model weakness tied to transcript]. (2) I would build differently: [product/GTM]. (3) Undercut: [one specific tech or pricing move]."
-}
-  \`\`\`
+- No markdown, no code fences, no prose, no commentary, no headings
+- Required keys: summary, marketSize, solutionValueProposition, competitivePosition, revenueModel, competitorCounterplay
 
 Use only the following text as the pitch transcript.
 Chat History (may include pitch and/or Q&A; analyze it carefully):

@@ -1,7 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { pitchEvaluationPromptMetric1} from './prompts';
 import {metric1ResultInvestorFilter } from './completionFilterFunctions';
-import { buildCitationItemsFromSonarResponse, cleanResponse, getSonarChatCompletionForMetric, transformFeedback } from './pitchEvaluationResponseShared';
+import {
+  buildCitationItemsFromSonarResponse,
+  getSonarChatCompletionForMetric,
+  messageContentToString,
+  parseJsonFromLlmContent,
+  transformFeedback,
+} from './pitchEvaluationResponseShared';
 
 const pitchEvaluationResponseMetric1 = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
@@ -50,14 +56,21 @@ const fetchMetric1 = async (currentMarketStats:string,chatHistory: any[]) => {
   try {
     let rubricRatingCompletion;
 
-      const metric1Result = await getSonarMetric1(currentMarketStats,chatHistory);
-      console.log(metric1Result,"direct metric1 completion")
+      let metric1Result = await getSonarMetric1(currentMarketStats, chatHistory);
+      console.log(metric1Result, 'direct metric1 completion');
+
+      let cleaned = cleanSonarOutputMetric1(metric1Result);
+      if (cleaned.includes('Sonar parsing error')) {
+        console.warn('metric1: first Sonar parse failed, retrying once…');
+        metric1Result = await getSonarMetric1(currentMarketStats, chatHistory);
+        cleaned = cleanSonarOutputMetric1(metric1Result);
+      }
 
       rubricRatingCompletion = {
         choices: [
           {
             message: {
-              content:cleanSonarOutputMetric1(metric1Result),
+              content: cleaned,
             },
           },
         ],
@@ -104,7 +117,8 @@ const cleanSonarOutputMetric1 = (metric1:any): string => {
     }
     console.log("testFn metric1 begin")
 
-    const metric1Data = JSON.parse(cleanResponse(metric1.choices[0].message.content));
+    const rawContent = messageContentToString(metric1?.choices?.[0]?.message?.content);
+    const metric1Data = parseJsonFromLlmContent(rawContent) as Record<string, any>;
     console.log(metric1Data,"testFn3 metric1: JSON.parse cleanResponse successful")
 
     const defaultMetric = {

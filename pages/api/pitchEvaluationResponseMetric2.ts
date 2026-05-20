@@ -1,7 +1,13 @@
 import { NextApiRequest, NextApiResponse } from 'next';
 import { pitchEvaluationPromptMetric2} from './prompts';
 import {  metric2ResultInvestorFilter} from './completionFilterFunctions';
-import { buildCitationItemsFromSonarResponse, cleanResponse, getSonarChatCompletionForMetric, transformFeedback } from './pitchEvaluationResponseShared';
+import {
+  buildCitationItemsFromSonarResponse,
+  getSonarChatCompletionForMetric,
+  messageContentToString,
+  parseJsonFromLlmContent,
+  transformFeedback,
+} from './pitchEvaluationResponseShared';
 
 const pitchEvaluationResponseMetric2 = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
@@ -54,14 +60,21 @@ const fetchMetric2 = async (currentMarketStats:string,chatHistory: any[]) => {
   try {
     let rubricRatingCompletion;
 
-      const metric2Result = await getSharktankMetric2(currentMarketStats,chatHistory);
-      console.log(metric2Result,"direct metric2 completion")
+      let metric2Result = await getSharktankMetric2(currentMarketStats, chatHistory);
+      console.log(metric2Result, 'direct metric2 completion');
+
+      let cleaned = cleanSonarOutputMetric2(metric2Result);
+      if (cleaned.includes('Sonar parsing error')) {
+        console.warn('metric2: first Sonar parse failed, retrying once…');
+        metric2Result = await getSharktankMetric2(currentMarketStats, chatHistory);
+        cleaned = cleanSonarOutputMetric2(metric2Result);
+      }
 
       rubricRatingCompletion = {
         choices: [
           {
             message: {
-              content: cleanSonarOutputMetric2(metric2Result),
+              content: cleaned,
             },
           },
         ],
@@ -108,7 +121,8 @@ const cleanSonarOutputMetric2 = (metric2:any): string => {
     }
     console.log("testFn metric2 begin")
 
-    const metric2Data = JSON.parse(cleanResponse(metric2.choices[0].message.content));
+    const rawContent = messageContentToString(metric2?.choices?.[0]?.message?.content);
+    const metric2Data = parseJsonFromLlmContent(rawContent) as Record<string, any>;
     console.log(metric2Data,"testFn3 metric2: JSON.parse cleanResponse successful")
 
     const defaultMetric = {

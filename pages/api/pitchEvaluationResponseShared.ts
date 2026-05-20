@@ -279,17 +279,54 @@ export const getGroqChatCompletionForMetric = async (chatHistory: any, prompt: s
       });
   };
 
-  function extractBalancedJson(text: string): string | null {
-    const start = text.search(/[\{\[]/);
-    if (start === -1) return null;
+  /** Normalize Sonar/OpenAI message content (string or parts array). */
+  export function messageContentToString(content: unknown): string {
+    if (typeof content === 'string') return content;
+    if (Array.isArray(content)) {
+      return content
+        .map((part) => {
+          if (typeof part === 'string') return part;
+          if (part && typeof part === 'object' && 'text' in part) {
+            return String((part as { text?: string }).text ?? '');
+          }
+          return '';
+        })
+        .filter(Boolean)
+        .join('\n');
+    }
+    return String(content ?? '');
+  }
 
-    const open = text[start];
+  function stripLlmWrappers(text: string): string {
+    return text
+      .replace(/```(?:json)?\s*([\s\S]*?)```/gi, '$1')
+      .replace(/[\s\S]*?<\/think>/gi, '')
+      .replace(/<think[^>]*>[\s\S]*?<\/think>/gi, '')
+      .replace(/<think>[\s\S]*?<\/redacted_thinking>/gi, '')
+      .replace(/<think>[\s\S]*?<\/think>/gi, '')
+      .replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, '')
+      .trim();
+  }
+
+  function repairJsonString(json: string): string {
+    return json
+      .replace(/[\u201C\u201D]/g, '"')
+      .replace(/[\u2018\u2019]/g, "'")
+      .replace(/,\s*([}\]])/g, '$1');
+  }
+
+  function extractBalancedJson(text: string, fromIndex = 0): string | null {
+    const start = text.slice(fromIndex).search(/[{[]/);
+    if (start === -1) return null;
+    const absoluteStart = fromIndex + start;
+
+    const open = text[absoluteStart];
     const close = open === '{' ? '}' : ']';
     let depth = 0;
     let inString = false;
     let escaped = false;
 
-    for (let i = start; i < text.length; i += 1) {
+    for (let i = absoluteStart; i < text.length; i += 1) {
       const ch = text[i];
 
       if (inString) {
@@ -316,7 +353,7 @@ export const getGroqChatCompletionForMetric = async (chatHistory: any, prompt: s
       if (ch === close) {
         depth -= 1;
         if (depth === 0) {
-          return text.slice(start, i + 1);
+          return text.slice(absoluteStart, i + 1);
         }
       }
     }
@@ -324,18 +361,98 @@ export const getGroqChatCompletionForMetric = async (chatHistory: any, prompt: s
     return null;
   }
 
-  export const cleanResponse = (content: string): string => {
-    const cleaned = content
-      .replace(/```json|```/g, '') // Remove code block markers
-      .replace(/<think>[\s\S]*?<\/think>/g, '') // Remove <think>...</think> tags
-      .trim();
+  function collectJsonCandidates(text: string): string[] {
+    const candidates: string[] = [];
+    const seen = new Set<string>();
 
-    const extracted = extractBalancedJson(cleaned);
-    if (!extracted) {
-      throw new Error("No valid JSON found in response");
+    const push = (value: string | null | undefined) => {
+      const v = value?.trim();
+      if (!v || seen.has(v)) return;
+      seen.add(v);
+      candidates.push(v);
+    };
+
+    const stripped = stripLlmWrappers(text);
+    push(stripped);
+
+    const fenceRegex = /```(?:json)?\s*([\s\S]*?)```/gi;
+    let fenceMatch: RegExpExecArray | null;
+    while ((fenceMatch = fenceRegex.exec(text)) !== null) {
+      push(fenceMatch[1]);
     }
 
-    return extracted;
+    let searchFrom = 0;
+    while (searchFrom < stripped.length) {
+      const chunk = extractBalancedJson(stripped, searchFrom);
+      if (!chunk) break;
+      push(chunk);
+      const nextIndex = stripped.indexOf(chunk, searchFrom);
+      if (nextIndex === -1) break;
+      searchFrom = nextIndex + chunk.length;
+    }
+
+    return candidates;
+  }
+
+  function scoreJsonCandidate(parsed: unknown): number {
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return 0;
+    const keys = Object.keys(parsed as Record<string, unknown>);
+    const rubricKeys = [
+      'elevatorPitch',
+      'team',
+      'marketOpportunity',
+      'tractionAwards',
+      'marketSize',
+      'solutionValueProposition',
+      'competitivePosition',
+      'summary',
+      'sections',
+      'investorVerdict',
+    ];
+    let score = keys.length;
+    for (const k of rubricKeys) {
+      if (keys.includes(k)) score += 10;
+    }
+    return score;
+  }
+
+  /** Parse JSON from LLM/Sonar text; returns object or throws. */
+  export function parseJsonFromLlmContent(content: unknown): Record<string, unknown> {
+    const text = messageContentToString(content);
+    if (!text.trim()) {
+      throw new Error('No valid JSON found in response (empty content)');
+    }
+
+    const candidates = collectJsonCandidates(text);
+    let best: { score: number; value: Record<string, unknown> } | null = null;
+
+    for (const candidate of candidates) {
+      const repaired = repairJsonString(candidate);
+      try {
+        const parsed = JSON.parse(repaired) as unknown;
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) continue;
+        const obj = parsed as Record<string, unknown>;
+        const score = scoreJsonCandidate(obj);
+        if (!best || score > best.score) {
+          best = { score, value: obj };
+        }
+        if (score >= 30) break;
+      } catch {
+        /* try next candidate */
+      }
+    }
+
+    if (best) return best.value;
+
+    console.error(
+      'parseJsonFromLlmContent: no parseable JSON. Snippet:',
+      text.slice(0, 800),
+    );
+    throw new Error('No valid JSON found in response');
+  }
+
+  export const cleanResponse = (content: unknown): string => {
+    return JSON.stringify(parseJsonFromLlmContent(content));
   };
 
   export const transformFeedback = (feedback: any): string => {
