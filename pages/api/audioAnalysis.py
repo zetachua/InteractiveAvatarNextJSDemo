@@ -175,9 +175,11 @@ def fluency_analysis():
         return max(round(score), 0)
 
     data = request.get_json()
-    segments = data.get("segments")
+    segments = data.get("segments") or []
 
     all_words = [word for segment in segments for word in segment.get("words", [])]
+    if not all_words:
+        return jsonify({"error": "No word-level timestamps in segments — ensure Whisper ran with word_timestamps=True"}), 400
     total_words = len(all_words)
     speaking_time = sum([w["end"] - w["start"] for w in all_words])
     total_duration = all_words[-1]["end"] - all_words[0]["start"] if len(all_words) > 1 else speaking_time
@@ -278,9 +280,11 @@ def fluency_analysis():
         print("LLM response could not be parsed")
         pause_score = compute_pause_score(words_and_pauses, fallback=True)
 
-    for idx, fb in zip(pause_indices, feedback):
-        words_and_pauses[idx]["classification"] = fb.get("classification")
-        words_and_pauses[idx]["reason"] = fb.get("reason")
+    if isinstance(feedback, list):
+        for idx, fb in zip(pause_indices, feedback):
+            if isinstance(fb, dict):
+                words_and_pauses[idx]["classification"] = fb.get("classification")
+                words_and_pauses[idx]["reason"] = fb.get("reason")
 
     return jsonify({
         "score": compute_fluency_score(pause_score, articulation_rate, words_and_pauses),

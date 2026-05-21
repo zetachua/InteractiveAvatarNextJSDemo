@@ -129,7 +129,7 @@ const Transcript: React.FC<TranscriptProps> = ({
     <div className='transcript'>
       {assessment === 'Pronunciation' ? (
         <>
-          {pronunciationAssessment === undefined || !pronunciationAssessment.words ? (
+          {pronunciationAssessment == null || !pronunciationAssessment.words ? (
             <p>Cannot analyze pronunciation.</p>
           ) : (
             <>
@@ -218,7 +218,7 @@ const Transcript: React.FC<TranscriptProps> = ({
         </>
       ) : assessment === 'Intonation' ? (
         <>
-          {intonationAssessment === undefined || !intonationAssessment.words ? (
+          {intonationAssessment == null || !intonationAssessment.words ? (
             <p>Cannot analyze intonation.</p>
           ) : (
             <>
@@ -266,7 +266,7 @@ const Transcript: React.FC<TranscriptProps> = ({
         </>
       ) : assessment === 'Fluency' ? (
         <>
-          {fluencyAssessment === undefined || !fluencyAssessment.words ? (
+          {fluencyAssessment == null || !fluencyAssessment.words ? (
             <p>Cannot analyze fluency.</p>
           ) : (
             <>

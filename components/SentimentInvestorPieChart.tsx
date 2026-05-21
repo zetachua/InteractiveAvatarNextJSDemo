@@ -138,7 +138,13 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
       ? Math.ceil((overallScore + Number.EPSILON) * 10) / 10
       : 0;
 
-  const [selectedAssessment, setSelectedAssessment] = useState<AssessmentType>('Pronunciation');
+  const availableAssessments = (assessments as AssessmentType[]).filter(a =>
+    a === 'Pronunciation' ? pronunciationAssessment != null :
+    a === 'Intonation' ? intonationAssessment != null :
+    fluencyAssessment != null
+  );
+  const defaultTab = availableAssessments[0] ?? 'Pronunciation';
+  const [selectedAssessment, setSelectedAssessment] = useState<AssessmentType>(defaultTab);
   const [showFullSummary, setShowFullSummary] = useState(false);
   const summaryPoints = feedbackSummary
     .split(/[.!?]\s+/)
@@ -206,7 +212,7 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
           />
 
           <div className='select-assessment'>
-            {assessments.map((assessment) => (
+            {availableAssessments.map((assessment) => (
               <Button
                 key={assessment}
                 onPress={() => setSelectedAssessment(assessment)}
