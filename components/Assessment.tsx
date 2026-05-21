@@ -16,9 +16,9 @@ import {
 } from './KnowledgeClasses';
 
 interface AssessmentProps {
-  pronunciationAssessment: PronunciationAssessment;
-  intonationAssessment: IntonationAssessment;
-  fluencyAssessment: FluencyAssessment;
+  pronunciationAssessment?: PronunciationAssessment;
+  intonationAssessment?: IntonationAssessment;
+  fluencyAssessment?: FluencyAssessment;
 };
 
 const getGrade = (score: number) => {
@@ -175,150 +175,138 @@ const Assessment: React.FC<AssessmentProps> = ({
   return (
     <div className='assessment'>
       {/* Pronunciation */}
-      <div className='summary'>
-        <div className='meter'>
-          <div
-            className='progress'
-            style={{ '--i': pronunciationAssessment.score, '--clr': getColor(pronunciationAssessment.score) } as React.CSSProperties }
-          >
-            <h3>{pronunciationAssessment.score}</h3>
-            <h4>{getGrade(pronunciationAssessment.score)}</h4>
-          </div>
-        </div>
-        <div className='description'>
-          <div className='metric'>
-            <h1>Pronunciation Score</h1>
-            <span className='tooltip-container'>
-              <img src='/question.png' alt='description' />
-              <span className='tooltip-text'>{PRONUNCIATION_DESC}</span>
-            </span>
-          </div>
-          <h2>Your Pronunciation is <strong>{getGrade(pronunciationAssessment.score)}</strong>.</h2>
-          <p>{getPronunciationDescription(pronunciationAssessment.score)}</p>
-        </div>
-      </div>
-
-      <div className={`charts ${isExpanded.pronunciation ? 'expanded' : ''}`}></div>
-
-      {/* Intonation */}
-      <div className='summary'>
-        <div className='meter'>
-          <div
-            className='progress'
-            style={{ '--i': intonationAssessment.score, '--clr': getColor(intonationAssessment.score) } as React.CSSProperties }
-          >
-            <h3>{intonationAssessment.score}</h3>
-            <h4>{getGrade(intonationAssessment.score)}</h4>
-          </div>
-        </div>
-        <div className='description'>
-          <div className='metric'>
-            <h1>Intonation Score</h1>
-            <span className='tooltip-container'>
-              <img src='/question.png' alt='description' />
-              <span className='tooltip-text'>{INTONATION_DESC}</span>
-            </span>
-          </div>
-          <h2>Your Intonation is <strong>{getGrade(intonationAssessment.score)}</strong>.</h2>
-          <p>{getIntonationDescription(intonationAssessment.score)}</p>
-        </div>
-      </div>
-
-      <div className='more-info'>
-        <button
-          onClick={() => setIsExpanded(prev => ({
-            ...prev,
-            intonation: !prev.intonation
-          }))}
-        >
-          More info {isExpanded.intonation ? '▲' : '▼'}
-        </button>
-      </div>
-
-      <div className={`charts ${isExpanded.intonation ? 'expanded' : ''}`}>
-        <div className='w-full h-64'>
-          <ResponsiveContainer>
-            <LineChart data={intonationAssessment.pitch}>
-              <CartesianGrid strokeDasharray='3 3' />
-              <XAxis dataKey='time' tickFormatter={(t) => t.toFixed(1)} tick={{ fontSize: '0.8rem' }} />
-              <YAxis domain={['auto', 'auto']} tickFormatter={(v) => v.toFixed(0)} tick={{ fontSize: '0.8rem'}}>
-                <Label value='Pitch (Hz)' angle={-90} position='insideLeft' />
-              </YAxis>
-              <Tooltip />
-              <Line
-                type='monotone'
-                dataKey='pitch'
-                stroke='#8884d8'
-                strokeWidth={2}
-                dot={false}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Fluency */}
-      <div className='summary'>
-        <div className='meter'>
-          <div
-            className='progress'
-            style={{ '--i': fluencyAssessment.score, '--clr': getColor(fluencyAssessment.score) } as React.CSSProperties }
-          >
-            <h3>{fluencyAssessment.score}</h3>
-            <h4>{getGrade(fluencyAssessment.score)}</h4>
-          </div>
-        </div>
-        <div className='description'>
-          <div className='metric'>
-            <h1>Fluency Score</h1>
-            <span className='tooltip-container'>
-              <img src='/question.png' alt='description' />
-              <span className='tooltip-text'>{FLUENCY_DESC}</span>
-            </span>
-          </div>
-          <h2>Your Fluency is <strong>{getGrade(fluencyAssessment.score)}</strong>.</h2>
-          <p>{getFluencyDescription(fluencyAssessment.score)}</p>
-        </div>
-      </div>
-
-      <div className='more-info'>
-        <button
-          onClick={() => setIsExpanded(prev => ({
-            ...prev,
-            fluency: !prev.fluency
-          }))}
-        >
-          More info {isExpanded.fluency ? '▲' : '▼'}
-        </button>
-      </div>
-
-      <div className={`charts ${isExpanded.fluency ? 'expanded' : ''}`}>
-        <div className='pace'>
-          <div className='speedometer-wrapper'>
-            <div className='speedometer'>
-              <div className='needle' style={{ transform: `rotate(${getNeedleAngle(fluencyAssessment.articulation_rate_wpm)}deg)` }} />
-              <div className='center-label'>
-                <div className='wpm'>{fluencyAssessment.articulation_rate_wpm} wpm</div>
-                <div className='label'>{getSpeedLabel(fluencyAssessment.articulation_rate_wpm)}</div>
+      {pronunciationAssessment && (
+        <>
+          <div className='summary'>
+            <div className='meter'>
+              <div
+                className='progress'
+                style={{ '--i': pronunciationAssessment.score, '--clr': getColor(pronunciationAssessment.score) } as React.CSSProperties }
+              >
+                <h3>{pronunciationAssessment.score}</h3>
+                <h4>{getGrade(pronunciationAssessment.score)}</h4>
               </div>
             </div>
+            <div className='description'>
+              <div className='metric'>
+                <h1>Pronunciation Score</h1>
+                <span className='tooltip-container'>
+                  <img src='/question.png' alt='description' />
+                  <span className='tooltip-text'>{PRONUNCIATION_DESC}</span>
+                </span>
+              </div>
+              <h2>Your Pronunciation is <strong>{getGrade(pronunciationAssessment.score)}</strong>.</h2>
+              <p>{getPronunciationDescription(pronunciationAssessment.score)}</p>
+            </div>
           </div>
-          <strong>Pace</strong>
-        </div>
-        <div className='pause'>
-          <div className='meter'>
-            <div
-              className='fill'
-              style={{
-                '--score': fluencyAssessment.pause_score,
-                '--clr': getColor(fluencyAssessment.pause_score)
-              } as React.CSSProperties }
-            />
+          <div className={`charts ${isExpanded.pronunciation ? 'expanded' : ''}`}></div>
+        </>
+      )}
+
+      {/* Intonation */}
+      {intonationAssessment && (
+        <>
+          <div className='summary'>
+            <div className='meter'>
+              <div
+                className='progress'
+                style={{ '--i': intonationAssessment.score, '--clr': getColor(intonationAssessment.score) } as React.CSSProperties }
+              >
+                <h3>{intonationAssessment.score}</h3>
+                <h4>{getGrade(intonationAssessment.score)}</h4>
+              </div>
+            </div>
+            <div className='description'>
+              <div className='metric'>
+                <h1>Intonation Score</h1>
+                <span className='tooltip-container'>
+                  <img src='/question.png' alt='description' />
+                  <span className='tooltip-text'>{INTONATION_DESC}</span>
+                </span>
+              </div>
+              <h2>Your Intonation is <strong>{getGrade(intonationAssessment.score)}</strong>.</h2>
+              <p>{getIntonationDescription(intonationAssessment.score)}</p>
+            </div>
           </div>
-          <strong>Pause Score</strong>
-          <div>{fluencyAssessment.pause_score}</div>
-        </div>
-      </div>
+          <div className='more-info'>
+            <button onClick={() => setIsExpanded(prev => ({ ...prev, intonation: !prev.intonation }))}>
+              More info {isExpanded.intonation ? '▲' : '▼'}
+            </button>
+          </div>
+          <div className={`charts ${isExpanded.intonation ? 'expanded' : ''}`}>
+            <div className='w-full h-64'>
+              <ResponsiveContainer>
+                <LineChart data={intonationAssessment.pitch}>
+                  <CartesianGrid strokeDasharray='3 3' />
+                  <XAxis dataKey='time' tickFormatter={(t) => t.toFixed(1)} tick={{ fontSize: '0.8rem' }} />
+                  <YAxis domain={['auto', 'auto']} tickFormatter={(v) => v.toFixed(0)} tick={{ fontSize: '0.8rem'}}>
+                    <Label value='Pitch (Hz)' angle={-90} position='insideLeft' />
+                  </YAxis>
+                  <Tooltip />
+                  <Line type='monotone' dataKey='pitch' stroke='#8884d8' strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Fluency */}
+      {fluencyAssessment && (
+        <>
+          <div className='summary'>
+            <div className='meter'>
+              <div
+                className='progress'
+                style={{ '--i': fluencyAssessment.score, '--clr': getColor(fluencyAssessment.score) } as React.CSSProperties }
+              >
+                <h3>{fluencyAssessment.score}</h3>
+                <h4>{getGrade(fluencyAssessment.score)}</h4>
+              </div>
+            </div>
+            <div className='description'>
+              <div className='metric'>
+                <h1>Fluency Score</h1>
+                <span className='tooltip-container'>
+                  <img src='/question.png' alt='description' />
+                  <span className='tooltip-text'>{FLUENCY_DESC}</span>
+                </span>
+              </div>
+              <h2>Your Fluency is <strong>{getGrade(fluencyAssessment.score)}</strong>.</h2>
+              <p>{getFluencyDescription(fluencyAssessment.score)}</p>
+            </div>
+          </div>
+          <div className='more-info'>
+            <button onClick={() => setIsExpanded(prev => ({ ...prev, fluency: !prev.fluency }))}>
+              More info {isExpanded.fluency ? '▲' : '▼'}
+            </button>
+          </div>
+          <div className={`charts ${isExpanded.fluency ? 'expanded' : ''}`}>
+            <div className='pace'>
+              <div className='speedometer-wrapper'>
+                <div className='speedometer'>
+                  <div className='needle' style={{ transform: `rotate(${getNeedleAngle(fluencyAssessment.articulation_rate_wpm)}deg)` }} />
+                  <div className='center-label'>
+                    <div className='wpm'>{fluencyAssessment.articulation_rate_wpm} wpm</div>
+                    <div className='label'>{getSpeedLabel(fluencyAssessment.articulation_rate_wpm)}</div>
+                  </div>
+                </div>
+              </div>
+              <strong>Pace</strong>
+            </div>
+            <div className='pause'>
+              <div className='meter'>
+                <div
+                  className='fill'
+                  style={{ '--score': fluencyAssessment.pause_score, '--clr': getColor(fluencyAssessment.pause_score) } as React.CSSProperties}
+                />
+              </div>
+              <strong>Pause Score</strong>
+              <div>{fluencyAssessment.pause_score}</div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
