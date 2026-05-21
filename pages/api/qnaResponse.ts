@@ -100,20 +100,26 @@ const getGroqChatCompletion = async (userInput: string, chatHistory: any, select
   
 };
 
-const finetunedSharktank =async (userInput:string,chatHistory:any[]) => {
-      const h = truncateChatMessagesForLlm(chatHistory);
-      const prompt=qnaFlarePrompt(userInput,h);
+const finetunedSharktank = async (userInput: string, chatHistory: any[]) => {
+  const h = truncateChatMessagesForLlm(chatHistory);
 
-      const [completion1] = await Promise.all([
-        getLocalChatCompletion(h, prompt,"sharktank-model"), //sharktank-model is the first version
-      ]);
+  // Step 1: local fine-tuned model (optional — if Ollama is down, continue with empty context)
+  let responseContent1 = '';
+  try {
+    const prompt = qnaFlarePrompt(userInput, h);
+    const completion1 = await getLocalChatCompletion(h, prompt, 'sharktank-model');
+    responseContent1 = completion1?.message?.content ?? '';
+  } catch (e) {
+    console.warn('finetunedSharktank: local model unavailable, skipping FLARE step:', e);
+  }
 
-      const responseContent1 = completion1.message.content;
-
-      const promptForFlare=qnaPrompt(responseContent1,userInput,h);
-      const completion3 = await getSonarChatCompletionForMetric(h, promptForFlare);
-      return completion3.choices[0].message.content;
-}
+  // Step 2: Sonar grounded follow-up
+  const promptForFlare = qnaPrompt(responseContent1, userInput, h);
+  const completion3 = await getSonarChatCompletionForMetric(h, promptForFlare);
+  const content = completion3?.choices?.[0]?.message?.content;
+  if (!content) throw new Error('Sonar completion returned no content for finetunedSharktank');
+  return content;
+};
 
 
 const promptEngineeringSharktank =async (userInput:string,chatHistory:any[]) => {

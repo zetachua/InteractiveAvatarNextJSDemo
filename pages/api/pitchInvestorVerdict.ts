@@ -49,11 +49,11 @@ export default async function pitchInvestorVerdict(req: NextApiRequest, res: Nex
     const completion = await groq.chat.completions.create({
       messages: [
         { role: 'system', content: prompt },
-        { role: 'user', content: 'Produce the JSON object now. Keep each section body under 45 words.' },
+        { role: 'user', content: 'Produce the JSON object now. Write each body as flowing investor prose — no score citations, ground every claim in market data or a concrete business fact from the rubric context.' },
       ],
       model: process.env.GROQ_INVESTOR_VERDICT_MODEL || 'llama-3.3-70b-versatile',
       response_format: { type: 'json_object' },
-      max_tokens: 512,
+      max_tokens: 1400,
     });
 
     const raw = completion.choices[0]?.message?.content;
@@ -70,10 +70,7 @@ export default async function pitchInvestorVerdict(req: NextApiRequest, res: Nex
         const heading = typeof o.heading === 'string' ? o.heading.trim() : '';
         const body = typeof o.body === 'string' ? o.body.trim() : '';
         if (heading && body) {
-          sections.push({
-            heading: clampChars(heading, 48),
-            body: clampSentences(clampChars(body, 320), 2),
-          });
+          sections.push({ heading: clampChars(heading, 60), body });
         }
       }
     }

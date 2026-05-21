@@ -122,6 +122,106 @@ function esc(s: string): string {
     .replace(/"/g, '&quot;');
 }
 
+function buildVoiceAnalysisHtml(assessment: { pronunciation: unknown; intonation: unknown; fluency: unknown }): string {
+  const sections: string[] = [];
+
+  // Fluency
+  const fl = assessment.fluency;
+  if (fl && typeof fl === 'object') {
+    const f = fl as Record<string, unknown>;
+    const score = typeof f.score === 'number' ? f.score : null;
+    const pauseScore = typeof f.pause_score === 'number' ? f.pause_score : null;
+    const articulationRate = typeof f.articulation_rate_wpm === 'number' ? f.articulation_rate_wpm : null;
+    const words = Array.isArray(f.words) ? (f.words as Record<string, unknown>[]) : [];
+
+    const pauses = words.filter(w => w.text === '**pause**');
+    const goodPauses = pauses.filter(w => w.classification === 'good');
+    const badPauses = pauses.filter(w => w.classification === 'bad');
+    const fillers = words.filter(w => w.filler === true);
+    const hesitations = words.filter(w => w.hesitation === true);
+    const fillerTexts = Array.from(new Set(fillers.map(w => String(w.text ?? '').toLowerCase()))).slice(0, 6);
+
+    let pauseDetail = '';
+    if (badPauses.length > 0) {
+      const examples = badPauses.slice(0, 3).map(p => {
+        const gap = typeof p.gap === 'number' ? `${p.gap}s` : '';
+        const reason = typeof p.reason === 'string' ? p.reason : 'disruptive pause';
+        return gap ? `${gap} — ${reason}` : reason;
+      }).join('; ');
+      pauseDetail = `Disruptive pauses: ${examples}.`;
+    } else if (goodPauses.length > 0) {
+      pauseDetail = 'All detected pauses appear well-timed.';
+    }
+
+    const rateLabel = articulationRate !== null
+      ? (articulationRate < 110 ? `${articulationRate} wpm — too slow (aim for 120–160 wpm)`
+        : articulationRate > 200 ? `${articulationRate} wpm — too fast (aim for 120–160 wpm)`
+        : `${articulationRate} wpm — good pace`)
+      : null;
+
+    const rows = [
+      score !== null ? `<tr><td>Fluency score</td><td>${score}/100</td></tr>` : '',
+      pauseScore !== null ? `<tr><td>Pause quality score</td><td>${pauseScore}/100</td></tr>` : '',
+      rateLabel ? `<tr><td>Articulation rate</td><td>${esc(rateLabel)}</td></tr>` : '',
+      `<tr><td>Pauses detected</td><td>${esc(`${pauses.length} total — ${goodPauses.length} well-timed, ${badPauses.length} disruptive`)}</td></tr>`,
+      pauseDetail ? `<tr><td>Pause highlights</td><td>${esc(pauseDetail)}</td></tr>` : '',
+      `<tr><td>Filler words</td><td>${esc(fillers.length > 0 ? `${fillers.length} detected (e.g. ${fillerTexts.join(', ')})` : 'None detected — good')}</td></tr>`,
+      hesitations.length > 0 ? `<tr><td>Hesitations</td><td>${esc(`${hesitations.length} prolonged word hold(s) — may signal uncertainty`)}</td></tr>` : '',
+    ].filter(Boolean).join('');
+
+    sections.push(`<h3>Fluency</h3><table><tbody>${rows}</tbody></table>`);
+  }
+
+  // Pronunciation
+  const pr = assessment.pronunciation;
+  if (pr && typeof pr === 'object') {
+    const p = pr as Record<string, unknown>;
+    const score = typeof p.score === 'number' ? p.score : null;
+    const words = Array.isArray(p.words) ? (p.words as Record<string, unknown>[]) : [];
+    const lowScoreWords = words
+      .filter(w => typeof w.score === 'number' && (w.score as number) < 70)
+      .sort((a, b) => (a.score as number) - (b.score as number))
+      .slice(0, 5);
+
+    const scoreLabel = score !== null
+      ? (score >= 90 ? `${score}/100 — excellent` : score >= 75 ? `${score}/100 — good` : score >= 60 ? `${score}/100 — needs practice` : `${score}/100 — needs significant work`)
+      : null;
+
+    const rows = [
+      scoreLabel ? `<tr><td>Pronunciation accuracy</td><td>${esc(scoreLabel)}</td></tr>` : '',
+      `<tr><td>Words needing work</td><td>${esc(lowScoreWords.length > 0 ? lowScoreWords.map(w => `${String(w.text ?? '')} (${String(w.score ?? '')}%)`).join(', ') : 'All words pronounced clearly')}</td></tr>`,
+    ].filter(Boolean).join('');
+
+    sections.push(`<h3>Pronunciation</h3><table><tbody>${rows}</tbody></table>`);
+  }
+
+  // Intonation
+  const it = assessment.intonation;
+  if (it && typeof it === 'object') {
+    const i = it as Record<string, unknown>;
+    const score = typeof i.score === 'number' ? i.score : null;
+    const words = Array.isArray(i.words) ? (i.words as Record<string, unknown>[]) : [];
+    const expectedWords = words.filter(w => w.expected === true);
+    const correctlyEmphasized = words.filter(w => w.expected === true && w.actual === true);
+    const emphasisPct = expectedWords.length > 0 ? Math.round((correctlyEmphasized.length / expectedWords.length) * 100) : null;
+    const missedWords = words.filter(w => w.expected === true && w.actual === false).slice(0, 5).map(w => String(w.text ?? ''));
+
+    const emphasisLabel = emphasisPct !== null
+      ? `${correctlyEmphasized.length}/${expectedWords.length} key words emphasized (${emphasisPct}%)${emphasisPct < 50 ? ' — work on stressing important nouns and verbs' : emphasisPct < 75 ? ' — decent but room to improve' : ' — strong'}`
+      : null;
+
+    const rows = [
+      score !== null ? `<tr><td>Intonation score</td><td>${score}/100</td></tr>` : '',
+      emphasisLabel ? `<tr><td>Emphasis accuracy</td><td>${esc(emphasisLabel)}</td></tr>` : '',
+      missedWords.length > 0 ? `<tr><td>Under-emphasized words</td><td>${esc(missedWords.join(', '))} — try stressing these</td></tr>` : '',
+    ].filter(Boolean).join('');
+
+    sections.push(`<h3>Intonation & Emphasis</h3><table><tbody>${rows}</tbody></table>`);
+  }
+
+  return sections.join('');
+}
+
 export function buildAnalyticsReportHtml(payload: AnalyticsExportPayload, title = 'Pitch analytics report'): string {
   const when = new Date().toISOString();
   const metrics = payload.rubricMetrics ?? ({} as Rubric2InvestorMetricData);
@@ -136,7 +236,7 @@ export function buildAnalyticsReportHtml(payload: AnalyticsExportPayload, title 
     .filter(([, text]) => text && String(text).trim())
     .map(([k, text]) => {
       const label = RUBRIC_LABELS[k] ?? k;
-      return `<h3>${esc(label)}</h3><p style="white-space:pre-wrap">${esc(String(text))}</p>`;
+      return `<h3>${esc(label)}</h3><p style="white-space:pre-wrap;background:#fafafa;border-left:3px solid #3b82f6;padding:0.5rem 0.75rem;border-radius:4px">${esc(String(text))}</p>`;
     })
     .join('');
 
@@ -204,6 +304,9 @@ export function buildAnalyticsReportHtml(payload: AnalyticsExportPayload, title 
   <table><thead><tr><th>Area</th><th>Score</th></tr></thead><tbody>${metricRows}</tbody></table>
 
   <h2>Rubric — detailed feedback</h2>
+  ${citeSession.length > 0
+    ? `<details open style="margin-bottom:1rem"><summary style="cursor:pointer;font-weight:600;color:#1d4ed8">Market data sources that informed this analysis (${citeSession.length})</summary><ol style="margin:0.5rem 0 0;padding-left:1.4rem">${citeList(citeSession)}</ol></details>`
+    : '<p style="font-size:0.85rem;color:#888">No live market data sources retrieved for this session.</p>'}
   ${feedbackBlocks || '<p>—</p>'}
 
   <h2>Competitor Counterplay</h2>
@@ -232,7 +335,7 @@ export function buildAnalyticsReportHtml(payload: AnalyticsExportPayload, title 
   <p><strong>Specifics:</strong></p>
   <pre style="white-space:pre-wrap;font-size:0.9rem;background:#f5f5f5;padding:0.75rem;border-radius:8px">${esc(JSON.stringify(payload.sentimentSpecificFeedback, null, 2))}</pre>
 
-  ${hasVoice ? `<h2>Voice assessment (raw)</h2><pre style="white-space:pre-wrap;font-size:0.8rem;background:#f5f5f5;padding:0.75rem;border-radius:8px">${esc(JSON.stringify(payload.assessment, null, 2))}</pre>` : ''}
+  ${hasVoice ? `<h2>Voice &amp; Delivery Assessment</h2>${buildVoiceAnalysisHtml(payload.assessment)}` : ''}
 
   <h2>Chat history</h2>
   ${chatSection || '<p>—</p>'}

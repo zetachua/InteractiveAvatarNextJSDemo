@@ -1,4 +1,15 @@
-import { FeedbackData, Metric1InvestorData, Metric2InvestorData, Metric3InvestorData, QnaData, Rubric2InvestorData, Rubric3InvestorData, RubricData, RubricInvestorData } from "@/components/KnowledgeClasses";
+import {
+  FeedbackData,
+  FeedbackSpecificMetrics,
+  Metric1InvestorData,
+  Metric2InvestorData,
+  Metric3InvestorData,
+  QnaData,
+  Rubric2InvestorData,
+  Rubric3InvestorData,
+  RubricData,
+  RubricInvestorData,
+} from '@/components/KnowledgeClasses';
 import { clampChars, clampSentences } from './pitchEvaluationResponseShared';
 
 export const suggestionsOptionsFilter = (responseContent: string,rating:number) => {
@@ -41,30 +52,80 @@ export const responseFilter = (responseContent: string) => {
 };
 
 
+/** Extract a numeric score for `label` from plain-text LLM output.
+ *  Handles lines like "* Clarity: 4 - ..." or "Clarity (1-5): 3"
+ */
+function extractPlainTextScore(text: string, label: string): number {
+  const re = new RegExp(label + '[^\\d]*(\\d+(?:\\.\\d+)?)', 'i');
+  const m = text.match(re);
+  return m ? parseFloat(m[1]) : 0;
+}
+
+/** Pull the one-sentence feedback for `label` from bullet-point output. */
+function extractPlainTextFeedback(text: string, label: string): string {
+  const re = new RegExp(label + '[^-–:]*[-–:]+\\s*(.+?)(?=\\n|$)', 'i');
+  const m = text.match(re);
+  return m ? m[1].trim() : '';
+}
+
 export const feedbackFilter = (responseContent: string) => {
   try {
     console.log(responseContent,"original responseContent sentiment")
-    let feedbackJson = responseContent
-      .replace(/<think>[\s\S]*?<\/think>/g, '')  // Remove <think> tags
-      .replace(/```json|```/g, '')               // Remove ```json markers
+    let cleaned = responseContent
+      .replace(/<think>[\s\S]*?<\/think>/g, '')
+      .replace(/```json|```/g, '')
       .trim();
-      
-    let feedbackJsonMatch = feedbackJson.match(/\{[\s\S]*\}/);
-    feedbackJson = feedbackJsonMatch ? feedbackJsonMatch[0].trim() : '{}';
-    // console.log("Raw feedbackJson:", feedbackJson);
 
-    const feedbackDataJson: FeedbackData = JSON.parse(feedbackJson);
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    const feedbackJson = jsonMatch ? jsonMatch[0].trim() : null;
+
+    let feedbackDataJson: FeedbackData | null = null;
+    if (feedbackJson) {
+      try {
+        feedbackDataJson = JSON.parse(feedbackJson);
+      } catch {
+        // fall through to plain-text path
+      }
+    }
+
+    // Plain-text fallback: LLM returned bullet-point format instead of JSON
+    if (!feedbackDataJson || feedbackDataJson.overallScore === undefined) {
+      const clarity    = extractPlainTextScore(cleaned, 'clarity');
+      const relevance  = extractPlainTextScore(cleaned, 'relevance');
+      const depth      = extractPlainTextScore(cleaned, 'depth');
+      const neutrality = extractPlainTextScore(cleaned, 'neutrality');
+      const engagement = extractPlainTextScore(cleaned, 'engagement');
+      const overallMatch = cleaned.match(/overall\s+sentiment\s+score[:\s]+([\d.]+)/i);
+      const overall = overallMatch
+        ? parseFloat(overallMatch[1])
+        : parseFloat(((clarity + relevance + depth + neutrality + engagement) / 5).toFixed(1));
+
+      const summaryMatch = cleaned.match(/feedback\s+summary[:\s]*([\s\S]+?)(?=\n\n|\n[A-Z*]|$)/i);
+      const summary = summaryMatch ? summaryMatch[1].replace(/\n/g, ' ').trim() : '';
+
+      return {
+        feedbackScore: overall,
+        feedbackSummary: clampSentences(clampChars(summary, 280), 2),
+        feedbackMetrics: { clarity, relevance, neutrality, engagement, depth },
+        feedbackSpecific: {
+          clarity:    extractPlainTextFeedback(cleaned, 'clarity'),
+          relevance:  extractPlainTextFeedback(cleaned, 'relevance'),
+          depth:      extractPlainTextFeedback(cleaned, 'depth'),
+          neutrality: extractPlainTextFeedback(cleaned, 'neutrality'),
+          engagement: extractPlainTextFeedback(cleaned, 'engagement'),
+        },
+      };
+    }
 
     const specific = feedbackDataJson.specificFeedback;
-    const feedbackSpecific =
-      specific && typeof specific === 'object'
-        ? Object.fromEntries(
-            Object.entries(specific as Record<string, unknown>).map(([k, v]) => [
-              k,
-              clampSentences(clampChars(String(v ?? ''), 160), 1),
-            ]),
-          )
-        : specific;
+    const clampLine = (text: string) => clampSentences(clampChars(text, 160), 1);
+    const feedbackSpecific: FeedbackSpecificMetrics = {
+      clarity:    clampLine(specific?.clarity    ?? ''),
+      relevance:  clampLine(specific?.relevance  ?? ''),
+      depth:      clampLine(specific?.depth      ?? ''),
+      neutrality: clampLine(specific?.neutrality ?? ''),
+      engagement: clampLine(specific?.engagement ?? ''),
+    };
 
     return {
       feedbackScore: feedbackDataJson.overallScore,
@@ -73,11 +134,11 @@ export const feedbackFilter = (responseContent: string) => {
         2,
       ),
       feedbackMetrics: {
-        clarity: feedbackDataJson.clarity,
-        relevance: feedbackDataJson.relevance,
+        clarity:    feedbackDataJson.clarity,
+        relevance:  feedbackDataJson.relevance,
         neutrality: feedbackDataJson.neutrality,
         engagement: feedbackDataJson.engagement,
-        depth: feedbackDataJson.depth,
+        depth:      feedbackDataJson.depth,
       },
       feedbackSpecific,
     };

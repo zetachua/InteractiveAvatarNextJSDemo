@@ -78,8 +78,15 @@ async function parseShard(completion: unknown, label: string): Promise<Record<st
   );
   try {
     return parseJsonFromLlmContent(raw);
-  } catch (e) {
-    console.warn(`metric1 parseShard failed (${label}):`, e);
+  } catch {
+    // Sonar returned prose instead of JSON — wrap as feedback so market data isn't lost
+    const prose = raw.replace(/<[^>]+>/g, '').replace(/\n+/g, ' ').trim();
+    if (prose && label !== 'summary') {
+      console.log(`metric1 parseShard(${label}): prose fallback (${prose.length} chars)`);
+      const scoreMatch = prose.match(/\b([1-9]|10)\s*\/\s*10\b|\bscore[:\s]+([1-9]|10)\b/i);
+      const extractedScore = scoreMatch ? parseInt(scoreMatch[1] ?? scoreMatch[2], 10) : 0;
+      return { [label]: { score: extractedScore, feedback: prose.slice(0, 1200) } };
+    }
     return {};
   }
 }
@@ -89,7 +96,7 @@ function buildCombinedMetric1Json(metric1Data: Record<string, unknown>): string 
 
   const clampMetric = (v: unknown) => {
     const m = normalizeRubricMetricBlock(v);
-    return { score: m.score, feedback: clampSentences(clampChars(m.feedback, 380), 2) };
+    return { score: m.score, feedback: m.feedback };
   };
   const elevatorPitch = clampMetric(flat.elevatorPitch);
   const team = clampMetric(flat.team);
@@ -100,7 +107,7 @@ function buildCombinedMetric1Json(metric1Data: Record<string, unknown>): string 
   const overallScore = Math.round(scores.reduce((sum, score) => sum + score, 0) / 4);
   const summary =
     typeof flat.summary === 'string' && flat.summary.trim()
-      ? clampSentences(clampChars(flat.summary.trim(), 420), 3)
+      ? flat.summary.trim()
       : 'Summary not available.';
 
   return JSON.stringify({

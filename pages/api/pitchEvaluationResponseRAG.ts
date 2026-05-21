@@ -29,25 +29,46 @@ const getSonarMetric1 = async (chatHistory: any) => {
 };
 
 
+/**
+ * Sonar sometimes emits literal newlines inside JSON string values, producing
+ * invalid JSON.  Walk the text with a tiny state machine and replace every
+ * bare \n / \r inside a string with a space so JSON.parse can succeed.
+ */
+function sanitizeJsonNewlines(text: string): string {
+  let result = '';
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escaped) { result += ch; escaped = false; continue; }
+      if (ch === '\\') { result += ch; escaped = true; continue; }
+      if (ch === '"')  { inString = false; result += ch; continue; }
+      if (ch === '\n' || ch === '\r') { result += ' '; continue; }
+      result += ch;
+    } else {
+      if (ch === '"') inString = true;
+      result += ch;
+    }
+  }
+  return result;
+}
+
 const fetchCurrentMarketStats = async (chatHistory: any[]) => {
   try {
-    let rubricRatingCompletion= await getSonarMetric1(chatHistory);
-
-    let responseContent = rubricRatingCompletion?.choices[0].message.content;
+    const rubricRatingCompletion = await getSonarMetric1(chatHistory);
+    const responseContent = rubricRatingCompletion?.choices[0].message.content;
     const citations = rubricRatingCompletion?.citations || [];
-    const cleanedResponse=cleanResponse(responseContent);
 
-    if (!responseContent) {
-      throw new Error("Empty rubric response");
-    }
-    const result={
-        citations:citations, 
-        responseContent:cleanedResponse
-    }
-    return result;
+    if (!responseContent) throw new Error('Empty rubric response');
 
+    // Sanitise literal newlines inside JSON strings before parsing
+    const sanitized = sanitizeJsonNewlines(responseContent);
+    const cleanedResponse = cleanResponse(sanitized);
+
+    return { citations, responseContent: cleanedResponse };
   } catch (error) {
-    console.error("Error in fetchRubric:", error);
+    console.error('Error in fetchRubric:', error);
     return null;
   }
 };

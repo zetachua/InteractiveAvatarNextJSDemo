@@ -293,14 +293,15 @@ export default function InteractiveInvestors() {
 
   useEffect(() => {
     if (!awaitingFeedbackAfterAnalytics) return;
-    if (!sentimentJson || !rubricJson2) return;
+    // rubricJson2 must be loaded; sentiment is best-effort — don't block on it
+    if (!rubricJson2) return;
     if (rubricCitations2 === null || loadingRubric) return;
     const t = window.setTimeout(() => {
       setShowFeedbackModal(true);
       setAwaitingFeedbackAfterAnalytics(false);
     }, 30000);
     return () => clearTimeout(t);
-  }, [awaitingFeedbackAfterAnalytics, sentimentJson, rubricJson2, rubricCitations2, loadingRubric]);
+  }, [awaitingFeedbackAfterAnalytics, rubricJson2, rubricCitations2, loadingRubric]);
 
   useEffect(() => {
     if (debug !== 'Audio file processed successfully.') return;
@@ -612,24 +613,43 @@ export default function InteractiveInvestors() {
     }
   };
 
-  const runPitchAudioAssessment = async (outputFile: string, transcribedData: any) => {
+  const runPitchAudioAssessment = (outputFile: string, transcribedData: any) => {
     if (!isPitch) return;
     setIsPitch(false);
     setAudioAnalyticsLoading(true);
-    try {
-      const [pronunciationRes, intonationRes, fluencyRes] = await Promise.all([
-        fetch('/api/pronunciationAnalysis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: outputFile, script: transcribedData.text }) }),
-        fetch('/api/audioIntonationAnalysis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: outputFile, script: transcribedData.text, segments: transcribedData.segments }) }),
-        fetch('/api/audioFluencyAnalysis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ segments: transcribedData.segments }) })
-      ]);
-      const [pronunciationData, intonationData, fluencyData] = await Promise.all([pronunciationRes.json(), intonationRes.json(), fluencyRes.json()]);
-      if (!pronunciationRes.ok) throw new Error(pronunciationData.error);
-      if (!intonationRes.ok) throw new Error(intonationData.error);
-      if (!fluencyRes.ok) throw new Error(fluencyData.error);
-      setAssessment({ pronunciation: pronunciationData, intonation: intonationData, fluency: fluencyData });
-    } finally {
-      setAudioAnalyticsLoading(false);
-    }
+
+    const safeJson = async (r: Response) => { try { return await r.json(); } catch { return null; } };
+    let pending = 3;
+    const finish = () => { if (--pending === 0) setAudioAnalyticsLoading(false); };
+
+    const run = async (
+      key: 'pronunciation' | 'intonation' | 'fluency',
+      url: string,
+      body: object,
+    ) => {
+      try {
+        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const data = await safeJson(res);
+        if (!res.ok) setDebug(`${key} failed: ${data?.error ?? res.status}`);
+        // Treat empty word arrays as no data (Azure found no speech / server returned nothing useful)
+        const hasWords = !Array.isArray(data?.words) || data.words.length > 0;
+        const value = res.ok && data && hasWords ? data : null;
+        setAssessment(prev => ({ ...prev, [key]: value }));
+      } catch (e: any) {
+        setDebug(`${key} failed: ${e?.message ?? 'network error'}`);
+      } finally {
+        finish();
+      }
+    };
+
+    // Limit fluency segments to first 60s — the DeepSeek pause-classifier times out on long transcripts
+    const segs = Array.isArray(transcribedData.segments) ? transcribedData.segments : [];
+    const speechStart = segs[0]?.start ?? 0;
+    const fluencySegs = segs.filter((s: any) => (s.start ?? 0) < speechStart + 60);
+
+    run('pronunciation', '/api/pronunciationAnalysis', { file: outputFile, script: transcribedData.text, segments: segs });
+    run('intonation', '/api/audioIntonationAnalysis', { file: outputFile, script: transcribedData.text, segments: segs });
+    run('fluency', '/api/audioFluencyAnalysis', { segments: fluencySegs });
   };
 
   const EMPTY_TRANSCRIPT_ALERT =
@@ -652,11 +672,7 @@ export default function InteractiveInvestors() {
     }
     setAudioTranscribing(false);
     handleSpeak(transcriptText);
-    if (runAssessmentInBackground) {
-      void runPitchAudioAssessment(outputFile, transcribedData).catch((e) => console.error("Background audio assessment failed:", e));
-    } else {
-      await runPitchAudioAssessment(outputFile, transcribedData);
-    }
+    runPitchAudioAssessment(outputFile, transcribedData);
     return true;
   };
 

@@ -27,26 +27,35 @@ export type InvestorVerdictContext = {
   sentimentMetrics: Record<string, unknown>;
 };
 
-/** Groq: sectioned verdict merging rubric + sentiment (Shark Tank–style). */
+/** Groq: sectioned verdict merging rubric + sentiment (investor deal-memo style). */
 export const investorVerdictPrompt = (ctx: InvestorVerdictContext) => `
-You are an experienced investor judge in the style of Shark Tank.
+You are a senior venture capitalist writing a short internal deal memo on a student's startup pitch.
 
-Synthesize the **rubric / substance** evaluation and the **sentiment / delivery** evaluation into a **unified investment read**, split into clear sections for a student-facing UI.
+Write in the voice of someone who has reviewed hundreds of pitches — authoritative, direct, and specific. Each section must read as natural flowing prose that another investor can pick up and immediately understand. No bullet points, no score citations, no hedging language.
 
-Structured inputs (JSON):
+Inputs:
 ${JSON.stringify(ctx, null, 2)}
 
-Instructions:
-- Output **only** a valid JSON object with exactly one key: \`sections\`, whose value is an **array of exactly 4 objects**, each with:
-  - \`heading\`: short label (2–5 words), Title Case, **no** markdown, **no** trailing colon.
-  - \`body\`: **exactly 1–2 short sentences**, **max 45 words total** for that body. Plain text only — no bullets, no markdown.
-- Use this **order** and **intent** (you may slightly rephrase headings):
-  1. **Overall read** — holistic take in one breath.
-  2. **Substance & rubric** — top strength + top gap from rubric scores (cite numbers).
-  3. **Delivery & sentiment** — delivery takeaway from sentiment score (one line).
-  4. **Investment stance** — **Invest**, **Pass**, or **Invest with conditions** (max one condition, half a sentence).
-- **Hard cap:** ~80–110 words across all four bodies combined. Be direct; no filler or repetition.
-- Ground claims in the inputs only; do not invent facts.
+Output format — a valid JSON object with key "sections", an array of exactly 4 objects each with:
+- "heading": 2–5 words, Title Case, no colon
+- "body": plain prose, no bullets, no markdown, no score numbers
+
+Section 1 — Overall Read
+Two sentences. First: describe what this startup actually does and the market gap it targets, naming the product and customer segment. Second: state the single most compelling evidence from the pitch (a specific market size, a customer win, a validated use case, or a concrete traction number) and the biggest unanswered question an investor would walk away with.
+
+Section 2 — Substance and Market Position
+Two to three sentences. Ground every statement in market data, benchmarks, or industry figures drawn from the rubric feedback — not in dimension scores. For example: "The global wearables market reached $95B in 2024 and is growing at 14% CAGR, yet the pitch presents no partnership or channel strategy for reaching the athlete segment that drives that growth." Name what is commercially strong, then quantify what is missing with a market reference.
+
+Section 3 — Founder and Delivery
+One to two sentences. Describe how the founder came across — command of the material, energy, clarity of narrative. Call out one specific moment from the pitch (a strong analogy, a confident answer to a hard question, a hesitation on pricing) and what it signals about execution readiness.
+
+Section 4 — Investment Decision
+One to two sentences of clear verdict: Invest, Pass, or Invest with conditions. If conditions, name the exact milestone in business terms (e.g., "a signed pilot with at least two paying enterprise clients", "demonstrating $20K MRR against the SaaS median of $50K at seed stage"), and explain in one clause why that milestone de-risks the bet.
+
+Absolute rules:
+- Never quote rubric scores as evidence — replace every score reference with the underlying market data or business fact that informed it
+- Forbidden phrases: "strong potential", "needs improvement", "more evidence", "lacks passion", "shows promise" — substitute a specific fact or benchmark each time
+- Word target: 50–80 words per body; total under 260 words across all four sections
 
 Return only the JSON object. No code fences, no commentary.
 `;
@@ -639,21 +648,26 @@ export const pitchEvaluationPromptMetric1Shard = (
   marketStatsContent: string,
   chatHistory: unknown,
 ) => `
+YOUR ENTIRE RESPONSE MUST BE A SINGLE RAW JSON OBJECT — starting with { and ending with }. No prose before or after, no markdown, no explanation.
+
 You are an experienced VC. Evaluate ONLY: **${metricLabel}**.
 ${RUBRIC_PERPLEXITY_SOURCE_AND_CITATION_POLICY}
 
-Return ONLY valid raw JSON (no markdown). Schema (exact keys):
-{"${metricKey}":{"score":<integer 1-10>,"feedback":"<max 2 sentences>"}}
+Return exactly this JSON structure:
+{"${metricKey}":{"score":<integer 1-10>,"feedback":"<your analysis as a plain string>"}}
 
-Rules:
-- "${metricKey}" MUST be an object with numeric score and string feedback (never a plain string).
-- Do not include any other top-level keys.
+Feedback must:
+- Be 2–3 sentences
+- Include at least one concrete market figure, benchmark, or industry stat from the Market Stats to validate or challenge the pitch claim
+- Avoid generic phrases like "needs more data" — substitute a specific benchmark instead
 
 Chat History:
 ${JSON.stringify(chatHistory)}
 
-Market Stats (reference only):
+Market Stats (use for benchmarks):
 ${JSON.stringify(marketStatsContent, null, 2)}
+
+FINAL REMINDER: Output only the JSON object above. No text outside the curly braces.
 `;
 
 export const pitchEvaluationPromptMetric1SummaryShard = (
@@ -733,21 +747,26 @@ export const pitchEvaluationPromptMetric2Shard = (
   marketStatsContent: string,
   chatHistory: unknown,
 ) => `
+YOUR ENTIRE RESPONSE MUST BE A SINGLE RAW JSON OBJECT — starting with { and ending with }. No prose before or after, no markdown, no explanation.
+
 You are an experienced VC. Evaluate ONLY: **${metricLabel}**.
 ${RUBRIC_PERPLEXITY_SOURCE_AND_CITATION_POLICY}
 
-Return ONLY valid raw JSON (no markdown). Schema (exact keys):
-{"${metricKey}":{"score":<integer 1-10>,"feedback":"<max 2 sentences>"}}
+Return exactly this JSON structure:
+{"${metricKey}":{"score":<integer 1-10>,"feedback":"<your analysis as a plain string>"}}
 
-Rules:
-- "${metricKey}" MUST be an object with numeric score and string feedback (never a plain string).
-- Do not include any other top-level keys.
+Feedback must:
+- Be 2–3 sentences
+- Include at least one concrete market figure, benchmark, or industry stat from the Market Stats to validate or challenge the pitch claim
+- Avoid generic phrases like "needs more data" — substitute a specific benchmark instead
 
 Chat History:
 ${JSON.stringify(chatHistory)}
 
-Market Stats (reference only):
+Market Stats (use for benchmarks):
 ${JSON.stringify(marketStatsContent, null, 2)}
+
+FINAL REMINDER: Output only the JSON object above. No text outside the curly braces.
 `;
 
 /** Small Sonar shard: summary + competitor counterplay only. */
@@ -966,50 +985,26 @@ export const marketStats = `
   - **Competitor Valuation**: Stripe at $95B (CB Insights 2025).
 `;
 export const ragSonar = (pitchText: string) => `
-You are assisting a venture capitalist in evaluating a startup pitch.
-
-Your task is to research and provide factual, real-time 2025 web data to validate and enrich the following areas **based on the industry described in the pitch**.
+You are assisting a venture capitalist evaluating a startup pitch.
 
 Startup Pitch:
 ${pitchText}
 
-Use the pitch to infer the relevant industry (e.g., medical, construction, education, AI, logistics, etc.). Then retrieve **real-world data from 2025** relevant to that industry.
+Infer the relevant industry from the pitch, then retrieve real-world 2025 data for the five fields below.
 
-Retrieve and summarize the following:
-
-1. **Market Size**
-   - Global/regional market size (TAM/SAM/SOM if available).
-   - Relevant 2025 projections from sources like Statista, Deloitte, Crunchbase.
-
-2. **Solution & Pricing Benchmarks**
-   - Common 2025 pricing models for similar products/services in this industry.
-   - Any known packaging, bundling, or tiered pricing examples.
-
-3. **Competitor Analysis**
-   - Top 2025 companies offering similar solutions.
-   - Revenue, traction, product differentiators.
-
-4. **Revenue Models**
-   - Typical monetization methods in this industry.
-   - Example companies and their models.
-
-5. **Traction & Awards**
-   - Benchmarks (e.g., pilot project sizes, partnerships, award recognitions).
-   - Relevant validation or adoption examples.
-
-**Guidelines**:
-- Cite only **factual 2025 data** from trusted sources (Statista, Crunchbase, etc.)
-- Summarize clearly in bullet points with citations.
-- Do **not hallucinate**. If a section is unclear in the pitch, infer based on known industry norms.
-- If direct 2025 sources are unavailable, use recent industry knowledge as fallback.
-
-Return the response in this strict JSON structure:
+Return ONLY a valid JSON object with exactly these five string keys. Rules:
+- Each value is a single plain-text string — NO newlines, NO bullet points, NO markdown inside the value.
+- Keep each value under 80 words.
+- Cite sources inline in parentheses, e.g. (Statista 2025).
+- Do not hallucinate; if data is unavailable use known industry norms and say so.
 
 {
-  "marketSize": "...",
-  "solutionPricing": "...",
-  "competitors": "...",
-  "revenueModel": "...",
-  "tractionAwards": "..."
+  "marketSize": "Global/regional TAM and 2025 projections for this industry with source.",
+  "solutionPricing": "Typical 2025 pricing models and benchmarks for comparable products in this space.",
+  "competitors": "Top 2-3 competitors in 2025 with brief differentiator note.",
+  "revenueModel": "Common monetisation methods and example companies in this industry.",
+  "tractionAwards": "Typical pilot sizes, partnerships, or award benchmarks relevant to this stage."
 }
+
+Return only the JSON object. No explanation, no code fences, no extra text.
 `;

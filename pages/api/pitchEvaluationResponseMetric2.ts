@@ -81,6 +81,33 @@ async function completeWithPrompt(chatHistory: unknown[], prompt: string) {
   }
 }
 
+/** Extract a complete JSON string value for `key` using a state-machine scan.
+ *  Handles embedded unescaped quotes that break regex-only approaches. */
+function extractStringField(raw: string, key: string): string | null {
+  const keyIndex = raw.indexOf(`"${key}"`);
+  if (keyIndex === -1) return null;
+  const colonIndex = raw.indexOf(':', keyIndex + key.length + 2);
+  if (colonIndex === -1) return null;
+  const quoteStart = raw.indexOf('"', colonIndex + 1);
+  if (quoteStart === -1) return null;
+
+  let i = quoteStart + 1;
+  let result = '';
+  while (i < raw.length) {
+    const ch = raw[i];
+    if (ch === '\\') { result += ch + (raw[i + 1] ?? ''); i += 2; continue; }
+    if (ch === '"') {
+      // Accept as end-of-string only if followed by , } ] or whitespace+closer
+      const rest = raw.slice(i + 1).trimStart();
+      if (/^[,\}\]]/.test(rest) || rest === '') break;
+      // Embedded unescaped quote — skip it (treat as part of value)
+      result += '\\"'; i++; continue;
+    }
+    result += ch; i++;
+  }
+  return result;
+}
+
 async function parseShard(
   completion: unknown,
   label: string,
@@ -91,9 +118,18 @@ async function parseShard(
   );
   try {
     return parseJsonFromLlmContent(raw);
-  } catch (e) {
-    console.warn(`parseShard failed (${label}):`, e);
-    return {};
+  } catch {
+    console.log(`metric2 parseShard(${label}): prose fallback, attempting field extraction`);
+    // Fallback: pull known string fields individually (survives embedded quotes / truncation)
+    const result: Record<string, unknown> = {};
+    for (const field of ['summary', 'competitorCounterplay', ...METRIC2_KEYS]) {
+      const val = extractStringField(raw, field);
+      if (val !== null) result[field] = val;
+    }
+    // Also attempt numeric score extraction for metric shards
+    const scoreMatch = raw.match(/"score"\s*:\s*(\d+(?:\.\d+)?)/);
+    if (scoreMatch && label !== 'summary') result[label] = { score: parseFloat(scoreMatch[1]), feedback: result[label + 'Feedback'] ?? '' };
+    return result;
   }
 }
 
@@ -103,7 +139,7 @@ function buildCombinedMetric2Json(
   const flat = flattenRubricPayload(metric2Data, METRIC2_KEYS);
   const clampMetric = (v: unknown) => {
     const m = normalizeRubricMetricBlock(v);
-    return { score: m.score, feedback: clampSentences(clampChars(m.feedback, 380), 2) };
+    return { score: m.score, feedback: m.feedback };
   };
   const marketSize = clampMetric(flat.marketSize);
   const solutionValueProposition = clampMetric(flat.solutionValueProposition);
@@ -119,11 +155,11 @@ function buildCombinedMetric2Json(
   const overallScore = Math.round(scores.reduce((sum, score) => sum + score, 0) / 4);
   const summary =
     typeof flat.summary === 'string' && flat.summary.trim()
-      ? clampSentences(clampChars(flat.summary.trim(), 420), 3)
+      ? flat.summary.trim()
       : 'Summary not available.';
   const competitorCounterplay =
     typeof flat.competitorCounterplay === 'string'
-      ? clampSentences(clampChars(flat.competitorCounterplay.trim(), 480), 3)
+      ? flat.competitorCounterplay.trim()
       : '';
 
   return JSON.stringify({

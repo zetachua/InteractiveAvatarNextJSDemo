@@ -23,7 +23,7 @@ export function clampChars(text: string, maxChars: number): string {
   return `${t.slice(0, maxChars - 1).trimEnd()}…`;
 }
 
-/** Trim rubric/sentiment blobs before investor verdict so Groq stays concise. */
+/** Trim rubric/sentiment blobs before investor verdict — keep enough context for market data refs. */
 export function trimVerdictContextInput(ctx: {
   rubricSummary: string;
   rubricSpecificFeedback?: Record<string, string>;
@@ -33,14 +33,14 @@ export function trimVerdictContextInput(ctx: {
     ? Object.fromEntries(
         Object.entries(ctx.rubricSpecificFeedback).map(([k, v]) => [
           k,
-          clampSentences(clampChars(v, 220), 2),
+          clampSentences(clampChars(v, 600), 4),
         ]),
       )
     : undefined;
   return {
-    rubricSummary: clampSentences(clampChars(ctx.rubricSummary, 500), 3),
+    rubricSummary: clampSentences(clampChars(ctx.rubricSummary, 900), 5),
     rubricSpecificFeedback,
-    sentimentSummary: clampSentences(clampChars(ctx.sentimentSummary, 320), 2),
+    sentimentSummary: clampSentences(clampChars(ctx.sentimentSummary, 500), 3),
   };
 }
 

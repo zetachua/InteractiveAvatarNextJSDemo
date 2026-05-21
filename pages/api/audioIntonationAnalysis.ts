@@ -13,7 +13,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(req.body ?? {}),
+      signal: AbortSignal.timeout(30000),
     });
+    const contentType = upstream.headers.get("content-type") ?? "";
+    if (!contentType.includes("application/json")) {
+      const text = await upstream.text();
+      console.error("audioIntonationAnalysis: non-JSON response (status", upstream.status, "):", text.slice(0, 300));
+      return res.status(502).json({ error: `Audio analysis server returned unexpected response (HTTP ${upstream.status}). Ensure the Python server is running at ${AUDIO_ANALYSIS_BASE_URL}.` });
+    }
     const data = await upstream.json();
     return res.status(upstream.status).json(data);
   } catch (error) {

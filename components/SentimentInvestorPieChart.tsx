@@ -79,8 +79,8 @@ const SentimentInvestorPiechart: React.FC<SentimentInvestorPieChartProps> = ({
   audioAnalyticsLoading = false,
 }) => {
   const hasVoiceAnalysis =
-    pronunciationAssessment != null &&
-    intonationAssessment != null &&
+    pronunciationAssessment != null ||
+    intonationAssessment != null ||
     fluencyAssessment != null;
 
   // Destructure values from the feedbackData prop
